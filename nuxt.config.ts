@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     jwtSecret: process.env.JWT_SECRET || 'ticketing-secret-key-2024',
     public: {
-      appName: process.env.APP_NAME || 'TicketingApp'
+      appName: process.env.APP_NAME || 'Shadow Care'
     }
   },
   nitro: {
