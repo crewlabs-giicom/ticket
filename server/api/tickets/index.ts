@@ -1,0 +1,107 @@
+import { getDb } from '../../database/index'
+import { broadcastToAll, broadcastToUser } from '../../utils/sse'
+
+export default defineEventHandler(async (event) => {
+  const db = getDb()
+  const user = event.context.user
+  const query = getQuery(event)
+
+  if (event.method === 'GET') {
+    let where = '1=1'
+    const params: any[] = []
+
+    if (user.role === 'customer') {
+      where += ' AND t.created_by = ?'
+      params.push(user.id)
+    } else if (query.assigned_to) {
+      where += ' AND t.assigned_to = ?'
+      params.push(query.assigned_to)
+    }
+
+    if (query.status_id) { where += ' AND t.status_id = ?'; params.push(query.status_id) }
+    if (query.priority_id) { where += ' AND t.priority_id = ?'; params.push(query.priority_id) }
+    if (query.project_id) { where += ' AND t.project_id = ?'; params.push(query.project_id) }
+    if (query.search) { where += ' AND (t.title LIKE ? OR t.ticket_number LIKE ?)'; params.push(`%${query.search}%`, `%${query.search}%`) }
+    if (query.date_from) { where += ' AND date(t.created_at) >= ?'; params.push(query.date_from) }
+    if (query.date_to) { where += ' AND date(t.created_at) <= ?'; params.push(query.date_to) }
+
+    const tickets = db.prepare(`
+      SELECT t.*,
+        p.name as project_name,
+        pr.name as priority_name, pr.color as priority_color,
+        s.name as status_name, s.color as status_color,
+        u1.name as created_by_name,
+        u2.name as assigned_to_name,
+        (SELECT COUNT(*) FROM ticket_responses r WHERE r.ticket_id = t.id AND r.is_internal = 0) as response_count,
+        (SELECT COUNT(*) FROM ticket_attachments a WHERE a.ticket_id = t.id) as attachment_count
+      FROM tickets t
+      LEFT JOIN projects p ON p.id = t.project_id
+      LEFT JOIN priorities pr ON pr.id = t.priority_id
+      LEFT JOIN ticket_statuses s ON s.id = t.status_id
+      LEFT JOIN users u1 ON u1.id = t.created_by
+      LEFT JOIN users u2 ON u2.id = t.assigned_to
+      WHERE ${where}
+      ORDER BY t.created_at DESC
+      LIMIT 200
+    `).all(...params)
+
+    return { success: true, data: tickets }
+  }
+
+  if (event.method === 'POST') {
+    const body = await readBody(event)
+    const { title, description, project_id, priority_id, status_id, assigned_to, due_date } = body
+
+    if (!title || !project_id || !priority_id || !status_id) {
+      throw createError({ statusCode: 400, statusMessage: 'Field tidak lengkap' })
+    }
+
+    // Auto generate ticket number
+    const last = db.prepare("SELECT ticket_number FROM tickets ORDER BY id DESC LIMIT 1").get() as any
+    let nextNum = 1
+    if (last) {
+      const match = last.ticket_number.match(/(\d+)$/)
+      if (match) nextNum = parseInt(match[1]) + 1
+    }
+    const ticketNumber = `TKT-${String(nextNum).padStart(4, '0')}`
+
+    // Auto due_date from SLA if not provided
+    let finalDueDate = due_date
+    if (!finalDueDate) {
+      const pri = db.prepare('SELECT sla_hours FROM priorities WHERE id=?').get(priority_id) as any
+      if (pri) {
+        const d = new Date()
+        d.setHours(d.getHours() + pri.sla_hours)
+        finalDueDate = d.toISOString()
+      }
+    }
+
+    const r = db.prepare(`
+      INSERT INTO tickets (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(ticketNumber, title, description || '', project_id, priority_id, status_id, user.id, assigned_to || null, finalDueDate)
+
+    const ticketId = r.lastInsertRowid
+
+    // Save attachments if any
+    const attachments = body.attachments as Array<{ filename: string; original_name: string; mime_type: string; size: number }> | undefined
+    if (attachments?.length) {
+      const insertAtt = db.prepare('INSERT INTO ticket_attachments (ticket_id, filename, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)')
+      const tx = db.transaction((items: typeof attachments) => items.forEach(a => insertAtt.run(ticketId, a.filename, a.original_name, a.mime_type || null, a.size || null, user.id)))
+      tx(attachments)
+    }
+
+    const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId) as any
+
+    // Notify assigned staff
+    if (assigned_to) {
+      db.prepare('INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)').run(assigned_to, 'Ticket baru di-assign', `Ticket ${ticketNumber}: ${title}`, 'ticket_assigned', r.lastInsertRowid)
+      broadcastToUser(assigned_to, 'notification', { title: 'Ticket baru di-assign', message: `${ticketNumber}: ${title}`, type: 'ticket_assigned', ticket_id: r.lastInsertRowid })
+    }
+
+    // Notify all admins
+    broadcastToAll('ticket_created', { ticket_number: ticketNumber, title, id: r.lastInsertRowid })
+
+    return { success: true, data: ticket }
+  }
+})
