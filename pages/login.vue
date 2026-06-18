@@ -7,7 +7,7 @@
         </div>
       </div>
       <h1 class="text-xl font-bold text-center text-slate-900 mb-1">Selamat Datang</h1>
-      <p class="text-sm text-center text-slate-500 mb-6">Masuk ke TicketingApp</p>
+      <p class="text-sm text-center text-slate-500 mb-6">Masuk ke ShadowCare</p>
 
       <form @submit.prevent="handleLogin" class="space-y-4">
         <div>
