@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
 
   if (event.method === 'GET') {
-    const ticket = db.prepare(`
+    const [ticketRows] = await db.execute(`
       SELECT t.*,
         p.name as project_name,
         pr.name as priority_name, pr.color as priority_color,
@@ -21,36 +21,40 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN users u1 ON u1.id = t.created_by
       LEFT JOIN users u2 ON u2.id = t.assigned_to
       WHERE t.id = ?
-    `).get(id) as any
-
+    `, [id])
+    const ticket = (ticketRows as any[])[0]
     if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
 
     const showInternal = user.role !== 'customer'
-    const responses = db.prepare(`
+    const [responses] = await db.execute(`
       SELECT r.*, u.name as user_name, u.role as user_role
       FROM ticket_responses r
       LEFT JOIN users u ON u.id = r.user_id
       WHERE r.ticket_id = ? ${!showInternal ? 'AND r.is_internal = 0' : ''}
       ORDER BY r.created_at ASC
-    `).all(id)
+    `, [id])
 
-    const attachments = db.prepare(`
+    const [attachments] = await db.execute(`
       SELECT a.*, u.name as uploaded_by_name
       FROM ticket_attachments a
       LEFT JOIN users u ON u.id = a.uploaded_by
       WHERE a.ticket_id = ? AND a.response_id IS NULL
       ORDER BY a.created_at ASC
-    `).all(id)
+    `, [id])
 
-    // Attach response-level attachments
-    const responseIds = (responses as any[]).map((r: any) => r.id)
+    const responseList = responses as any[]
     let responseAttachments: any[] = []
-    if (responseIds.length) {
-      responseAttachments = db.prepare(
-        `SELECT * FROM ticket_attachments WHERE response_id IN (${responseIds.map(() => '?').join(',')}) ORDER BY created_at ASC`
-      ).all(...responseIds) as any[]
+    if (responseList.length) {
+      const responseIds = responseList.map((r: any) => r.id)
+      const placeholders = responseIds.map(() => '?').join(',')
+      const [attRows] = await db.execute(
+        `SELECT * FROM ticket_attachments WHERE response_id IN (${placeholders}) ORDER BY created_at ASC`,
+        responseIds
+      )
+      responseAttachments = attRows as any[]
     }
-    const responsesWithAttachments = (responses as any[]).map((r: any) => ({
+
+    const responsesWithAttachments = responseList.map((r: any) => ({
       ...r,
       attachments: responseAttachments.filter((a: any) => a.response_id === r.id),
     }))
@@ -60,35 +64,38 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'PUT') {
     const body = await readBody(event)
-    const old = db.prepare('SELECT * FROM tickets WHERE id=?').get(id) as any
+    const [oldRows] = await db.execute('SELECT * FROM tickets WHERE id = ?', [id])
+    const old = (oldRows as any[])[0]
     if (!old) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
 
     const { title, description, project_id, priority_id, status_id, assigned_to, due_date } = body
 
-    // Check SLA breach
     const dueCheck = due_date || old.due_date
     const sla_breached = dueCheck && new Date(dueCheck) < new Date() ? 1 : 0
 
-    // Check if resolved
     let resolved_at = old.resolved_at
-    let closed_at = old.closed_at
     if (status_id && status_id !== old.status_id) {
-      const newStatus = db.prepare('SELECT is_resolved FROM ticket_statuses WHERE id=?').get(status_id) as any
-      if (newStatus?.is_resolved && !old.resolved_at) resolved_at = new Date().toISOString()
+      const [statusRows] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id = ?', [status_id])
+      const newStatus = (statusRows as any[])[0]
+      if (newStatus?.is_resolved && !old.resolved_at) resolved_at = new Date().toISOString().slice(0, 19).replace('T', ' ')
     }
 
-    db.prepare(`
+    await db.execute(`
       UPDATE tickets SET title=?, description=?, project_id=?, priority_id=?, status_id=?,
-      assigned_to=?, due_date=?, sla_breached=?, resolved_at=?, updated_at=datetime('now')
+      assigned_to=?, due_date=?, sla_breached=?, resolved_at=?, updated_at=NOW()
       WHERE id=?
-    `).run(title || old.title, description ?? old.description, project_id || old.project_id,
+    `, [
+      title || old.title, description ?? old.description, project_id || old.project_id,
       priority_id || old.priority_id, status_id || old.status_id,
       assigned_to !== undefined ? assigned_to : old.assigned_to,
-      due_date || old.due_date, sla_breached, resolved_at, id)
+      due_date || old.due_date, sla_breached, resolved_at, id
+    ])
 
-    // Notify if newly assigned
     if (assigned_to && assigned_to !== old.assigned_to) {
-      db.prepare('INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)').run(assigned_to, 'Ticket di-assign ke kamu', `${old.ticket_number}: ${old.title}`, 'ticket_assigned', id)
+      await db.execute(
+        'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
+        [assigned_to, 'Ticket di-assign ke kamu', `${old.ticket_number}: ${old.title}`, 'ticket_assigned', id]
+      )
       broadcastToUser(assigned_to, 'notification', { title: 'Ticket di-assign ke kamu', message: `${old.ticket_number}: ${old.title}`, type: 'ticket_assigned', ticket_id: Number(id) })
     }
 

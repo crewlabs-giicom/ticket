@@ -8,13 +8,16 @@ export default defineEventHandler(async (event) => {
   if (event.method === 'PUT') {
     if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     const body = await readBody(event)
-    db.prepare(`UPDATE projects SET name=?, description=?, is_active=?, updated_at=datetime('now') WHERE id=?`).run(body.name, body.description, body.is_active ?? 1, id)
+    await db.execute(
+      'UPDATE projects SET name=?, description=?, is_active=?, updated_at=NOW() WHERE id=?',
+      [body.name, body.description, body.is_active ?? 1, id]
+    )
     return { success: true }
   }
 
   if (event.method === 'DELETE') {
     if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-    db.prepare('UPDATE projects SET is_active=0 WHERE id=?').run(id)
+    await db.execute('UPDATE projects SET is_active=0 WHERE id=?', [id])
     return { success: true }
   }
 })

@@ -8,11 +8,14 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'PUT') {
     const body = await readBody(event)
-    db.prepare('UPDATE priorities SET name=?, color=?, order_index=?, sla_hours=? WHERE id=?').run(body.name, body.color, body.order_index, body.sla_hours, id)
+    await db.execute(
+      'UPDATE priorities SET name=?, color=?, order_index=?, sla_hours=? WHERE id=?',
+      [body.name, body.color, body.order_index, body.sla_hours, id]
+    )
     return { success: true }
   }
   if (event.method === 'DELETE') {
-    db.prepare('DELETE FROM priorities WHERE id=?').run(id)
+    await db.execute('DELETE FROM priorities WHERE id=?', [id])
     return { success: true }
   }
 })

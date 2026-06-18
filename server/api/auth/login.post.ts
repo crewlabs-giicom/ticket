@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const db = getDb()
-  const user = db.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1').get(email) as any
+  const [rows] = await db.execute('SELECT * FROM users WHERE email = ? AND is_active = 1', [email])
+  const user = (rows as any[])[0]
   if (!user || !verifyPassword(password, user.password)) {
     throw createError({ statusCode: 401, statusMessage: 'Email atau password salah' })
   }

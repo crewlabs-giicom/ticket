@@ -1,28 +1,44 @@
 import { getDb } from '../../database/index'
+import type { ResultSetHeader } from 'mysql2'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
   const user = event.context.user
 
   if (event.method === 'GET') {
-    return { success: true, data: db.prepare('SELECT * FROM priorities ORDER BY order_index ASC').all() }
+    const [rows] = await db.execute('SELECT * FROM priorities ORDER BY order_index ASC')
+    return { success: true, data: rows }
   }
 
   if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
 
   if (event.method === 'POST') {
     const body = await readBody(event)
-    const r = db.prepare('INSERT INTO priorities (name, color, order_index, sla_hours) VALUES (?, ?, ?, ?)').run(body.name, body.color || '#6366f1', body.order_index || 99, body.sla_hours || 24)
-    return { success: true, data: db.prepare('SELECT * FROM priorities WHERE id = ?').get(r.lastInsertRowid) }
+    const [r] = await db.execute(
+      'INSERT INTO priorities (name, color, order_index, sla_hours) VALUES (?, ?, ?, ?)',
+      [body.name, body.color || '#6366f1', body.order_index || 99, body.sla_hours || 24]
+    )
+    const insertId = (r as ResultSetHeader).insertId
+    const [rows] = await db.execute('SELECT * FROM priorities WHERE id = ?', [insertId])
+    return { success: true, data: (rows as any[])[0] }
   }
 
   if (event.method === 'PUT') {
     const body = await readBody(event)
-    // Bulk reorder
     if (Array.isArray(body)) {
-      const update = db.prepare('UPDATE priorities SET order_index=? WHERE id=?')
-      const tx = db.transaction((items: any[]) => items.forEach(i => update.run(i.order_index, i.id)))
-      tx(body)
+      const conn = await db.getConnection()
+      try {
+        await conn.beginTransaction()
+        for (const item of body) {
+          await conn.execute('UPDATE priorities SET order_index=? WHERE id=?', [item.order_index, item.id])
+        }
+        await conn.commit()
+      } catch (e) {
+        await conn.rollback()
+        throw e
+      } finally {
+        conn.release()
+      }
       return { success: true }
     }
   }

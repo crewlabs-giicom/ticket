@@ -8,11 +8,14 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'PUT') {
     const body = await readBody(event)
-    db.prepare('UPDATE ticket_statuses SET name=?, color=?, order_index=?, is_resolved=? WHERE id=?').run(body.name, body.color, body.order_index, body.is_resolved ? 1 : 0, id)
+    await db.execute(
+      'UPDATE ticket_statuses SET name=?, color=?, order_index=?, is_resolved=? WHERE id=?',
+      [body.name, body.color, body.order_index, body.is_resolved ? 1 : 0, id]
+    )
     return { success: true }
   }
   if (event.method === 'DELETE') {
-    db.prepare('DELETE FROM ticket_statuses WHERE id=?').run(id)
+    await db.execute('DELETE FROM ticket_statuses WHERE id=?', [id])
     return { success: true }
   }
 })
