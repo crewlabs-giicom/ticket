@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: giicom
     steps:
       - name: SSH ke server dan jalankan deploy.sh
         uses: appleboy/ssh-action@v1.0.3
