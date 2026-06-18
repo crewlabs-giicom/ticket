@@ -17,5 +17,5 @@ jobs:
           username: ${{ secrets.CPANEL_SSH_USERNAME }}
           key: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
           port: ${{ secrets.CPANEL_SSH_PORT }}
-          script: bash /home/js_app/ticket/deploy.sh
+          script: bash /home/giicom/js_app/ticket/deploy.sh
           # ^ ganti path sesuai lokasi deploy.sh di server
