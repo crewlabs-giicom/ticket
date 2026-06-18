@@ -1,0 +1,20 @@
+name: Deploy Ticketing System to cPanel
+
+on:
+  push:
+    branches:
+      - main   # ganti kalau branch deploy bukan main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH ke server dan jalankan deploy.sh
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.CPANEL_SSH_HOST }}
+          username: ${{ secrets.CPANEL_SSH_USERNAME }}
+          key: ${{ secrets.CPANEL_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.CPANEL_SSH_PORT }}
+          script: bash /home/public_html/ticket/deploy.sh
+          # ^ ganti path sesuai lokasi deploy.sh di server
