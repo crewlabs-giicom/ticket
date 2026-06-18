@@ -6,7 +6,7 @@
           <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
         </div>
       </div>
-      <h1 class="text-xl font-bold text-center text-slate-900 mb-1">Selamat Datang</h1>
+      <h1 class="text-xl font-bold text-center text-slate-900 mb-1">Welcome</h1>
       <p class="text-sm text-center text-slate-500 mb-6">Masuk ke Shadow Care</p>
 
       <form @submit.prevent="handleLogin" class="space-y-4">
