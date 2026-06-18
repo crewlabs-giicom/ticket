@@ -118,7 +118,20 @@ export default defineEventHandler(async (event) => {
       broadcastToUser(assigned_to, 'notification', { title: 'Ticket baru di-assign', message: `${ticketNumber}: ${title}`, type: 'ticket_assigned', ticket_id: ticketId! })
     }
 
-    broadcastToAll('ticket_created', { ticket_number: ticketNumber, title, id: ticketId! })
+    // Insert DB notification untuk semua staff & admin aktif (kecuali creator dan assigned_to)
+    const [staffAdmins] = await db.execute(
+      "SELECT id FROM users WHERE role IN ('staff','admin') AND is_active = 1 AND id != ?",
+      [user.id]
+    )
+    for (const su of staffAdmins as any[]) {
+      if (su.id === assigned_to) continue
+      await db.execute(
+        'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
+        [su.id, 'Ticket baru dibuat', `${ticketNumber}: ${title}`, 'ticket_created', ticketId!]
+      )
+    }
+
+    broadcastToAll('ticket_created', { ticket_number: ticketNumber, title, id: ticketId!, created_by: user.id })
 
     return { success: true, data: ticket }
   }

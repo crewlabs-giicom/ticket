@@ -51,6 +51,10 @@ export const useNotifStore = defineStore('notif', () => {
     }, 5000)
   }
 
+  function dismissToast(id: number) {
+    toasts.value = toasts.value.filter(t => t._id !== id)
+  }
+
   function connectSSE() {
     if (es) return
     es = new EventSource('/api/sse')
@@ -65,14 +69,29 @@ export const useNotifStore = defineStore('notif', () => {
 
     es.addEventListener('ticket_created', (e) => {
       const data = JSON.parse(e.data)
-      addToast({ title: 'Ticket baru', message: `${data.ticket_number}: ${data.title}`, type: 'ticket_created' })
+      const auth = useAuthStore()
+      const role = auth.user?.role
+      // Hanya tampilkan ke staff dan admin, skip jika creator adalah user sendiri
+      if (role !== 'staff' && role !== 'admin') return
+      if (data.created_by === auth.user?.id) return
+      addToast({ title: 'Ticket baru', message: `${data.ticket_number}: ${data.title}`, type: 'ticket_created', ticket_id: data.id })
       playSound()
+      unread.value++
+      items.value.unshift({
+        title: 'Ticket baru dibuat',
+        message: `${data.ticket_number}: ${data.title}`,
+        type: 'ticket_created',
+        ticket_id: data.id,
+        is_read: 0,
+        created_at: new Date().toISOString(),
+      })
     })
 
     es.addEventListener('ticket_updated', () => {})
+
     es.addEventListener('ticket_response', (e) => {
       const data = JSON.parse(e.data)
-      addToast({ title: 'Response baru', message: `Ticket ${data.ticket_number} dibalas`, type: 'new_response' })
+      addToast({ title: 'Response baru', message: `Ticket ${data.ticket_number} dibalas`, type: 'new_response', ticket_id: data.ticket_id })
     })
 
     es.onerror = () => {
@@ -87,5 +106,5 @@ export const useNotifStore = defineStore('notif', () => {
     es = null
   }
 
-  return { items, unread, toasts, fetchNotifs, markRead, connectSSE, disconnectSSE, playSound }
+  return { items, unread, toasts, fetchNotifs, markRead, connectSSE, disconnectSSE, playSound, dismissToast }
 })
