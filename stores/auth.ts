@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useChatWidgetStore } from './chatWidget'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<any>(null)
@@ -8,6 +9,10 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await $fetch('/api/auth/me')
       user.value = (res as any).user
+      if (user.value?.id) {
+        const chatWidget = useChatWidgetStore()
+        chatWidget.initForUser(user.value.id)
+      }
     } catch {
       user.value = null
     }
@@ -18,6 +23,10 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await $fetch('/api/auth/login', { method: 'POST', body: { email, password } })
       user.value = (res as any).user
+      if (user.value?.id) {
+        const chatWidget = useChatWidgetStore()
+        chatWidget.initForUser(user.value.id)
+      }
       return true
     } catch (e: any) {
       throw new Error(e?.data?.statusMessage || 'Login gagal')
@@ -27,6 +36,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    const chatWidget = useChatWidgetStore()
+    chatWidget.clearAll()
     await $fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     user.value = null
     navigateTo('/login')

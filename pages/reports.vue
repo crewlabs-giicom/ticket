@@ -5,16 +5,20 @@
       <div><label class="label text-xs">Dari</label><input v-model="filters.from" type="date" class="input text-sm w-36" /></div>
       <div><label class="label text-xs">Sampai</label><input v-model="filters.to" type="date" class="input text-sm w-36" /></div>
       <div><label class="label text-xs">Project</label>
-        <select v-model="filters.project_id" class="input text-sm w-36">
-          <option value="">Semua</option>
-          <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
+        <AppSelect
+          v-model="filters.project_id"
+          :options="[{ value: '', label: 'Semua' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+          placeholder="Semua"
+          class="w-40"
+        />
       </div>
       <div><label class="label text-xs">Staff</label>
-        <select v-model="filters.staff_id" class="input text-sm w-36">
-          <option value="">Semua</option>
-          <option v-for="u in staff" :key="u.id" :value="u.id">{{ u.name }}</option>
-        </select>
+        <AppSelect
+          v-model="filters.staff_id"
+          :options="[{ value: '', label: 'Semua' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]"
+          placeholder="Semua"
+          class="w-40"
+        />
       </div>
       <button @click="fetchReport" class="btn-primary">Tampilkan</button>
     </div>

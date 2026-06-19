@@ -25,6 +25,8 @@ export default defineEventHandler(async (event) => {
     if (query.search) { where += ' AND (t.title LIKE ? OR t.ticket_number LIKE ?)'; params.push(`%${query.search}%`, `%${query.search}%`) }
     if (query.date_from) { where += ' AND DATE(t.created_at) >= ?'; params.push(query.date_from) }
     if (query.date_to) { where += ' AND DATE(t.created_at) <= ?'; params.push(query.date_to) }
+    if (query.task_id) { where += ' AND t.task_id = ?'; params.push(query.task_id) }
+    if (query.subsystem) { where += ' AND t.subsystem = ?'; params.push(query.subsystem) }
 
     const [tickets] = await db.execute(`
       SELECT t.*,
@@ -51,7 +53,7 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'POST') {
     const body = await readBody(event)
-    const { title, description, project_id, priority_id, status_id, assigned_to, due_date } = body
+    const { title, description, project_id, priority_id, status_id, assigned_to, due_date, task_id, subsystem } = body
 
     if (!title || !project_id || !priority_id || !status_id) {
       throw createError({ statusCode: 400, statusMessage: 'Field tidak lengkap' })
@@ -83,9 +85,9 @@ export default defineEventHandler(async (event) => {
       await conn.beginTransaction()
 
       const [r] = await conn.execute(
-        `INSERT INTO tickets (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [ticketNumber, title, description || '', project_id, priority_id, status_id, user.id, assigned_to || null, finalDueDate]
+        `INSERT INTO tickets (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, task_id, subsystem)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [ticketNumber, title, description || '', project_id, priority_id, status_id, user.id, assigned_to || null, finalDueDate, task_id || null, subsystem || null]
       )
       ticketId = (r as ResultSetHeader).insertId
 

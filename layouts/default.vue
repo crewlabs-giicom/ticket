@@ -14,11 +14,16 @@
       </div>
 
       <!-- Nav -->
-      <nav class="flex-1 overflow-y-auto p-3 space-y-0.5">
-        <NuxtLink v-for="m in menus" :key="m.id" :to="m.path" class="nav-link" :class="{ active: isActive(m.path) }" @click="sidebarOpen = false">
-          <component :is="getIcon(m.icon)" class="w-4 h-4 flex-shrink-0" />
-          <span>{{ m.name }}</span>
-        </NuxtLink>
+      <nav class="flex-1 overflow-y-auto p-3 space-y-4">
+        <div v-for="group in menuGroups" :key="group.label">
+          <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 px-2 mb-1">{{ group.label }}</p>
+          <div class="space-y-0.5">
+            <NuxtLink v-for="m in group.items" :key="m.id" :to="m.path" class="nav-link" :class="{ active: isActive(m.path) }" @click="sidebarOpen = false">
+              <component :is="getIcon(m.icon)" class="w-4 h-4 flex-shrink-0" />
+              <span>{{ m.name }}</span>
+            </NuxtLink>
+          </div>
+        </div>
       </nav>
 
       <!-- User -->
@@ -47,6 +52,14 @@
           <h1 class="text-sm font-semibold text-slate-900">{{ pageTitle }}</h1>
         </div>
         <!-- Notif Bell -->
+        <!-- Sync indicator -->
+        <div v-if="pendingCount > 0" class="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg">
+          <svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          {{ pendingCount }} pending
+          <button @click="retrySync" class="underline hover:no-underline ml-0.5">Retry</button>
+          <span class="text-amber-300">·</span>
+          <button @click="clearQueue" class="underline hover:no-underline text-amber-500">Clear</button>
+        </div>
         <div class="relative" ref="notifRef">
           <button @click="notifOpen = !notifOpen" class="relative p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -93,6 +106,7 @@
 
 <script setup lang="ts">
 import { onClickOutside } from '@vueuse/core'
+import { resolveComponent, computed } from 'vue'
 const auth = useAuthStore()
 const notif = useNotifStore()
 const tabs = useTabStore()
@@ -101,25 +115,51 @@ const sidebarOpen = ref(false)
 const notifOpen = ref(false)
 const notifRef = ref(null)
 
+const { pendingCount, setupListeners, retrySync, clearQueue } = useSync()
+
+
 onClickOutside(notifRef, () => { notifOpen.value = false })
 
 const menus = ref<any[]>([])
 
+function menuSection(path: string): string {
+  if (path.startsWith('/master/')) return 'Master Data'
+  if (path === '/workload' || path === '/reports') return 'Management'
+  return 'Menu'
+}
+
+const menuGroups = computed(() => {
+  const groups: Record<string, { label: string; order: number; items: any[] }> = {
+    'Menu':        { label: 'Menu',        order: 0, items: [] },
+    'Management':  { label: 'Management',  order: 1, items: [] },
+    'Master Data': { label: 'Master Data', order: 2, items: [] },
+  }
+  for (const m of menus.value) {
+    const section = m.section || menuSection(m.path)
+    if (!groups[section]) groups[section] = { label: section, order: 99, items: [] }
+    groups[section].items.push(m)
+  }
+  return Object.values(groups).filter(g => g.items.length).sort((a, b) => a.order - b.order)
+})
+
 function fallbackMenus(role?: string) {
   const base = [
     { id: 'f1', name: 'Dashboard', path: '/', icon: 'dashboard' },
-    { id: 'f2', name: 'Tickets', path: '/tickets', icon: 'ticket' },
-    { id: 'f3', name: 'Kalender', path: '/calendar', icon: 'calendar' }
+    { id: 'f2', name: 'Projects', path: '/projects', icon: 'folder' },
+    { id: 'f3', name: 'Tasks', path: '/tasks', icon: 'check-square' },
+    { id: 'f4', name: 'Tickets', path: '/tickets', icon: 'ticket' },
+    { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar' },
   ]
   if (role === 'admin') {
     return [
       ...base,
-      { id: 'f4', name: 'Reports', path: '/reports', icon: 'chart-bar' },
-      { id: 'f5', name: 'Users', path: '/master/users', icon: 'users' },
-      { id: 'f6', name: 'Projects', path: '/master/projects', icon: 'folder' },
-      { id: 'f7', name: 'Priority', path: '/master/priorities', icon: 'flag' },
-      { id: 'f8', name: 'Status', path: '/master/statuses', icon: 'tag' },
-      { id: 'f9', name: 'Menus', path: '/master/menus', icon: 'menu' }
+      { id: 'f6', name: 'Workload', path: '/workload', icon: 'users' },
+      { id: 'f7', name: 'Reports', path: '/reports', icon: 'chart-bar' },
+      { id: 'f8', name: 'Users', path: '/master/users', icon: 'users' },
+      { id: 'f9', name: 'Master Projects', path: '/master/projects', icon: 'folder' },
+      { id: 'f10', name: 'Priority', path: '/master/priorities', icon: 'flag' },
+      { id: 'f11', name: 'Status', path: '/master/statuses', icon: 'tag' },
+      { id: 'f12', name: 'Menus', path: '/master/menus', icon: 'menu' }
     ]
   }
   return base
@@ -140,7 +180,12 @@ watch(() => auth.user?.role, () => {
 }, { immediate: true })
 
 const pageTitle = computed(() => {
-  const titles: Record<string, string> = { '/': 'Dashboard', '/tickets': 'Tickets', '/calendar': 'Kalender', '/reports': 'Reports', '/master/users': 'Master User', '/master/projects': 'Master Project', '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu' }
+  const titles: Record<string, string> = {
+    '/': 'Dashboard', '/tickets': 'Tickets', '/tasks': 'Tasks', '/projects': 'Projects',
+    '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Reports',
+    '/master/users': 'Master User', '/master/projects': 'Master Project',
+    '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu'
+  }
   return titles[route.path] || 'TicketingApp'
 })
 
@@ -162,6 +207,7 @@ function getIcon(name: string) {
     flag: resolveComponent('IconFlag'),
     tag: resolveComponent('IconTag'),
     menu: resolveComponent('IconMenu'),
+    'check-square': resolveComponent('IconTicket'), // reuse ticket icon for tasks
   }
   return icons[name] || resolveComponent('IconDashboard')
 }
@@ -179,6 +225,7 @@ function timeAgo(dateStr: string) {
 onMounted(async () => {
   await notif.fetchNotifs()
   notif.connectSSE()
+  setupListeners()
 })
 onUnmounted(() => notif.disconnectSSE())
 </script>

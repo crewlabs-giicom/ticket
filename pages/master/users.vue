@@ -51,11 +51,11 @@
           <div><label class="label">Email</label><input v-model="form.email" type="email" class="input" placeholder="email@domain.com" required /></div>
           <div><label class="label">Password {{ editing ? '(kosongkan jika tidak diubah)' : '' }}</label><input v-model="form.password" type="password" class="input" :placeholder="editing ? 'Kosongkan jika tidak diubah' : 'Min. 6 karakter'" /></div>
           <div><label class="label">Role</label>
-            <select v-model="form.role" class="input">
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
-              <option value="customer">Customer</option>
-            </select>
+            <AppSelect
+              v-model="form.role"
+              :options="[{ value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'customer', label: 'Customer' }]"
+              placeholder="Role"
+            />
           </div>
         </div>
         <p v-if="formError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{{ formError }}</p>

@@ -3,6 +3,7 @@
     <NuxtPage />
   </NuxtLayout>
   <ToastContainer />
+  <TicketChatWidget />
 </template>
 
 <script setup lang="ts">

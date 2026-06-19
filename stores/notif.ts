@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useChatWidgetStore } from './chatWidget'
 
 export const useNotifStore = defineStore('notif', () => {
   const items = ref<any[]>([])
@@ -88,6 +89,20 @@ export const useNotifStore = defineStore('notif', () => {
     })
 
     es.addEventListener('ticket_updated', () => {})
+
+    es.addEventListener('ticket_message:new', (e) => {
+      const data = JSON.parse(e.data)
+      const auth = useAuthStore()
+      if (data.sender_id === auth.user?.id) return
+
+      const chatWidget = useChatWidgetStore()
+      chatWidget.pushIncoming(data)
+
+      const openTicket = chatWidget.openTickets.find((t: any) => t.ticketId === data.ticket_id)
+      if (openTicket?.mode !== 'expanded') {
+        chatWidget.incrementUnread(data.ticket_id)
+      }
+    })
 
     es.addEventListener('ticket_response', (e) => {
       const data = JSON.parse(e.data)

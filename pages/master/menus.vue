@@ -6,6 +6,7 @@
     </div>
 
     <div class="card overflow-hidden">
+      <ClientOnly>
       <draggable v-model="list" item-key="id" handle=".drag-handle" @end="saveOrder" class="divide-y divide-slate-100">
         <template #item="{ element: m }">
           <div class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
@@ -23,6 +24,7 @@
           </div>
         </template>
       </draggable>
+      </ClientOnly>
     </div>
 
     <div v-if="showForm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -33,12 +35,16 @@
           <div><label class="label">Path</label><input v-model="form.path" class="input" placeholder="/tickets" /></div>
           <div><label class="label">Icon (nama)</label><input v-model="form.icon" class="input" placeholder="ticket" /></div>
           <div><label class="label">Akses Role</label>
-            <select v-model="form.role" class="input">
-              <option value="all">Semua (all)</option>
-              <option value="admin">Admin saja</option>
-              <option value="staff">Staff & Admin</option>
-              <option value="customer">Customer saja</option>
-            </select>
+            <AppSelect
+              v-model="form.role"
+              :options="[
+                { value: 'all', label: 'Semua (all)' },
+                { value: 'admin', label: 'Admin saja' },
+                { value: 'staff', label: 'Staff & Admin' },
+                { value: 'customer', label: 'Customer saja' },
+              ]"
+              placeholder="Role"
+            />
           </div>
           <div v-if="editing">
             <label class="flex items-center gap-2 cursor-pointer">
@@ -57,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import draggable from 'vuedraggable'
+const draggable = defineAsyncComponent(() => import('vuedraggable'))
 definePageMeta({ middleware: 'auth' })
 
 const { data: allMenus, refresh } = await useFetch('/api/menus')

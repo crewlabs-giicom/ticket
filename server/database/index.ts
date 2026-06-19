@@ -20,8 +20,12 @@ export function getDb(): mysql.Pool {
 
 async function initDb() {
   const db = pool!
-  await migrate(db)
-  await seed(db)
+  try {
+    await migrate(db)
+    await seed(db)
+  } catch (err) {
+    console.error('[DB] initDb failed:', err)
+  }
 }
 
 async function migrate(db: mysql.Pool) {
@@ -44,11 +48,14 @@ async function migrate(db: mysql.Pool) {
       id INT AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       description TEXT,
+      status ENUM('active','on_hold','completed') NOT NULL DEFAULT 'active',
       is_active TINYINT(1) NOT NULL DEFAULT 1,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `)
+  // Add status column to existing databases that pre-date this migration
+  await db.execute(`ALTER TABLE projects ADD COLUMN status ENUM('active','on_hold','completed') NOT NULL DEFAULT 'active'`).catch(() => {})
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS priorities (
@@ -153,6 +160,69 @@ async function migrate(db: mysql.Pool) {
       is_active TINYINT(1) NOT NULL DEFAULT 1
     )
   `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS project_members (
+      project_id INT NOT NULL,
+      user_id INT NOT NULL,
+      PRIMARY KEY (project_id, user_id),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      title VARCHAR(500) NOT NULL,
+      description TEXT,
+      status ENUM('backlog','todo','in_progress','review','done') NOT NULL DEFAULT 'backlog',
+      position INT NOT NULL DEFAULT 0,
+      assigned_to INT,
+      created_by INT NOT NULL,
+      due_date DATETIME,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (assigned_to) REFERENCES users(id),
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ticket_links (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ticket_id INT NOT NULL,
+      referenced_ticket_id INT NOT NULL,
+      relation_type ENUM('recurring','duplicate') NOT NULL DEFAULT 'recurring',
+      note TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+      FOREIGN KEY (referenced_ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ticket_messages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ticket_id INT NOT NULL,
+      sender_id INT NOT NULL,
+      message TEXT NOT NULL,
+      read_at DATETIME,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+      FOREIGN KEY (sender_id) REFERENCES users(id)
+    )
+  `)
+
+  // Add task_id and subsystem to tickets if not present
+  try {
+    await db.execute(`ALTER TABLE tickets ADD COLUMN task_id INT REFERENCES tasks(id)`)
+  } catch {}
+  try {
+    await db.execute(`ALTER TABLE tickets ADD COLUMN subsystem VARCHAR(100)`)
+  } catch {}
 }
 
 async function seed(db: mysql.Pool) {
@@ -207,14 +277,17 @@ async function seed(db: mysql.Pool) {
 
   const menus = [
     ['Dashboard', '/', 'dashboard', 1, 'all'],
-    ['Tickets', '/tickets', 'ticket', 2, 'all'],
-    ['Kalender', '/calendar', 'calendar', 3, 'all'],
-    ['Reports', '/reports', 'chart-bar', 4, 'admin'],
-    ['Users', '/master/users', 'users', 5, 'admin'],
-    ['Projects', '/master/projects', 'folder', 6, 'admin'],
-    ['Priority', '/master/priorities', 'flag', 7, 'admin'],
-    ['Status', '/master/statuses', 'tag', 8, 'admin'],
-    ['Menus', '/master/menus', 'menu', 9, 'admin'],
+    ['Projects', '/projects', 'folder', 2, 'all'],
+    ['Tasks', '/tasks', 'check-square', 3, 'all'],
+    ['Tickets', '/tickets', 'ticket', 4, 'all'],
+    ['Workload', '/workload', 'users', 5, 'admin'],
+    ['Kalender', '/calendar', 'calendar', 6, 'all'],
+    ['Reports', '/reports', 'chart-bar', 7, 'admin'],
+    ['Users', '/master/users', 'users', 8, 'admin'],
+    ['Master Projects', '/master/projects', 'folder', 9, 'admin'],
+    ['Priority', '/master/priorities', 'flag', 10, 'admin'],
+    ['Status', '/master/statuses', 'tag', 11, 'admin'],
+    ['Menus', '/master/menus', 'menu', 12, 'admin'],
   ]
   for (const m of menus) {
     await db.execute('INSERT INTO menus (name, path, icon, order_index, role) VALUES (?, ?, ?, ?, ?)', m)

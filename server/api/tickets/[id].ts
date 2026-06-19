@@ -13,13 +13,15 @@ export default defineEventHandler(async (event) => {
         pr.name as priority_name, pr.color as priority_color,
         s.name as status_name, s.color as status_color, s.is_resolved as status_is_resolved,
         u1.name as created_by_name,
-        u2.name as assigned_to_name, u2.email as assigned_to_email
+        u2.name as assigned_to_name, u2.email as assigned_to_email,
+        tk.title as task_title
       FROM tickets t
       LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN priorities pr ON pr.id = t.priority_id
       LEFT JOIN ticket_statuses s ON s.id = t.status_id
       LEFT JOIN users u1 ON u1.id = t.created_by
       LEFT JOIN users u2 ON u2.id = t.assigned_to
+      LEFT JOIN tasks tk ON tk.id = t.task_id
       WHERE t.id = ?
     `, [id])
     const ticket = (ticketRows as any[])[0]
@@ -59,7 +61,22 @@ export default defineEventHandler(async (event) => {
       attachments: responseAttachments.filter((a: any) => a.response_id === r.id),
     }))
 
-    return { success: true, data: { ...ticket, responses: responsesWithAttachments, attachments } }
+    // Ticket links (recurring/duplicate references)
+    const [links] = await db.execute(`
+      SELECT tl.*, t_ref.ticket_number as ref_ticket_number, t_ref.title as ref_ticket_title
+      FROM ticket_links tl
+      LEFT JOIN tickets t_ref ON t_ref.id = tl.referenced_ticket_id
+      WHERE tl.ticket_id = ?
+    `, [id])
+
+    const [backLinks] = await db.execute(`
+      SELECT tl.*, t_new.ticket_number as new_ticket_number, t_new.title as new_ticket_title
+      FROM ticket_links tl
+      LEFT JOIN tickets t_new ON t_new.id = tl.ticket_id
+      WHERE tl.referenced_ticket_id = ?
+    `, [id])
+
+    return { success: true, data: { ...ticket, responses: responsesWithAttachments, attachments, links, backLinks } }
   }
 
   if (event.method === 'PUT') {
@@ -68,7 +85,8 @@ export default defineEventHandler(async (event) => {
     const old = (oldRows as any[])[0]
     if (!old) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
 
-    const { title, description, project_id, priority_id, status_id, assigned_to, due_date } = body
+    const { title, description, project_id, priority_id, status_id, assigned_to } = body
+    const due_date = body.due_date ? String(body.due_date).slice(0, 10) : body.due_date
 
     const dueCheck = due_date || old.due_date
     const sla_breached = dueCheck && new Date(dueCheck) < new Date() ? 1 : 0

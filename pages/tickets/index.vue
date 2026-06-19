@@ -4,18 +4,24 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-2">
         <input v-model="filters.search" class="input w-48" placeholder="Cari ticket..." />
-        <select v-model="filters.status_id" class="input w-36">
-          <option value="">Semua Status</option>
-          <option v-for="s in statuses" :key="s.id" :value="s.id">{{ s.name }}</option>
-        </select>
-        <select v-model="filters.priority_id" class="input w-36">
-          <option value="">Semua Priority</option>
-          <option v-for="p in priorities" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
-        <select v-model="filters.project_id" class="input w-36">
-          <option value="">Semua Project</option>
-          <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-        </select>
+        <AppSelect
+          v-model="filters.status_id"
+          :options="[{ value: '', label: 'Semua Status' }, ...statuses.map((s: any) => ({ value: s.id, label: s.name }))]"
+          placeholder="Semua Status"
+          class="w-40"
+        />
+        <AppSelect
+          v-model="filters.priority_id"
+          :options="[{ value: '', label: 'Semua Priority' }, ...priorities.map((p: any) => ({ value: p.id, label: p.name }))]"
+          placeholder="Semua Priority"
+          class="w-40"
+        />
+        <AppSelect
+          v-model="filters.project_id"
+          :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+          placeholder="Semua Project"
+          class="w-40"
+        />
       </div>
       <button @click="showForm = true" class="btn-primary">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>

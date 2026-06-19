@@ -7,10 +7,21 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'GET') {
     const [projects] = await db.execute(`
-      SELECT p.*, COUNT(t.id) as ticket_count
+      SELECT p.*,
+        COUNT(DISTINCT t.id) AS ticket_count,
+        COUNT(DISTINCT tk.id) AS task_count,
+        SUM(CASE WHEN tk.status = 'done' THEN 1 ELSE 0 END) AS task_done,
+        SUM(CASE WHEN tk.status IN ('todo','in_progress','review') THEN 1 ELSE 0 END) AS task_waiting,
+        SUM(CASE WHEN tk.due_date < NOW() AND tk.status != 'done' THEN 1 ELSE 0 END) AS task_overdue,
+        COUNT(DISTINCT pm.user_id) AS member_count,
+        GROUP_CONCAT(DISTINCT u.name ORDER BY u.id SEPARATOR '||') AS member_names
       FROM projects p
       LEFT JOIN tickets t ON t.project_id = p.id
-      GROUP BY p.id ORDER BY p.id DESC
+      LEFT JOIN tasks tk ON tk.project_id = p.id
+      LEFT JOIN project_members pm ON pm.project_id = p.id
+      LEFT JOIN users u ON u.id = pm.user_id
+      GROUP BY p.id
+      ORDER BY p.id DESC
     `)
     return { success: true, data: projects }
   }

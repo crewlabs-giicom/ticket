@@ -13,16 +13,32 @@
           <h2 class="text-lg font-semibold text-slate-900">{{ ticket.title }}</h2>
           <p class="text-sm text-slate-500 mt-1">{{ ticket.project_name }} · Dibuat oleh {{ ticket.created_by_name }} · {{ timeAgo(ticket.created_at) }}</p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap" v-if="auth.isStaffOrAdmin">
-          <select v-model="editStatus" @change="updateField('status_id', editStatus)" class="input text-xs w-36">
-            <option v-for="s in statuses" :key="s.id" :value="s.id">{{ s.name }}</option>
-          </select>
-          <select v-model="editAssigned" @change="updateField('assigned_to', editAssigned)" class="input text-xs w-36">
-            <option value="">Unassigned</option>
-            <option v-for="u in staff" :key="u.id" :value="u.id">{{ u.name }}</option>
-          </select>
-          <button @click="tabs.togglePin(ticket.id)" class="btn-ghost text-xs py-1.5">
-            {{ tabs.tabs.find(t=>t.id===ticket.id)?.pinned ? 'Unpin Tab' : 'Pin Tab' }}
+        <div class="flex items-center gap-2 flex-wrap">
+          <template v-if="auth.isStaffOrAdmin">
+            <AppSelect
+              v-model="editStatus"
+              :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
+              placeholder="Status"
+              class="w-36"
+              @update:modelValue="updateField('status_id', $event)"
+            />
+            <AppSelect
+              v-model="editAssigned"
+              :options="[{ value: '', label: 'Unassigned' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]"
+              placeholder="Unassigned"
+              class="w-36"
+              @update:modelValue="updateField('assigned_to', $event)"
+            />
+            <button @click="tabs.togglePin(ticket.id)" class="btn-ghost text-xs py-1.5">
+              {{ tabs.tabs.find(t=>t.id===ticket.id)?.pinned ? 'Unpin Tab' : 'Pin Tab' }}
+            </button>
+          </template>
+          <button @click="openChat" class="btn-ghost text-xs py-1.5 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+              <path d="M3.505 2.365A41.369 41.369 0 019 2c1.863 0 3.697.124 5.495.365 1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 00-.577-.069 43.141 43.141 0 00-4.706 0C9.229 4.696 7.5 6.727 7.5 9.25v.05a43.143 43.143 0 00-1.085.628 1.5 1.5 0 00-.372 2.273c.307.38.712.646 1.171.76a4.38 4.38 0 01-.103.065 1.5 1.5 0 01-1.5-2.598l.032-.018a43.167 43.167 0 00-.966-.553 1.5 1.5 0 01-.62-2.039A14.31 14.31 0 013.505 2.365z"/>
+              <path d="M7.5 9.25c0-2.075 1.56-3.818 3.6-4.052a41.647 41.647 0 014.8 0C17.94 5.432 19.5 7.175 19.5 9.25v1.5c0 2.075-1.56 3.818-3.6 4.052a41.647 41.647 0 01-4.8 0C9.06 14.568 7.5 12.825 7.5 11.75v-2.5z"/>
+            </svg>
+            Chat
           </button>
         </div>
       </div>
@@ -36,6 +52,18 @@
         <div><span class="font-medium">Due:</span> <span :class="ticket.sla_breached ? 'text-red-600 font-medium' : ''">{{ ticket.due_date ? new Date(ticket.due_date).toLocaleString('id') : '—' }}</span></div>
         <div><span class="font-medium">Dibuat:</span> {{ new Date(ticket.created_at).toLocaleString('id') }}</div>
         <div v-if="ticket.resolved_at"><span class="font-medium">Resolved:</span> {{ new Date(ticket.resolved_at).toLocaleString('id') }}</div>
+      </div>
+
+      <!-- Task & subsystem links -->
+      <div class="mt-4 flex flex-wrap gap-3 text-xs border-t border-slate-100 pt-4">
+        <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          Task: {{ ticket.task_title || ticket.task_id }}
+        </NuxtLink>
+        <span v-if="ticket.subsystem" class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+          {{ ticket.subsystem }}
+        </span>
       </div>
 
       <!-- Ticket-level Attachments -->
@@ -129,6 +157,61 @@
         </div>
       </div>
     </div>
+    <!-- Ticket references -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-slate-900">Referensi Ticket</h3>
+        <button @click="showLinkModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Link referensi
+        </button>
+      </div>
+
+      <div v-if="ticket.links?.length || ticket.backLinks?.length" class="space-y-2">
+        <div v-for="lnk in ticket.links" :key="lnk.id" class="flex items-center gap-2 text-sm">
+          <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{{ lnk.relation_type }}</span>
+          <NuxtLink :to="`/tickets/${lnk.referenced_ticket_id}`" class="text-indigo-600 hover:underline font-mono text-xs">{{ lnk.ref_ticket_number }}</NuxtLink>
+          <span class="text-slate-500 text-xs truncate">{{ lnk.ref_ticket_title }}</span>
+        </div>
+        <div v-for="bl in ticket.backLinks" :key="bl.id" class="flex items-center gap-2 text-sm">
+          <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">direferensi oleh</span>
+          <NuxtLink :to="`/tickets/${bl.ticket_id}`" class="text-indigo-600 hover:underline font-mono text-xs">{{ bl.new_ticket_number }}</NuxtLink>
+          <span class="text-slate-500 text-xs truncate">{{ bl.new_ticket_title }}</span>
+        </div>
+      </div>
+      <p v-else class="text-xs text-slate-400">Belum ada referensi ticket terkait.</p>
+    </div>
+
+    <!-- Link modal -->
+    <div v-if="showLinkModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showLinkModal = false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <h3 class="font-semibold mb-4">Link Ticket Referensi</h3>
+        <div class="space-y-3">
+          <input v-model="linkSearch" @input="searchTickets" type="text" placeholder="Cari ticket by judul / nomor…" class="input text-sm w-full" />
+          <div v-if="linkResults.length" class="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-xl p-2">
+            <button v-for="t in linkResults" :key="t.id" @click="selectLinkTicket(t)" class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-50 text-sm">
+              <span class="font-mono text-xs text-slate-400">{{ t.ticket_number }}</span>
+              <span class="flex-1 truncate">{{ t.title }}</span>
+            </button>
+          </div>
+          <div v-if="selectedLinkTicket" class="bg-indigo-50 rounded-lg p-3 text-sm">
+            <p>Link ke: <strong>{{ selectedLinkTicket.ticket_number }}</strong> — {{ selectedLinkTicket.title }}</p>
+            <AppSelect
+              v-model="linkType"
+              :options="[{ value: 'recurring', label: 'recurring' }, { value: 'duplicate', label: 'duplicate' }]"
+              placeholder="Tipe"
+              class="mt-2 w-40"
+            />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-4">
+          <button @click="showLinkModal = false" class="text-sm text-slate-600">Batal</button>
+          <button @click="submitLink" :disabled="!selectedLinkTicket || linkSaving" class="btn-primary text-sm">
+            {{ linkSaving ? 'Menyimpan…' : 'Simpan' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
   <div v-else class="flex items-center justify-center h-48 text-slate-400">Ticket tidak ditemukan</div>
 </template>
@@ -137,6 +220,12 @@
 definePageMeta({ middleware: 'auth' })
 const auth = useAuthStore()
 const tabs = useTabStore()
+const chatWidget = useChatWidgetStore()
+
+function openChat() {
+  if (!ticket.value) return
+  chatWidget.openTicket({ ticketId: ticket.value.id, ticketNumber: ticket.value.ticket_number, title: ticket.value.title })
+}
 const route = useRoute()
 const id = route.params.id
 
@@ -211,5 +300,44 @@ function timeAgo(d: string) {
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}j lalu`
   return `${Math.floor(h / 24)}h lalu`
+}
+
+// Ticket links
+const showLinkModal = ref(false)
+const linkSearch = ref('')
+const linkResults = ref<any[]>([])
+const selectedLinkTicket = ref<any>(null)
+const linkType = ref<'recurring' | 'duplicate'>('recurring')
+const linkSaving = ref(false)
+
+let linkSearchTimer: ReturnType<typeof setTimeout>
+function searchTickets() {
+  clearTimeout(linkSearchTimer)
+  linkSearchTimer = setTimeout(async () => {
+    if (!linkSearch.value.trim()) { linkResults.value = []; return }
+    const res = await $fetch<any>('/api/tickets', { query: { search: linkSearch.value } })
+    linkResults.value = (res.data || []).filter((t: any) => t.id !== Number(id)).slice(0, 10)
+  }, 300)
+}
+
+function selectLinkTicket(t: any) {
+  selectedLinkTicket.value = t
+  linkSearch.value = ''
+  linkResults.value = []
+}
+
+async function submitLink() {
+  if (!selectedLinkTicket.value) return
+  linkSaving.value = true
+  try {
+    await $fetch('/api/ticket-links', {
+      method: 'POST',
+      body: { ticket_id: Number(id), referenced_ticket_id: selectedLinkTicket.value.id, relation_type: linkType.value },
+    })
+    showLinkModal.value = false
+    selectedLinkTicket.value = null
+    linkType.value = 'recurring'
+    await refresh()
+  } finally { linkSaving.value = false }
 }
 </script>
