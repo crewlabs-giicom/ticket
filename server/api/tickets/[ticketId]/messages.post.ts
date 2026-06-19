@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const user = event.context.user
   if (!user) throw createError({ statusCode: 401 })
 
-  const ticketId = getRouterParam(event, 'id')
+  const ticketId = getRouterParam(event, 'ticketId')
   const body = await readBody(event)
   const message = body?.message?.trim()
   if (!message) throw createError({ statusCode: 400, statusMessage: 'Pesan tidak boleh kosong' })

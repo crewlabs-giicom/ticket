@@ -4,7 +4,7 @@ export default defineEventHandler(async (event) => {
   const user = event.context.user
   if (!user) throw createError({ statusCode: 401 })
 
-  const ticketId = getRouterParam(event, 'id')
+  const ticketId = getRouterParam(event, 'ticketId')
   const db = getDb()
 
   await db.execute(
