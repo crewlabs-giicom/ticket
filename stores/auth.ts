@@ -5,9 +5,9 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<any>(null)
   const loading = ref(false)
 
-  async function fetchMe() {
+  async function fetchMe(headers?: Record<string, string>) {
     try {
-      const res = await $fetch('/api/auth/me')
+      const res = await $fetch('/api/auth/me', { headers })
       user.value = (res as any).user
       if (user.value?.id) {
         const chatWidget = useChatWidgetStore()
