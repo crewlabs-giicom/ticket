@@ -72,6 +72,7 @@
 
 <script setup lang="ts">
 const chatWidget = useChatWidgetStore()
+const threadRef = ref<any>(null)
 
 const expandedTicket = computed(() =>
   chatWidget.openTickets.find(t => t.mode === 'expanded') || null
