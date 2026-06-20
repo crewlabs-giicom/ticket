@@ -1,13 +1,18 @@
 import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
+import { logActivity } from '../../utils/activity'
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event)
+  const user = requireAuth(event)
   const db = getDb()
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)
 
-  const allowed = ['title', 'description', 'status', 'position', 'assigned_to', 'due_date']
+  const [oldRows] = await db.execute('SELECT t.*, u.name as assigned_to_name FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to WHERE t.id = ?', [id]) as any[]
+  const old = (oldRows as any[])[0]
+  if (!old) throw createError({ statusCode: 404, message: 'Task not found' })
+
+  const allowed = ['title', 'description', 'status', 'position', 'assigned_to', 'due_date', 'system_menu_id']
   const sets: string[] = []
   const params: any[] = []
 
@@ -24,6 +29,36 @@ export default defineEventHandler(async (event) => {
 
   params.push(id)
   await db.execute(`UPDATE tasks SET ${sets.join(', ')}, updated_at = NOW() WHERE id = ?`, params)
+
+  if ('status' in body && body.status !== old.status) {
+    const LABELS: Record<string, string> = { backlog: 'Backlog', todo: 'Todo', in_progress: 'In Progress', review: 'Review', done: 'Done' }
+    await logActivity(db, {
+      entity_type: 'task', entity_id: Number(id), action: 'status_changed',
+      from_value: old.status, to_value: body.status,
+      label: `${user.name} mengubah status dari "${LABELS[old.status] ?? old.status}" ke "${LABELS[body.status] ?? body.status}"`,
+      user_id: user.id,
+    })
+  }
+
+  if ('assigned_to' in body && body.assigned_to !== old.assigned_to) {
+    if (body.assigned_to) {
+      const [uRows] = await db.execute('SELECT name FROM users WHERE id = ?', [body.assigned_to]) as any[]
+      const toName = (uRows as any[])[0]?.name ?? 'seseorang'
+      await logActivity(db, {
+        entity_type: 'task', entity_id: Number(id), action: 'assigned',
+        to_value: String(body.assigned_to),
+        label: `${user.name} menugaskan task ke ${toName}`,
+        user_id: user.id,
+      })
+    } else {
+      await logActivity(db, {
+        entity_type: 'task', entity_id: Number(id), action: 'unassigned',
+        from_value: old.assigned_to_name,
+        label: `${user.name} menghapus penugasan`,
+        user_id: user.id,
+      })
+    }
+  }
 
   const [rows] = await db.execute('SELECT * FROM tasks WHERE id = ?', [id])
   return (rows as any[])[0]

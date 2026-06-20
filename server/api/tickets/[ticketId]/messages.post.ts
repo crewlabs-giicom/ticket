@@ -8,8 +8,10 @@ export default defineEventHandler(async (event) => {
 
   const ticketId = getRouterParam(event, 'ticketId')
   const body = await readBody(event)
-  const message = body?.message?.trim()
-  if (!message) throw createError({ statusCode: 400, statusMessage: 'Pesan tidak boleh kosong' })
+  const message = body?.message?.trim() || ''
+  const attachments: Array<{ filename: string; original_name: string; mime_type: string; size: number }> = body?.attachments || []
+
+  if (!message && !attachments.length) throw createError({ statusCode: 400, statusMessage: 'Pesan tidak boleh kosong' })
 
   const db = getDb()
 
@@ -20,9 +22,18 @@ export default defineEventHandler(async (event) => {
 
   const [result] = await db.execute(
     'INSERT INTO ticket_messages (ticket_id, sender_id, message) VALUES (?, ?, ?)',
-    [ticketId, user.id, message]
+    [ticketId, user.id, message || null]
   )
   const insertId = (result as ResultSetHeader).insertId
+
+  if (attachments.length) {
+    for (const a of attachments) {
+      await db.execute(
+        'INSERT INTO ticket_message_attachments (message_id, filename, original_name, mime_type, size) VALUES (?, ?, ?, ?, ?)',
+        [insertId, a.filename, a.original_name, a.mime_type || null, a.size || null]
+      )
+    }
+  }
 
   const [rows] = await db.execute(`
     SELECT m.id, m.ticket_id, m.sender_id, m.message, m.read_at, m.created_at,
@@ -31,13 +42,22 @@ export default defineEventHandler(async (event) => {
     JOIN users u ON u.id = m.sender_id
     WHERE m.id = ?
   `, [insertId])
-  const newMessage = (rows as any[])[0]
+  const newMessage = (rows as any[])[0] as any
+
+  if (attachments.length) {
+    const [attRows] = await db.execute('SELECT * FROM ticket_message_attachments WHERE message_id = ?', [insertId])
+    newMessage.attachments = attRows
+  } else {
+    newMessage.attachments = []
+  }
 
   broadcastToAll('ticket_message:new', {
     ...newMessage,
     ticket_id: Number(ticketId),
     ticket_number: ticket.ticket_number,
     ticket_title: ticket.title,
+    created_by: ticket.created_by,
+    assigned_to: ticket.assigned_to,
   })
 
   return { data: newMessage }

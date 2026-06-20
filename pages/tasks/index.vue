@@ -189,7 +189,7 @@
     </div>
 
     <!-- Create task modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showCreateModal = false">
+    <div v-if="showCreateModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="() => { taskPasteImages.forEach(i => URL.revokeObjectURL(i.blobUrl)); taskPasteImages.length = 0; showCreateModal = false }">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
         <h2 class="text-lg font-semibold mb-4">New Task</h2>
         <div class="space-y-4">
@@ -207,7 +207,15 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea v-model="form.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Optional description"></textarea>
+            <textarea v-model="form.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Optional description (Ctrl+V untuk paste gambar)" @paste="handleTaskPaste"></textarea>
+            <!-- Paste image preview -->
+            <div v-if="taskPasteImages.length" class="flex flex-wrap gap-2 mt-2">
+              <div v-for="(img, i) in taskPasteImages" :key="i" class="relative group">
+                <img :src="img.blobUrl" class="w-14 h-14 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity" @click="openTaskPasteLightbox(i)" />
+                <button type="button" @click="removeTaskPasteImage(i)" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+              </div>
+              <p v-if="taskPasteUploading" class="text-[11px] text-indigo-500 self-center">Mengupload...</p>
+            </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -231,9 +239,17 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Due date</label>
             <input v-model="form.due_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
+          <div v-if="systemMenus.length">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Modul / Menu Sistem</label>
+            <AppSelect
+              v-model="form.system_menu_id"
+              :options="systemMenuOptions"
+              placeholder="— Tidak dipilih —"
+            />
+          </div>
         </div>
         <div class="flex justify-end gap-3 mt-6">
-          <button @click="showCreateModal = false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+          <button @click="() => { taskPasteImages.forEach(i => URL.revokeObjectURL(i.blobUrl)); taskPasteImages.length = 0; showCreateModal = false }" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
           <button @click="createTask" :disabled="creating" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50">
             {{ creating ? 'Creating…' : 'Create Task' }}
           </button>
@@ -283,7 +299,72 @@
             <p v-else class="text-xs text-gray-400">No tickets yet.</p>
           </div>
 
-          <div class="pt-2 flex gap-2">
+          <!-- Checklist -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-semibold text-gray-700">Checklist</h3>
+                <span v-if="selectedTask.checklist?.length" class="text-xs text-gray-400">
+                  {{ selectedTask.checklist.filter((i: any) => i.is_checked).length }}/{{ selectedTask.checklist.length }}
+                </span>
+              </div>
+            </div>
+            <!-- Progress bar -->
+            <div v-if="selectedTask.checklist?.length" class="w-full bg-gray-100 rounded-full h-1.5 mb-3">
+              <div class="bg-indigo-500 h-1.5 rounded-full transition-all" :style="{ width: `${Math.round(selectedTask.checklist.filter((i: any) => i.is_checked).length / selectedTask.checklist.length * 100)}%` }"></div>
+            </div>
+            <!-- Items -->
+            <div class="space-y-1.5 mb-2">
+              <div v-for="item in selectedTask.checklist" :key="item.id" class="flex items-center gap-2 group">
+                <input type="checkbox" :checked="item.is_checked" @change="toggleChecklist(item)" class="w-3.5 h-3.5 rounded accent-indigo-600 cursor-pointer flex-shrink-0" />
+                <span :class="['text-sm flex-1', item.is_checked ? 'line-through text-gray-400' : 'text-gray-700']">{{ item.title }}</span>
+                <button @click="deleteChecklistItem(item.id)" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-opacity text-xs leading-none">×</button>
+              </div>
+            </div>
+            <!-- Add item -->
+            <div class="flex gap-2">
+              <input v-model="newChecklistTitle" @keydown.enter.prevent="addChecklistItem" type="text" placeholder="Tambah poin..." class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+              <button @click="addChecklistItem" :disabled="!newChecklistTitle.trim()" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 disabled:opacity-40">Add</button>
+            </div>
+          </div>
+
+          <!-- Comments -->
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">Komentar</h3>
+            <div v-if="selectedTask.comments?.length" class="space-y-3 mb-3">
+              <div v-for="c in selectedTask.comments" :key="c.id" class="flex gap-2.5">
+                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">{{ c.user_name?.charAt(0).toUpperCase() }}</div>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-0.5">
+                    <span class="text-xs font-medium text-gray-800">{{ c.user_name }}</span>
+                    <span class="text-[10px] text-gray-400">{{ timeAgo(c.created_at) }}</span>
+                  </div>
+                  <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ c.message }}</p>
+                </div>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-400 mb-3">Belum ada komentar.</p>
+            <div class="flex gap-2">
+              <textarea v-model="newComment" rows="2" placeholder="Tulis komentar..." class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"></textarea>
+              <button @click="postComment" :disabled="!newComment.trim() || postingComment" class="text-xs bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-40 self-end">Post</button>
+            </div>
+          </div>
+
+          <!-- Activity History -->
+          <div v-if="selectedTask.history?.length">
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">Activity</h3>
+            <div class="space-y-2">
+              <div v-for="h in selectedTask.history" :key="h.id" class="flex gap-2.5 items-start">
+                <div class="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5 flex-shrink-0"></div>
+                <div class="flex-1">
+                  <p class="text-xs text-gray-600">{{ h.label }}</p>
+                  <p class="text-[10px] text-gray-400 mt-0.5">{{ timeAgo(h.created_at) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 flex gap-2 border-t border-gray-100">
             <button @click="deleteTask(selectedTask.id)" class="text-xs text-red-500 hover:text-red-700">Delete task</button>
           </div>
         </div>
@@ -332,6 +413,26 @@ const showCreateModal = ref(false)
 const creating = ref(false)
 const selectedTask = ref<any>(null)
 
+const systemMenus = ref<any[]>([])
+const systemMenuOptions = computed(() => {
+  const opts: any[] = [{ value: '', label: '— Tidak dipilih —' }]
+  const byModule: Record<string, any[]> = {}
+  for (const item of systemMenus.value) {
+    if (!byModule[item.module]) byModule[item.module] = []
+    byModule[item.module].push(item)
+  }
+  for (const [mod, items] of Object.entries(byModule)) {
+    opts.push({ group: mod })
+    for (const item of items) {
+      const label = item.type
+        ? `${mod} › ${item.type.charAt(0).toUpperCase() + item.type.slice(1)} › ${item.name}`
+        : mod
+      opts.push({ value: item.id, label })
+    }
+  }
+  return opts
+})
+
 const form = reactive({
   project_id: '',
   title: '',
@@ -339,7 +440,35 @@ const form = reactive({
   status: 'backlog',
   assigned_to: '',
   due_date: '',
+  system_menu_id: '',
 })
+
+const lb = useLightbox()
+const taskPasteImages = ref<Array<{ blobUrl: string; name: string; file: File }>>([])
+const taskPasteUploading = ref(false)
+
+function handleTaskPaste(e: ClipboardEvent) {
+  const items = Array.from(e.clipboardData?.items || []).filter(i => i.type.startsWith('image/'))
+  if (!items.length) return
+  e.preventDefault()
+  for (const item of items) {
+    const file = item.getAsFile()
+    if (file) {
+      const ext = item.type.split('/')[1] || 'png'
+      const name = `paste-${Date.now()}.${ext}`
+      taskPasteImages.value.push({ blobUrl: URL.createObjectURL(file), name, file })
+    }
+  }
+}
+
+function openTaskPasteLightbox(idx: number) {
+  lb.open(taskPasteImages.value.map(i => ({ url: i.blobUrl, name: i.name })), idx)
+}
+
+function removeTaskPasteImage(idx: number) {
+  URL.revokeObjectURL(taskPasteImages.value[idx].blobUrl)
+  taskPasteImages.value.splice(idx, 1)
+}
 
 // List mode: flat filtered tasks
 const filteredListTasks = computed(() => {
@@ -395,10 +524,15 @@ async function loadUsers() {
   staffUsers.value = all.filter((u: any) => u.role === 'staff' || u.role === 'admin')
 }
 
+async function loadSystemMenus() {
+  const res = await $fetch<any>('/api/system-menus')
+  systemMenus.value = res?.data || []
+}
+
 watch(filterProject, loadTasks)
 
 onMounted(async () => {
-  await Promise.all([loadTasks(), loadProjects(), loadUsers()])
+  await Promise.all([loadTasks(), loadProjects(), loadUsers(), loadSystemMenus()])
 })
 
 // Helpers
@@ -423,6 +557,8 @@ function isOverdue(d: string) {
 }
 
 async function openTask(task: any) {
+  newChecklistTitle.value = ''
+  newComment.value = ''
   const detail = await $fetch<any>(`/api/tasks/${task.id}`)
   selectedTask.value = detail
 }
@@ -437,19 +573,34 @@ async function createTask() {
   if (!form.project_id || !form.title.trim()) return
   creating.value = true
   try {
+    let description = form.description || ''
+    if (taskPasteImages.value.length) {
+      taskPasteUploading.value = true
+      for (const img of taskPasteImages.value) {
+        const fd = new FormData()
+        fd.append('file', img.file, img.name)
+        const r = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+        description += `\n\n![${img.name}](/uploads/${r.data.filename})`
+      }
+      taskPasteImages.value.forEach(i => URL.revokeObjectURL(i.blobUrl))
+      taskPasteImages.value = []
+      taskPasteUploading.value = false
+    }
     await performAction('task', 'create', `tmp_${Date.now()}`, {
       project_id: Number(form.project_id),
       title: form.title.trim(),
-      description: form.description || undefined,
+      description: description || undefined,
       status: form.status,
       assigned_to: form.assigned_to ? Number(form.assigned_to) : undefined,
       due_date: form.due_date || undefined,
+      system_menu_id: form.system_menu_id ? Number(form.system_menu_id) : undefined,
     })
     await loadTasks()
     showCreateModal.value = false
-    Object.assign(form, { project_id: '', title: '', description: '', status: 'backlog', assigned_to: '', due_date: '' })
+    Object.assign(form, { project_id: '', title: '', description: '', status: 'backlog', assigned_to: '', due_date: '', system_menu_id: '' })
   } finally {
     creating.value = false
+    taskPasteUploading.value = false
   }
 }
 
@@ -471,6 +622,54 @@ async function deleteTask(id: number) {
   await performAction('task', 'delete', id, {})
   selectedTask.value = null
   await loadTasks()
+}
+
+// Checklist
+const newChecklistTitle = ref('')
+async function addChecklistItem() {
+  if (!newChecklistTitle.value.trim() || !selectedTask.value) return
+  const r = await $fetch<any>(`/api/tasks/${selectedTask.value.id}/checklist`, { method: 'POST', body: { title: newChecklistTitle.value.trim() } })
+  selectedTask.value.checklist = [...(selectedTask.value.checklist || []), r.data]
+  newChecklistTitle.value = ''
+}
+async function toggleChecklist(item: any) {
+  const r = await $fetch<any>(`/api/tasks/${selectedTask.value!.id}/checklist/${item.id}`, { method: 'PUT', body: { is_checked: !item.is_checked } })
+  const idx = selectedTask.value!.checklist.findIndex((i: any) => i.id === item.id)
+  if (idx >= 0) selectedTask.value!.checklist[idx] = r.data
+  // refresh history
+  const hist = await $fetch<any>(`/api/tasks/${selectedTask.value!.id}/history`)
+  selectedTask.value!.history = hist.data
+}
+async function deleteChecklistItem(itemId: number) {
+  await $fetch(`/api/tasks/${selectedTask.value!.id}/checklist/${itemId}`, { method: 'DELETE' })
+  selectedTask.value!.checklist = selectedTask.value!.checklist.filter((i: any) => i.id !== itemId)
+}
+
+// Comments
+const newComment = ref('')
+const postingComment = ref(false)
+async function postComment() {
+  if (!newComment.value.trim() || !selectedTask.value) return
+  postingComment.value = true
+  try {
+    const r = await $fetch<any>(`/api/tasks/${selectedTask.value.id}/comments`, { method: 'POST', body: { message: newComment.value.trim() } })
+    selectedTask.value.comments = [...(selectedTask.value.comments || []), r.data]
+    newComment.value = ''
+    const hist = await $fetch<any>(`/api/tasks/${selectedTask.value.id}/history`)
+    selectedTask.value.history = hist.data
+  } finally {
+    postingComment.value = false
+  }
+}
+
+function timeAgo(d: string) {
+  const diff = Date.now() - new Date(d).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'baru saja'
+  if (m < 60) return `${m}m lalu`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}j lalu`
+  return `${Math.floor(h / 24)}h lalu`
 }
 
 function createTicketFromTask(task: any) {

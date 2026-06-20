@@ -162,6 +162,18 @@ async function migrate(db: mysql.Pool) {
   `)
 
   await db.execute(`
+    CREATE TABLE IF NOT EXISTS system_menus (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      module VARCHAR(100) NOT NULL,
+      type ENUM('master','transaction','report') NULL,
+      name VARCHAR(200) NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      order_index INT NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS project_members (
       project_id INT NOT NULL,
       user_id INT NOT NULL,
@@ -216,6 +228,37 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ticket_message_attachments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      message_id INT NOT NULL,
+      filename VARCHAR(255) NOT NULL,
+      original_name VARCHAR(255) NOT NULL,
+      mime_type VARCHAR(100),
+      size INT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (message_id) REFERENCES ticket_messages(id) ON DELETE CASCADE
+    )
+  `)
+
+  // Allow message to be empty (when only attachments sent)
+  try { await db.execute(`ALTER TABLE ticket_messages MODIFY COLUMN message TEXT NULL`) } catch {}
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ticket_chat_transcripts (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ticket_id INT NOT NULL UNIQUE,
+      transcript JSON NOT NULL,
+      message_count INT NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+    )
+  `)
+
+  // Add system_menu_id to tickets and tasks if not present
+  try { await db.execute(`ALTER TABLE tickets ADD COLUMN system_menu_id INT NULL REFERENCES system_menus(id)`) } catch {}
+  try { await db.execute(`ALTER TABLE tasks ADD COLUMN system_menu_id INT NULL REFERENCES system_menus(id)`) } catch {}
+
   // Add task_id and subsystem to tickets if not present
   try {
     await db.execute(`ALTER TABLE tickets ADD COLUMN task_id INT REFERENCES tasks(id)`)
@@ -223,6 +266,48 @@ async function migrate(db: mysql.Pool) {
   try {
     await db.execute(`ALTER TABLE tickets ADD COLUMN subsystem VARCHAR(100)`)
   } catch {}
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS task_checklist_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      task_id INT NOT NULL,
+      title VARCHAR(500) NOT NULL,
+      is_checked TINYINT(1) NOT NULL DEFAULT 0,
+      order_index INT NOT NULL DEFAULT 0,
+      created_by INT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS task_comments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      task_id INT NOT NULL,
+      user_id INT NOT NULL,
+      message TEXT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS activity_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      entity_type ENUM('ticket','task') NOT NULL,
+      entity_id INT NOT NULL,
+      action VARCHAR(100) NOT NULL,
+      from_value VARCHAR(500),
+      to_value VARCHAR(500),
+      label VARCHAR(500) NOT NULL,
+      user_id INT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+      INDEX idx_entity (entity_type, entity_id)
+    )
+  `)
 }
 
 async function seed(db: mysql.Pool) {

@@ -21,5 +21,24 @@ export default defineEventHandler(async (event) => {
     ORDER BY m.created_at ASC
   `, [ticketId])
 
-  return { data: messages }
+  const msgList = messages as any[]
+
+  if (msgList.length) {
+    const ids = msgList.map(m => m.id)
+    const placeholders = ids.map(() => '?').join(',')
+    const [attRows] = await db.execute(
+      `SELECT * FROM ticket_message_attachments WHERE message_id IN (${placeholders}) ORDER BY id ASC`,
+      ids
+    )
+    const attMap: Record<number, any[]> = {}
+    for (const a of attRows as any[]) {
+      if (!attMap[a.message_id]) attMap[a.message_id] = []
+      attMap[a.message_id].push(a)
+    }
+    for (const msg of msgList) {
+      msg.attachments = attMap[msg.id] || []
+    }
+  }
+
+  return { data: msgList }
 })

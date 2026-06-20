@@ -1,5 +1,6 @@
 import { getDb } from '../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../utils/sse'
+import { logActivity } from '../../utils/activity'
 import type { ResultSetHeader } from 'mysql2'
 
 export default defineEventHandler(async (event) => {
@@ -53,7 +54,7 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'POST') {
     const body = await readBody(event)
-    const { title, description, project_id, priority_id, status_id, assigned_to, due_date, task_id, subsystem } = body
+    const { title, description, project_id, priority_id, status_id, assigned_to, due_date, task_id, subsystem, system_menu_id } = body
 
     if (!title || !project_id || !priority_id || !status_id) {
       throw createError({ statusCode: 400, statusMessage: 'Field tidak lengkap' })
@@ -85,9 +86,9 @@ export default defineEventHandler(async (event) => {
       await conn.beginTransaction()
 
       const [r] = await conn.execute(
-        `INSERT INTO tickets (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, task_id, subsystem)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [ticketNumber, title, description || '', project_id, priority_id, status_id, user.id, assigned_to || null, finalDueDate, task_id || null, subsystem || null]
+        `INSERT INTO tickets (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, task_id, subsystem, system_menu_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [ticketNumber, title, description || '', project_id, priority_id, status_id, user.id, assigned_to || null, finalDueDate, task_id || null, subsystem || null, system_menu_id || null]
       )
       ticketId = (r as ResultSetHeader).insertId
 
@@ -132,6 +133,13 @@ export default defineEventHandler(async (event) => {
         [su.id, 'Ticket baru dibuat', `${ticketNumber}: ${title}`, 'ticket_created', ticketId!]
       )
     }
+
+    await logActivity(db, {
+      entity_type: 'ticket', entity_id: ticketId!,
+      action: 'created',
+      label: `Ticket dibuat oleh ${user.name}`,
+      user_id: user.id,
+    })
 
     broadcastToAll('ticket_created', { ticket_number: ticketNumber, title, id: ticketId!, created_by: user.id })
 

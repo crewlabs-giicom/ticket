@@ -1,5 +1,6 @@
 import { getDb } from '../../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../../utils/sse'
+import { logActivity } from '../../../utils/activity'
 import type { ResultSetHeader } from 'mysql2'
 
 export default defineEventHandler(async (event) => {
@@ -67,6 +68,12 @@ export default defineEventHandler(async (event) => {
         broadcastToUser(uid, 'notification', { title: 'Response baru', message: `${user.name} membalas ${ticket.ticket_number}`, type: 'new_response', ticket_id: Number(ticketId) })
       }
     }
+
+    await logActivity(db, {
+      entity_type: 'ticket', entity_id: Number(ticketId), action: isInternal ? 'internal_note' : 'commented',
+      label: isInternal ? `${user.name} menambahkan catatan internal` : `${user.name} menambahkan balasan`,
+      user_id: user.id,
+    })
 
     broadcastToAll('ticket_response', { ticket_id: Number(ticketId), ticket_number: ticket.ticket_number })
 

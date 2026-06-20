@@ -70,17 +70,38 @@
       <div v-if="ticket.attachments?.length" class="mt-4 border-t border-slate-100 pt-4">
         <p class="text-xs font-semibold text-slate-600 mb-2">Lampiran ({{ ticket.attachments.length }})</p>
         <div class="flex flex-wrap gap-2">
-          <a v-for="a in ticket.attachments" :key="a.id" :href="`/uploads/${a.filename}`" target="_blank" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700">
-            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-            {{ a.original_name }}
-          </a>
+          <template v-for="(a, i) in ticket.attachments" :key="a.id">
+            <button v-if="isImage(a.mime_type)" @click="openLightbox(ticketImages, ticketImageIndex(i))" class="group relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-indigo-400 transition-colors shrink-0">
+              <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <svg class="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+              </div>
+            </button>
+            <a v-else :href="`/uploads/${a.filename}`" target="_blank" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700">
+              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+              {{ a.original_name }}
+            </a>
+          </template>
         </div>
       </div>
     </div>
 
     <!-- Chat Responses -->
     <div class="card p-5">
-      <h3 class="text-sm font-semibold text-slate-900 mb-4">Diskusi ({{ ticket.responses?.filter((r:any) => !r.is_internal || auth.isStaffOrAdmin).length || 0 }})</h3>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-semibold text-slate-900">Diskusi ({{ ticket.responses?.filter((r:any) => !r.is_internal || auth.isStaffOrAdmin).length || 0 }})</h3>
+        <button
+          v-if="ticket.status_is_resolved && transcriptData"
+          @click="showTranscriptModal = true"
+          class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+            <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z" clip-rule="evenodd"/>
+            <path d="M15 7h1a2 2 0 012 2v5.5a1.5 1.5 0 01-3 0V7z"/>
+          </svg>
+          Transcript Chat ({{ transcriptData.message_count }} pesan)
+        </button>
+      </div>
 
       <div class="space-y-3">
         <div v-for="r in ticket.responses" :key="r.id" :class="['flex gap-2', r.user_id === auth.user?.id ? 'flex-row-reverse' : 'flex-row']">
@@ -112,14 +133,20 @@
 
               <!-- Response attachments -->
               <div v-if="r.attachments?.length" :class="['mt-2 flex flex-wrap gap-1.5', r.user_id === auth.user?.id ? 'justify-end' : '']">
-                <a v-for="a in r.attachments" :key="a.id" :href="`/uploads/${a.filename}`" target="_blank"
-                  :class="['flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-colors',
-                    r.user_id === auth.user?.id
-                      ? 'bg-white/20 hover:bg-white/30 text-white'
-                      : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-700']">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                  <span class="max-w-[120px] truncate">{{ a.original_name }}</span>
-                </a>
+                <template v-for="a in r.attachments" :key="a.id">
+                  <button v-if="isImage(a.mime_type)" @click="openLightbox(allResponseImages, allResponseImageIndex(a.id))" class="group relative w-14 h-14 rounded-lg overflow-hidden border border-white/30 hover:border-white/60 transition-colors shrink-0">
+                    <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  </button>
+                  <a v-else :href="`/uploads/${a.filename}`" target="_blank"
+                    :class="['flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-colors',
+                      r.user_id === auth.user?.id
+                        ? 'bg-white/20 hover:bg-white/30 text-white'
+                        : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-700']">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                    <span class="max-w-[120px] truncate">{{ a.original_name }}</span>
+                  </a>
+                </template>
               </div>
             </div>
           </div>
@@ -134,14 +161,22 @@
             <span class="text-xs text-slate-600">Internal Note (hanya staff)</span>
           </label>
         </div>
-        <textarea v-model="reply" :class="['input min-h-[80px] resize-none', isInternal && 'border-amber-300 bg-amber-50/50']" :placeholder="isInternal ? 'Tulis catatan internal...' : 'Tulis balasan...'" />
+        <textarea v-model="reply" :class="['input min-h-[80px] resize-none', isInternal && 'border-amber-300 bg-amber-50/50']" :placeholder="isInternal ? 'Tulis catatan internal... (Ctrl+V untuk paste gambar)' : 'Tulis balasan... (Ctrl+V untuk paste gambar)'" @paste="handleReplyPaste" />
 
         <!-- Reply attachments preview -->
         <div v-if="replyFiles.length" class="flex flex-wrap gap-2 mt-2">
-          <div v-for="(f, i) in replyFiles" :key="i" class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
-            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            <span class="max-w-[120px] truncate">{{ f.original_name }}</span>
-            <button type="button" @click="replyFiles.splice(i, 1)" class="text-slate-400 hover:text-red-500 ml-0.5">×</button>
+          <div v-for="(f, i) in replyFiles" :key="i" class="relative group">
+            <template v-if="f.mime_type?.startsWith('image/')">
+              <img :src="`/uploads/${f.filename}`" class="w-14 h-14 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" @click="openReplyImageLightbox(i)" />
+              <button type="button" @click="replyFiles.splice(i, 1)" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+            </template>
+            <template v-else>
+              <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
+                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <span class="max-w-[120px] truncate">{{ f.original_name }}</span>
+                <button type="button" @click="replyFiles.splice(i, 1)" class="text-slate-400 hover:text-red-500 ml-0.5">×</button>
+              </div>
+            </template>
           </div>
         </div>
         <p v-if="uploadError" class="text-xs text-red-600 mt-1">{{ uploadError }}</p>
@@ -182,6 +217,20 @@
       <p v-else class="text-xs text-slate-400">Belum ada referensi ticket terkait.</p>
     </div>
 
+    <!-- Activity History -->
+    <div v-if="ticket.history?.length" class="card p-5">
+      <h3 class="text-sm font-semibold text-slate-900 mb-3">Activity</h3>
+      <div class="space-y-3">
+        <div v-for="h in ticket.history" :key="h.id" class="flex gap-3 items-start">
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 flex-shrink-0 ring-4 ring-white"></div>
+          <div class="flex-1 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
+            <p class="text-xs text-slate-700">{{ h.label }}</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">{{ timeAgo(h.created_at) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Link modal -->
     <div v-if="showLinkModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showLinkModal = false">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
@@ -212,6 +261,48 @@
         </div>
       </div>
     </div>
+    <!-- Transcript Chat Modal -->
+    <div v-if="showTranscriptModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showTranscriptModal = false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 flex flex-col" style="max-height: 80vh;">
+        <!-- Modal header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+          <div>
+            <h3 class="font-semibold text-slate-900 text-sm">Transcript Chat</h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              {{ transcriptData?.message_count }} pesan · Ticket ditutup {{ transcriptData ? new Date(transcriptData.created_at).toLocaleString('id') : '' }}
+            </p>
+          </div>
+          <button @click="showTranscriptModal = false" class="text-slate-400 hover:text-slate-600 p-1 rounded transition">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">
+              <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/>
+            </svg>
+          </button>
+        </div>
+        <!-- Messages -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          <div v-if="!transcriptData?.transcript?.length" class="text-center text-sm text-slate-400 py-8">Tidak ada riwayat chat.</div>
+          <div
+            v-for="(msg, i) in transcriptData?.transcript"
+            :key="i"
+            class="flex gap-2 flex-row"
+          >
+            <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 bg-slate-200 text-slate-600">
+              {{ msg.sender_name?.split(' ').slice(0,2).map((w:string) => w[0]).join('').toUpperCase() || '?' }}
+            </div>
+            <div class="flex flex-col max-w-[75%] items-start">
+              <div class="flex items-center gap-1.5 mb-0.5">
+                <span class="text-[11px] font-semibold text-slate-700">{{ msg.sender_name }}</span>
+                <span v-if="msg.role !== 'customer'" class="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 rounded">{{ msg.role }}</span>
+              </div>
+              <div class="rounded-2xl rounded-tl-sm px-3 py-2 text-sm break-words bg-slate-100 text-slate-800">
+                {{ msg.message }}
+              </div>
+              <span class="text-[10px] text-slate-400 mt-0.5">{{ new Date(msg.created_at).toLocaleString('id') }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div v-else class="flex items-center justify-center h-48 text-slate-400">Ticket tidak ditemukan</div>
 </template>
@@ -221,6 +312,36 @@ definePageMeta({ middleware: 'auth' })
 const auth = useAuthStore()
 const tabs = useTabStore()
 const chatWidget = useChatWidgetStore()
+const lb = useLightbox()
+
+function isImage(mime?: string) { return !!mime?.startsWith('image/') }
+
+const ticketImages = computed(() =>
+  (ticket.value?.attachments || []).filter((a: any) => isImage(a.mime_type))
+    .map((a: any) => ({ url: `/uploads/${a.filename}`, name: a.original_name }))
+)
+function ticketImageIndex(rawIdx: number) {
+  const imgs = (ticket.value?.attachments || []).filter((a: any) => isImage(a.mime_type))
+  return imgs.findIndex((_: any, i: number) => i === rawIdx)
+}
+
+const allResponseImages = computed(() => {
+  const imgs: Array<{ url: string; name: string; id: number }> = []
+  for (const r of (ticket.value?.responses || [])) {
+    for (const a of (r.attachments || [])) {
+      if (isImage(a.mime_type)) imgs.push({ url: `/uploads/${a.filename}`, name: a.original_name, id: a.id })
+    }
+  }
+  return imgs
+})
+function allResponseImageIndex(attachmentId: number) {
+  return allResponseImages.value.findIndex(i => i.id === attachmentId)
+}
+
+function openLightbox(images: any[], index: number) {
+  if (index < 0) return
+  lb.open(images.map((i: any) => ({ url: i.url, name: i.name })), index)
+}
 
 function openChat() {
   if (!ticket.value) return
@@ -239,6 +360,17 @@ const staff = computed(() => ((ud.value as any)?.data || []).filter((u: any) => 
 
 const editStatus = ref(ticket.value?.status_id)
 const editAssigned = ref(ticket.value?.assigned_to || '')
+
+const showTranscriptModal = ref(false)
+const transcriptData = ref<any>(null)
+
+watchEffect(async () => {
+  if (ticket.value?.status_is_resolved) {
+    const res = await $fetch(`/api/tickets/${id}/transcript`) as any
+    transcriptData.value = res.data
+  }
+})
+
 const reply = ref('')
 const isInternal = ref(false)
 const sending = ref(false)
@@ -246,6 +378,45 @@ const uploading = ref(false)
 const uploadError = ref('')
 const replyFiles = ref<Array<{ filename: string; original_name: string; mime_type: string; size: number }>>([])
 const fileInput = ref<HTMLInputElement>()
+
+function openReplyImageLightbox(fileIndex: number) {
+  const images = replyFiles.value
+    .filter(f => f.mime_type?.startsWith('image/'))
+    .map(f => ({ url: `/uploads/${f.filename}`, name: f.original_name }))
+  let imgIdx = 0
+  let count = 0
+  for (let i = 0; i <= fileIndex; i++) {
+    if (replyFiles.value[i]?.mime_type?.startsWith('image/')) {
+      imgIdx = count
+      count++
+    }
+  }
+  lb.open(images, imgIdx)
+}
+
+async function handleReplyPaste(e: ClipboardEvent) {
+  const items = Array.from(e.clipboardData?.items || []).filter(i => i.type.startsWith('image/'))
+  if (!items.length) return
+  e.preventDefault()
+  uploading.value = true
+  uploadError.value = ''
+  try {
+    for (const item of items) {
+      const file = item.getAsFile()
+      if (file) {
+        const ext = item.type.split('/')[1] || 'png'
+        const fd = new FormData()
+        fd.append('file', file, `paste-${Date.now()}.${ext}`)
+        const r = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+        replyFiles.value.push(r.data)
+      }
+    }
+  } catch (err: any) {
+    uploadError.value = err?.data?.statusMessage || 'Gagal mengupload gambar'
+  } finally {
+    uploading.value = false
+  }
+}
 
 onMounted(() => {
   tabs.clearUnread(Number(id))

@@ -1,5 +1,6 @@
 import { getDb } from '../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../utils/sse'
+import { logActivity } from '../../utils/activity'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -76,7 +77,12 @@ export default defineEventHandler(async (event) => {
       WHERE tl.referenced_ticket_id = ?
     `, [id])
 
-    return { success: true, data: { ...ticket, responses: responsesWithAttachments, attachments, links, backLinks } }
+    const [historyRows] = await db.execute(
+      `SELECT al.*, u.name as user_name FROM activity_logs al LEFT JOIN users u ON u.id = al.user_id WHERE al.entity_type = 'ticket' AND al.entity_id = ? ORDER BY al.created_at ASC`,
+      [id]
+    )
+
+    return { success: true, data: { ...ticket, responses: responsesWithAttachments, attachments, links, backLinks, history: historyRows } }
   }
 
   if (event.method === 'PUT') {
@@ -95,7 +101,23 @@ export default defineEventHandler(async (event) => {
     if (status_id && status_id !== old.status_id) {
       const [statusRows] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id = ?', [status_id])
       const newStatus = (statusRows as any[])[0]
-      if (newStatus?.is_resolved && !old.resolved_at) resolved_at = new Date().toISOString().slice(0, 19).replace('T', ' ')
+      if (newStatus?.is_resolved && !old.resolved_at) {
+        resolved_at = new Date().toISOString().slice(0, 19).replace('T', ' ')
+        const [msgs] = await db.execute(`
+          SELECT tm.message, tm.created_at, u.name as sender_name, u.role
+          FROM ticket_messages tm
+          JOIN users u ON u.id = tm.sender_id
+          WHERE tm.ticket_id = ?
+          ORDER BY tm.created_at ASC
+        `, [id])
+        if ((msgs as any[]).length > 0) {
+          await db.execute(
+            'INSERT INTO ticket_chat_transcripts (ticket_id, transcript, message_count) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE transcript=VALUES(transcript), message_count=VALUES(message_count)',
+            [id, JSON.stringify(msgs), (msgs as any[]).length]
+          )
+          await db.execute('DELETE FROM ticket_messages WHERE ticket_id = ?', [id])
+        }
+      }
     }
 
     await db.execute(`
@@ -109,12 +131,53 @@ export default defineEventHandler(async (event) => {
       due_date || old.due_date, sla_breached, resolved_at, id
     ])
 
+    if (status_id && status_id !== old.status_id) {
+      const [oldStatusRows] = await db.execute('SELECT name FROM ticket_statuses WHERE id = ?', [old.status_id]) as any[]
+      const [newStatusRows] = await db.execute('SELECT name FROM ticket_statuses WHERE id = ?', [status_id]) as any[]
+      const oldStatusName = (oldStatusRows as any[])[0]?.name ?? old.status_id
+      const newStatusName = (newStatusRows as any[])[0]?.name ?? status_id
+      await logActivity(db, {
+        entity_type: 'ticket', entity_id: Number(id), action: 'status_changed',
+        from_value: String(old.status_id), to_value: String(status_id),
+        label: `${user?.name ?? 'System'} mengubah status dari "${oldStatusName}" ke "${newStatusName}"`,
+        user_id: user?.id,
+      })
+      if (resolved_at && !old.resolved_at) {
+        await logActivity(db, {
+          entity_type: 'ticket', entity_id: Number(id), action: 'resolved',
+          label: `Ticket diselesaikan oleh ${user?.name ?? 'System'}`,
+          user_id: user?.id,
+        })
+      }
+    }
+
     if (assigned_to && assigned_to !== old.assigned_to) {
+      const [toUserRows] = await db.execute('SELECT name FROM users WHERE id = ?', [assigned_to]) as any[]
+      const toName = (toUserRows as any[])[0]?.name ?? 'seseorang'
+      await logActivity(db, {
+        entity_type: 'ticket', entity_id: Number(id), action: 'assigned',
+        to_value: String(assigned_to),
+        label: `${user?.name ?? 'System'} menugaskan ticket ke ${toName}`,
+        user_id: user?.id,
+      })
       await db.execute(
         'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
         [assigned_to, 'Ticket di-assign ke kamu', `${old.ticket_number}: ${old.title}`, 'ticket_assigned', id]
       )
       broadcastToUser(assigned_to, 'notification', { title: 'Ticket di-assign ke kamu', message: `${old.ticket_number}: ${old.title}`, type: 'ticket_assigned', ticket_id: Number(id) })
+    }
+
+    if (priority_id && priority_id !== old.priority_id) {
+      const [oldPriRows] = await db.execute('SELECT name FROM priorities WHERE id = ?', [old.priority_id]) as any[]
+      const [newPriRows] = await db.execute('SELECT name FROM priorities WHERE id = ?', [priority_id]) as any[]
+      const oldPriName = (oldPriRows as any[])[0]?.name ?? old.priority_id
+      const newPriName = (newPriRows as any[])[0]?.name ?? priority_id
+      await logActivity(db, {
+        entity_type: 'ticket', entity_id: Number(id), action: 'priority_changed',
+        from_value: String(old.priority_id), to_value: String(priority_id),
+        label: `${user?.name ?? 'System'} mengubah prioritas dari "${oldPriName}" ke "${newPriName}"`,
+        user_id: user?.id,
+      })
     }
 
     broadcastToAll('ticket_updated', { id: Number(id), ticket_number: old.ticket_number })

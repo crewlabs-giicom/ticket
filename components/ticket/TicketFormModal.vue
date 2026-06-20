@@ -9,7 +9,6 @@
         <button @click="$emit('close')" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
       <form @submit.prevent="submit" class="p-6 space-y-4">
-        <div><label class="label">Judul <span class="text-red-500">*</span></label><input v-model="form.title" class="input" placeholder="Deskripsi singkat masalah" required /></div>
         <div><label class="label">Project <span class="text-red-500">*</span></label>
           <AppSelect
             v-model="form.project_id"
@@ -25,37 +24,41 @@
               placeholder="Priority"
             />
           </div>
-          <div><label class="label">Status</label>
+          <div>
+            <label class="label">Subsystem</label>
             <AppSelect
-              v-model="form.status_id"
-              :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
-              placeholder="Status"
+              v-model="form.subsystem"
+              :options="[{ value: '', label: '— Pilih —' }, ...SUBSYSTEMS.map(s => ({ value: s, label: s }))]"
+              placeholder="— Pilih —"
             />
           </div>
         </div>
+        <div v-if="systemMenus.length">
+          <label class="label">Modul / Menu Sistem</label>
+          <AppSelect
+            v-model="form.system_menu_id"
+            :options="systemMenuOptions"
+            placeholder="— Tidak dipilih —"
+          />
+        </div>
+
         <div>
-          <label class="label">Subsystem</label>
-          <AppSelect
-            v-model="form.subsystem"
-            :options="[{ value: '', label: '— Pilih subsystem —' }, ...SUBSYSTEMS.map(s => ({ value: s, label: s }))]"
-            placeholder="— Pilih subsystem —"
+          <label class="label">Deskripsi</label>
+          <textarea
+            v-model="form.description"
+            class="input min-h-[120px] resize-none"
+            placeholder="Jelaskan masalah secara detail... (Ctrl+V untuk paste gambar)"
+            @paste="handlePaste"
           />
+          <p v-if="form.title" class="text-[11px] text-slate-400 mt-1">Judul: <span class="text-slate-600">{{ form.title }}</span></p>
         </div>
-        <div v-if="auth.isStaffOrAdmin"><label class="label">Assign ke</label>
-          <AppSelect
-            v-model="form.assigned_to"
-            :options="[{ value: '', label: 'Pilih staff' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Pilih staff"
-          />
-        </div>
-        <div><label class="label">Deskripsi</label><textarea v-model="form.description" class="input min-h-[100px] resize-none" placeholder="Jelaskan masalah secara detail..." /></div>
 
         <!-- Attachment upload -->
         <div>
           <label class="label">Lampiran</label>
           <label class="flex items-center gap-2 cursor-pointer px-3 py-2 border-2 border-dashed border-slate-200 rounded-xl hover:border-primary-400 hover:bg-primary-50/50 transition-colors">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-            <span class="text-xs text-slate-500">{{ uploading ? 'Mengupload...' : 'Pilih file (maks. 10MB)' }}</span>
+            <span class="text-xs text-slate-500">{{ uploading ? 'Mengupload...' : 'Pilih file atau paste gambar (maks. 10MB)' }}</span>
             <input type="file" multiple class="hidden" :disabled="uploading" @change="handleFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
           </label>
           <div v-if="uploadedFiles.length" class="mt-2 flex flex-wrap gap-2">
@@ -92,11 +95,30 @@ const emit = defineEmits(['close', 'created'])
 const { data: pd } = await useFetch('/api/priorities')
 const { data: sd } = await useFetch('/api/statuses')
 const { data: prd } = await useFetch('/api/projects')
-const { data: ud } = await useFetch('/api/users')
+const { data: smd } = await useFetch('/api/system-menus')
 const priorities = computed(() => (pd.value as any)?.data || [])
 const statuses = computed(() => (sd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data?.filter((p: any) => p.is_active) || [])
-const staff = computed(() => ((ud.value as any)?.data || []).filter((u: any) => ['staff','admin'].includes(u.role) && u.is_active))
+const systemMenus = computed(() => (smd.value as any)?.data || [])
+
+const systemMenuOptions = computed(() => {
+  const opts: any[] = [{ value: '', label: '— Tidak dipilih —' }]
+  const byModule: Record<string, any[]> = {}
+  for (const item of systemMenus.value) {
+    if (!byModule[item.module]) byModule[item.module] = []
+    byModule[item.module].push(item)
+  }
+  for (const [mod, items] of Object.entries(byModule)) {
+    opts.push({ group: mod })
+    for (const item of items) {
+      const label = item.type
+        ? `${mod} › ${item.type.charAt(0).toUpperCase() + item.type.slice(1)} › ${item.name}`
+        : mod
+      opts.push({ value: item.id, label })
+    }
+  }
+  return opts
+})
 
 const form = reactive({
   title: props.prefillTitle || '',
@@ -104,10 +126,15 @@ const form = reactive({
   project_id: props.projectId ? String(props.projectId) : '',
   priority_id: priorities.value[0]?.id || '',
   status_id: statuses.value[0]?.id || '',
-  assigned_to: '',
   subsystem: '',
+  system_menu_id: '',
 })
 const taskId = computed(() => props.taskId)
+
+watch(() => form.description, (val) => {
+  const first = val.trim().split('\n')[0].slice(0, 80).trim()
+  form.title = first || 'Tanpa judul'
+})
 
 const loading = ref(false)
 const error = ref('')
@@ -135,10 +162,38 @@ async function handleFiles(e: Event) {
   }
 }
 
+async function handlePaste(e: ClipboardEvent) {
+  const items = Array.from(e.clipboardData?.items || [])
+  const imageItems = items.filter(item => item.type.startsWith('image/'))
+  if (!imageItems.length) return
+  e.preventDefault()
+  uploading.value = true
+  uploadError.value = ''
+  try {
+    for (const item of imageItems) {
+      const file = item.getAsFile()
+      if (!file) continue
+      const ext = item.type.split('/')[1] || 'png'
+      const fd = new FormData()
+      fd.append('file', file, `paste-${Date.now()}.${ext}`)
+      const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+      uploadedFiles.value.push(res.data)
+    }
+  } catch {
+    uploadError.value = 'Gagal mengupload gambar paste'
+  } finally {
+    uploading.value = false
+  }
+}
+
 async function submit() {
   error.value = ''
   if (!form.project_id || !form.priority_id || !form.status_id) {
-    error.value = 'Project, priority, dan status wajib diisi'
+    error.value = 'Project dan priority wajib diisi'
+    return
+  }
+  if (!form.description.trim()) {
+    error.value = 'Deskripsi wajib diisi'
     return
   }
   loading.value = true

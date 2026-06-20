@@ -27,5 +27,22 @@ export default defineEventHandler(async (event) => {
     [id]
   )
 
-  return { ...task, tickets }
+  const [checklist] = await db.execute(
+    'SELECT * FROM task_checklist_items WHERE task_id = ? ORDER BY order_index, id',
+    [id]
+  )
+
+  const [comments] = await db.execute(
+    `SELECT tc.*, u.name as user_name, u.role as user_role
+     FROM task_comments tc LEFT JOIN users u ON u.id = tc.user_id
+     WHERE tc.task_id = ? ORDER BY tc.created_at ASC`,
+    [id]
+  )
+
+  const [history] = await db.execute(
+    `SELECT al.*, u.name as user_name FROM activity_logs al LEFT JOIN users u ON u.id = al.user_id WHERE al.entity_type = 'task' AND al.entity_id = ? ORDER BY al.created_at ASC`,
+    [id]
+  )
+
+  return { ...task, tickets, checklist, comments, history }
 })

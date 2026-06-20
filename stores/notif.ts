@@ -44,6 +44,26 @@ export const useNotifStore = defineStore('notif', () => {
     } catch {}
   }
 
+  function playChatSound() {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      // Dua nada pendek "pop" khas chat
+      const notes = [520, 660]
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = freq
+        osc.type = 'sine'
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.1)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.18)
+        osc.start(ctx.currentTime + i * 0.1)
+        osc.stop(ctx.currentTime + i * 0.1 + 0.2)
+      })
+    } catch {}
+  }
+
   function addToast(notif: any) {
     const id = Date.now()
     toasts.value.push({ ...notif, _id: id })
@@ -95,12 +115,23 @@ export const useNotifStore = defineStore('notif', () => {
       const auth = useAuthStore()
       if (data.sender_id === auth.user?.id) return
 
+      const userId = auth.user?.id
       const chatWidget = useChatWidgetStore()
       chatWidget.pushIncoming(data)
+
+      // Auto-tambah ke widget jika user adalah creator atau assignee ticket
+      if (userId && (data.created_by === userId || data.assigned_to === userId)) {
+        chatWidget.addTicketMinimized({
+          ticketId: data.ticket_id,
+          ticketNumber: data.ticket_number,
+          title: data.ticket_title,
+        })
+      }
 
       const openTicket = chatWidget.openTickets.find((t: any) => t.ticketId === data.ticket_id)
       if (openTicket?.mode !== 'expanded') {
         chatWidget.incrementUnread(data.ticket_id)
+        playChatSound()
       }
     })
 
@@ -121,5 +152,5 @@ export const useNotifStore = defineStore('notif', () => {
     es = null
   }
 
-  return { items, unread, toasts, fetchNotifs, markRead, connectSSE, disconnectSSE, playSound, dismissToast }
+  return { items, unread, toasts, fetchNotifs, markRead, connectSSE, disconnectSSE, playSound, playChatSound, dismissToast }
 })

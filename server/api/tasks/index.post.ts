@@ -1,12 +1,13 @@
 import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
+import { logActivity } from '../../utils/activity'
 
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)
   const db = getDb()
   const body = await readBody(event)
 
-  const { project_id, title, description, assigned_to, status = 'backlog' } = body
+  const { project_id, title, description, assigned_to, status = 'backlog', system_menu_id } = body
   const due_date = body.due_date ? String(body.due_date).slice(0, 10) : null
   if (!project_id || !title) throw createError({ statusCode: 400, message: 'project_id and title required' })
 
@@ -18,10 +19,18 @@ export default defineEventHandler(async (event) => {
   const position = posRows[0]?.next_pos ?? 0
 
   const [result] = await db.execute(
-    `INSERT INTO tasks (project_id, title, description, status, position, assigned_to, created_by, due_date)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [project_id, title, description || null, status, position, assigned_to || null, user.id, due_date || null]
+    `INSERT INTO tasks (project_id, title, description, status, position, assigned_to, created_by, due_date, system_menu_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [project_id, title, description || null, status, position, assigned_to || null, user.id, due_date || null, system_menu_id || null]
   ) as any[]
+
+  await logActivity(db, {
+    entity_type: 'task',
+    entity_id: result.insertId,
+    action: 'created',
+    label: `Task dibuat oleh ${user.name}`,
+    user_id: user.id,
+  })
 
   const [rows] = await db.execute('SELECT * FROM tasks WHERE id = ?', [result.insertId])
   return (rows as any[])[0]

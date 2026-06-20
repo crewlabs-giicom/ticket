@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen flex bg-slate-50">
+    <AppLightbox />
     <!-- Sidebar overlay mobile -->
     <div v-if="sidebarOpen" class="fixed inset-0 bg-black/40 z-30 lg:hidden" @click="sidebarOpen = false" />
 
@@ -159,7 +160,8 @@ function fallbackMenus(role?: string) {
       { id: 'f9', name: 'Master Projects', path: '/master/projects', icon: 'folder' },
       { id: 'f10', name: 'Priority', path: '/master/priorities', icon: 'flag' },
       { id: 'f11', name: 'Status', path: '/master/statuses', icon: 'tag' },
-      { id: 'f12', name: 'Menus', path: '/master/menus', icon: 'menu' }
+      { id: 'f12', name: 'Menus', path: '/master/menus', icon: 'menu' },
+      { id: 'f13', name: 'Menu Sistem', path: '/master/system-menus', icon: 'grid' }
     ]
   }
   return base

@@ -20,6 +20,13 @@ export const useChatWidgetStore = defineStore('chatWidget', () => {
     _userId.value = id
   }
 
+  function addTicketMinimized(ticket: { ticketId: number; ticketNumber: string; title: string }) {
+    const existing = openTickets.value.find(t => t.ticketId === ticket.ticketId)
+    if (!existing) {
+      openTickets.value.push({ ...ticket, mode: 'minimized' })
+    }
+  }
+
   function openTicket(ticket: { ticketId: number; ticketNumber: string; title: string }) {
     const existing = openTickets.value.find(t => t.ticketId === ticket.ticketId)
     if (existing) {
@@ -72,7 +79,7 @@ export const useChatWidgetStore = defineStore('chatWidget', () => {
     _userId.value = null
   }
 
-  return { _userId, openTickets, unreadCounts, incomingMessage, initForUser, openTicket, closeTicket, toggleExpand, markRead, incrementUnread, pushIncoming, clearAll }
+  return { _userId, openTickets, unreadCounts, incomingMessage, initForUser, addTicketMinimized, openTicket, closeTicket, toggleExpand, markRead, incrementUnread, pushIncoming, clearAll }
 }, {
   persist: {
     key: 'chat-widget',

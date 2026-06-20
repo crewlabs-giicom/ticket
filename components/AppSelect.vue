@@ -40,24 +40,33 @@
 
       <!-- Options list -->
       <ul class="max-h-52 overflow-y-auto py-1">
-        <li v-if="!filtered.length" class="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada hasil</li>
-        <li
-          v-for="(opt, i) in filtered"
-          :key="String(opt.value)"
-          @click="select(opt)"
-          @mouseenter="highlighted = i"
-          :class="[
-            'px-3 py-2 text-sm cursor-pointer flex items-center gap-2 transition-colors',
-            highlighted === i ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50',
-            String(opt.value) === String(modelValue) && highlighted !== i && 'font-medium',
-          ]"
-        >
-          <svg v-if="String(opt.value) === String(modelValue)" class="w-3.5 h-3.5 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-          </svg>
-          <span v-else class="w-3.5 flex-shrink-0" />
-          {{ opt.label }}
-        </li>
+        <li v-if="!filteredSelectables.length" class="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada hasil</li>
+        <template v-for="(opt, i) in filtered" :key="isGroup(opt) ? `g-${opt.group}` : String(opt.value)">
+          <!-- Group header -->
+          <li
+            v-if="isGroup(opt)"
+            class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 select-none"
+          >
+            {{ opt.group }}
+          </li>
+          <!-- Selectable option -->
+          <li
+            v-else
+            @click="select(opt)"
+            @mouseenter="highlighted = selectableIndex(i)"
+            :class="[
+              'px-3 py-2 text-sm cursor-pointer flex items-center gap-2 transition-colors',
+              highlighted === selectableIndex(i) ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50',
+              String(opt.value) === String(modelValue) && highlighted !== selectableIndex(i) && 'font-medium',
+            ]"
+          >
+            <svg v-if="String(opt.value) === String(modelValue)" class="w-3.5 h-3.5 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+            <span v-else class="w-3.5 flex-shrink-0" />
+            {{ opt.label }}
+          </li>
+        </template>
       </ul>
     </div>
   </div>
@@ -66,9 +75,13 @@
 <script setup lang="ts">
 import { onClickOutside } from '@vueuse/core'
 
+type GroupHeader = { group: string }
+type SelectOption = { value: any; label: string }
+type AnyOption = GroupHeader | SelectOption
+
 const props = withDefaults(defineProps<{
   modelValue: any
-  options: { value: any; label: string }[]
+  options: AnyOption[]
   placeholder?: string
   disabled?: boolean
 }>(), {
@@ -84,16 +97,42 @@ const open = ref(false)
 const query = ref('')
 const highlighted = ref(0)
 
+function isGroup(opt: AnyOption): opt is GroupHeader {
+  return 'group' in opt
+}
+
 const selectedLabel = computed(() => {
-  const found = props.options.find(o => String(o.value) === String(props.modelValue))
-  return found?.label || ''
+  for (const opt of props.options) {
+    if (!isGroup(opt) && String(opt.value) === String(props.modelValue)) return opt.label
+  }
+  return ''
 })
 
-const filtered = computed(() => {
+const filtered = computed((): AnyOption[] => {
   const q = query.value.toLowerCase().trim()
   if (!q) return props.options
-  return props.options.filter(o => o.label.toLowerCase().includes(q))
+  const result: AnyOption[] = []
+  let pendingGroup: GroupHeader | null = null
+  for (const opt of props.options) {
+    if (isGroup(opt)) {
+      pendingGroup = opt
+    } else if (opt.label.toLowerCase().includes(q)) {
+      if (pendingGroup) { result.push(pendingGroup); pendingGroup = null }
+      result.push(opt)
+    }
+  }
+  return result
 })
+
+const filteredSelectables = computed(() => filtered.value.filter(o => !isGroup(o)) as SelectOption[])
+
+function selectableIndex(rawIndex: number): number {
+  let count = 0
+  for (let i = 0; i < rawIndex; i++) {
+    if (!isGroup(filtered.value[i])) count++
+  }
+  return count
+}
 
 function toggle() {
   if (props.disabled) return
@@ -112,19 +151,19 @@ function close() {
   query.value = ''
 }
 
-function select(opt: { value: any; label: string }) {
+function select(opt: SelectOption) {
   emit('update:modelValue', opt.value)
   close()
 }
 
 function moveHighlight(dir: 1 | -1) {
-  const len = filtered.value.length
+  const len = filteredSelectables.value.length
   if (!len) return
   highlighted.value = (highlighted.value + dir + len) % len
 }
 
 function selectHighlighted() {
-  const opt = filtered.value[highlighted.value]
+  const opt = filteredSelectables.value[highlighted.value]
   if (opt) select(opt)
 }
 

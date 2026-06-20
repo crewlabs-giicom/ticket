@@ -5,6 +5,26 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<any>(null)
   const loading = ref(false)
 
+  async function loadActiveChatTickets(playSound = false) {
+    try {
+      const chatWidget = useChatWidgetStore()
+      const res = await $fetch('/api/tickets/chat-active') as any
+      const tickets = (res.data || []) as any[]
+      let hasNew = false
+      for (const t of tickets) {
+        const existing = chatWidget.openTickets.find((ot: any) => ot.ticketId === t.ticketId)
+        if (!existing) {
+          chatWidget.addTicketMinimized(t)
+          hasNew = true
+        }
+      }
+      if (playSound && hasNew) {
+        const notif = useNotifStore()
+        notif.playChatSound()
+      }
+    } catch {}
+  }
+
   async function fetchMe(headers?: Record<string, string>) {
     try {
       const res = await $fetch('/api/auth/me', { headers })
@@ -12,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (user.value?.id) {
         const chatWidget = useChatWidgetStore()
         chatWidget.initForUser(user.value.id)
+        await loadActiveChatTickets(false)
       }
     } catch {
       user.value = null
@@ -26,6 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (user.value?.id) {
         const chatWidget = useChatWidgetStore()
         chatWidget.initForUser(user.value.id)
+        await loadActiveChatTickets(true)
       }
       return true
     } catch (e: any) {
