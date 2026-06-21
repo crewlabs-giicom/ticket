@@ -85,7 +85,7 @@ const { data: tr, refresh: refreshTickets } = await useFetch('/api/tickets')
 const allTickets = computed(() => (tr.value as any)?.data || [])
 
 const { data: taskRes, refresh: refreshTasks } = await useFetch('/api/tasks')
-const allTasks = computed(() => (taskRes.value as any) || [])
+const allTasks = computed(() => (taskRes.value as any)?.data || [])
 
 // Tickets
 const unscheduledTickets = computed(() => allTickets.value.filter((t: any) => !t.due_date?.trim()))
