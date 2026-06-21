@@ -227,58 +227,12 @@
       </div>
 
       <!-- Task detail slide-over (list mode) -->
-      <div v-if="selectedTask" class="fixed inset-0 bg-black/20 z-40" @click.self="selectedTask = null">
-        <div class="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl overflow-y-auto flex flex-col">
-          <div class="p-6 border-b border-slate-100 flex items-start justify-between gap-4 flex-shrink-0">
-            <div class="min-w-0">
-              <span class="text-xs text-slate-400">{{ project?.name }}</span>
-              <h2 class="text-lg font-semibold text-slate-900 mt-0.5">{{ selectedTask.title }}</h2>
-            </div>
-            <button @click="selectedTask = null" class="text-slate-400 hover:text-slate-600 flex-shrink-0">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-          <div class="p-6 space-y-5 flex-1">
-            <div class="flex flex-wrap gap-2">
-              <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border"
-                :style="{ borderColor: colColor(selectedTask.status)+'60', background: colColor(selectedTask.status)+'15', color: colColor(selectedTask.status) }">
-                <span class="w-1.5 h-1.5 rounded-full" :style="{ background: colColor(selectedTask.status) }"></span>
-                {{ colLabel(selectedTask.status) }}
-              </span>
-              <span v-if="selectedTask.assigned_to_name" class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-                <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold">{{ initials(selectedTask.assigned_to_name) }}</span>
-                {{ selectedTask.assigned_to_name }}
-              </span>
-              <span v-if="selectedTask.due_date" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
-                :class="isOverdue(selectedTask.due_date) ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'">
-                {{ fmtDate(selectedTask.due_date) }}
-              </span>
-            </div>
-            <p v-if="selectedTask.description" class="text-sm text-slate-600 leading-relaxed">{{ selectedTask.description }}</p>
-            <p v-else class="text-sm text-slate-300 italic">Tidak ada deskripsi.</p>
-            <div>
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-slate-700">Linked Tickets <span class="text-slate-400 font-normal">({{ selectedTask.tickets?.length || 0 }})</span></h3>
-                <button class="text-xs text-indigo-600 hover:text-indigo-800" @click="createTicketFromTask(selectedTask)">+ Buat Tiket</button>
-              </div>
-              <div v-if="selectedTask.tickets?.length" class="space-y-2">
-                <NuxtLink v-for="tk in selectedTask.tickets" :key="tk.id" :to="`/tickets/${tk.id}`"
-                  class="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 hover:bg-indigo-50 text-sm transition-colors"
-                  @click="selectedTask = null">
-                  <span class="text-indigo-600 font-mono text-xs flex-shrink-0">{{ tk.ticket_number }}</span>
-                  <span class="text-slate-700 truncate flex-1">{{ tk.title }}</span>
-                  <span class="text-xs px-2 py-0.5 rounded-full text-white flex-shrink-0" :style="{ background: tk.status_color }">{{ tk.status_name }}</span>
-                </NuxtLink>
-              </div>
-              <p v-else class="text-xs text-slate-400">Belum ada tiket terhubung.</p>
-            </div>
-          </div>
-          <div class="p-6 border-t border-slate-100 flex items-center justify-between flex-shrink-0">
-            <button class="text-xs text-red-500 hover:text-red-700" @click="deleteProjectTask(selectedTask.id)">Hapus task</button>
-            <button class="text-xs text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg" @click="selectedTask = null">Tutup</button>
-          </div>
-        </div>
-      </div>
+      <TaskDetailPanel
+        v-if="selectedTask"
+        :task="selectedTask"
+        @close="selectedTask = null"
+        @deleted="onTaskDeleted"
+      />
 
       <!-- ─ TICKETS ─ -->
       <div v-else-if="activeTab === 'tickets'">
@@ -607,16 +561,10 @@ async function openTaskDetail(task: any) {
   selectedTask.value = await $fetch<any>(`/api/tasks/${task.id}`)
 }
 
-async function deleteProjectTask(id: number) {
-  if (!confirm('Hapus task ini?')) return
-  await performAction('task', 'delete', id, {})
+async function onTaskDeleted() {
   selectedTask.value = null
   await loadProjectTasks()
   await refreshProject()
-}
-
-function createTicketFromTask(task: any) {
-  navigateTo(`/tickets/new?task_id=${task.id}&project_id=${projectId}&title=${encodeURIComponent(task.title)}`)
 }
 
 // Load list tasks when tab opens or view switches to list
