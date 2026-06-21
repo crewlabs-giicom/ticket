@@ -1,35 +1,27 @@
-const _images = ref<Array<{ url: string; name: string }>>([])
-const _index = ref(0)
-const _open = ref(false)
-
 export function useLightbox() {
-  function open(images: Array<{ url: string; name: string }>, index = 0) {
-    _images.value = images
-    _index.value = index
-    _open.value = true
+  const images = useState<Array<{ url: string; name: string }>>('lb_images', () => [])
+  const index = useState<number>('lb_index', () => 0)
+  const isOpen = useState<boolean>('lb_open', () => false)
+
+  function open(imgs: Array<{ url: string; name: string }>, startIndex = 0) {
+    images.value = imgs
+    index.value = startIndex
+    isOpen.value = true
   }
 
   function close() {
-    _open.value = false
+    isOpen.value = false
   }
 
   function next() {
-    if (!_images.value.length) return
-    _index.value = (_index.value + 1) % _images.value.length
+    if (!images.value.length) return
+    index.value = (index.value + 1) % images.value.length
   }
 
   function prev() {
-    if (!_images.value.length) return
-    _index.value = (_index.value - 1 + _images.value.length) % _images.value.length
+    if (!images.value.length) return
+    index.value = (index.value - 1 + images.value.length) % images.value.length
   }
 
-  return {
-    images: _images,
-    index: _index,
-    isOpen: _open,
-    open,
-    close,
-    next,
-    prev,
-  }
+  return { images, index, isOpen, open, close, next, prev }
 }

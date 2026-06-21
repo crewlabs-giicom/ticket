@@ -2,8 +2,8 @@
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
-  <ToastContainer />
-  <TicketChatWidget />
+  <ClientOnly><ToastContainer /></ClientOnly>
+  <ClientOnly><TicketChatWidget /></ClientOnly>
 </template>
 
 <script setup lang="ts">

@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen flex bg-slate-50">
-    <AppLightbox />
+    <ClientOnly><AppLightbox /></ClientOnly>
     <!-- Sidebar overlay mobile -->
     <div v-if="sidebarOpen" class="fixed inset-0 bg-black/40 z-30 lg:hidden" @click="sidebarOpen = false" />
 
