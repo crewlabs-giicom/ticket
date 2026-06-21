@@ -30,11 +30,16 @@
       <!-- User -->
       <div class="p-3 border-t border-slate-200">
         <div class="flex items-center gap-3 px-2 py-2">
-          <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-xs flex-shrink-0">{{ initials }}</div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-slate-900 truncate">{{ auth.user?.name }}</p>
-            <p class="text-xs text-slate-500 capitalize">{{ auth.user?.role }}</p>
-          </div>
+          <NuxtLink to="/profile" class="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity" @click="sidebarOpen = false">
+            <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-xs flex-shrink-0 overflow-hidden">
+              <img v-if="auth.user?.avatar" :src="`/uploads/${auth.user.avatar}`" class="w-full h-full object-cover" />
+              <span v-else>{{ initials }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-900 truncate">{{ auth.user?.name }}</p>
+              <p class="text-xs text-slate-500 capitalize">{{ auth.user?.role }}</p>
+            </div>
+          </NuxtLink>
           <button @click="auth.logout()" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Logout">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
           </button>
@@ -186,7 +191,8 @@ const pageTitle = computed(() => {
     '/': 'Dashboard', '/tickets': 'Tickets', '/tasks': 'Tasks', '/projects': 'Projects',
     '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Reports',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
-    '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu'
+    '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
+    '/profile': 'Profil Saya'
   }
   return titles[route.path] || 'TicketingApp'
 })

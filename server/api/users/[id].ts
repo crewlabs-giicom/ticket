@@ -16,16 +16,16 @@ export default defineEventHandler(async (event) => {
   if (event.method === 'PUT') {
     if (user.role !== 'admin' && user.id !== Number(id)) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     const body = await readBody(event)
-    const { name, email, password, role, is_active } = body
+    const { name, email, password, role, is_active, avatar } = body
     if (password) {
       await db.execute(
-        'UPDATE users SET name=?, email=?, password=?, role=?, is_active=?, updated_at=NOW() WHERE id=?',
-        [name, email, hashPassword(password), role, is_active ?? 1, id]
+        'UPDATE users SET name=?, email=?, password=?, role=?, is_active=?, avatar=?, updated_at=NOW() WHERE id=?',
+        [name, email, hashPassword(password), role, is_active ?? 1, avatar ?? null, id]
       )
     } else {
       await db.execute(
-        'UPDATE users SET name=?, email=?, role=?, is_active=?, updated_at=NOW() WHERE id=?',
-        [name, email, role, is_active ?? 1, id]
+        'UPDATE users SET name=?, email=?, role=?, is_active=?, avatar=?, updated_at=NOW() WHERE id=?',
+        [name, email, role, is_active ?? 1, avatar ?? null, id]
       )
     }
     return { success: true }
