@@ -46,10 +46,34 @@ export default defineEventHandler(async (event) => {
     [id]
   )
 
+  const commentList = comments as any[]
+
+  // Fetch attachments per comment
+  if (commentList.length) {
+    const ids = commentList.map(c => c.id)
+    const placeholders = ids.map(() => '?').join(',')
+    const [commentAttachments] = await db.execute(
+      `SELECT * FROM task_attachments WHERE task_comment_id IN (${placeholders}) ORDER BY created_at ASC`,
+      ids
+    )
+    for (const c of commentList) {
+      c.attachments = (commentAttachments as any[]).filter(a => a.task_comment_id === c.id)
+    }
+  }
+
+  // Task-level attachments (not linked to a comment)
+  const [attachments] = await db.execute(
+    `SELECT ta.*, u.name as uploaded_by_name
+     FROM task_attachments ta LEFT JOIN users u ON u.id = ta.uploaded_by
+     WHERE ta.task_id = ? AND ta.task_comment_id IS NULL
+     ORDER BY ta.created_at ASC`,
+    [id]
+  )
+
   const [history] = await db.execute(
     `SELECT al.*, u.name as user_name FROM activity_logs al LEFT JOIN users u ON u.id = al.user_id WHERE al.entity_type = 'task' AND al.entity_id = ? ORDER BY al.created_at ASC`,
     [id]
   )
 
-  return { ...task, tickets, checklist, comments, history }
+  return { ...task, tickets, checklist, comments: commentList, attachments, history }
 })

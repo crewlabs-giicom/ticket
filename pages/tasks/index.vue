@@ -334,6 +334,33 @@
             </div>
           </div>
 
+          <!-- Attachments -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-semibold text-gray-700">Lampiran ({{ selectedTask.attachments?.length || 0 }})</h3>
+              <label class="cursor-pointer text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1" :class="taskUploading && 'opacity-50 pointer-events-none'">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Tambah File
+                <input type="file" multiple class="hidden" :disabled="taskUploading" @change="handleTaskAttachment" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
+              </label>
+            </div>
+            <div v-if="selectedTask.attachments?.length" class="flex flex-wrap gap-2 mb-2">
+              <div v-for="a in selectedTask.attachments" :key="a.id" class="relative group">
+                <button v-if="isImage(a.mime_type)" @click="openTaskLightbox(a.id)" class="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 hover:border-indigo-400 transition-colors shrink-0 block">
+                  <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
+                </button>
+                <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank"
+                  class="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-xs text-gray-700">
+                  <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                  <span class="max-w-[120px] truncate">{{ a.original_name }}</span>
+                </a>
+                <button @click="deleteTaskAttachment(a.id)" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-400 mb-2">Belum ada lampiran.</p>
+            <p v-if="taskUploading" class="text-xs text-indigo-500">Mengupload...</p>
+          </div>
+
           <!-- Comments -->
           <div>
             <h3 class="text-sm font-semibold text-gray-700 mb-2">Komentar</h3>
@@ -349,13 +376,54 @@
                     <span class="text-[10px] text-gray-400">{{ timeAgo(c.created_at) }}</span>
                   </div>
                   <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ c.message }}</p>
+                  <!-- Comment attachments -->
+                  <div v-if="c.attachments?.length" class="flex flex-wrap gap-1.5 mt-1.5">
+                    <template v-for="a in c.attachments" :key="a.id">
+                      <button v-if="isImage(a.mime_type)" @click="openCommentLightbox(c, a.id)" class="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 hover:border-indigo-400 shrink-0">
+                        <img :src="`/uploads/${a.filename}`" class="w-full h-full object-cover" />
+                      </button>
+                      <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank"
+                        class="flex items-center gap-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-[11px] text-gray-600 hover:bg-gray-100">
+                        <svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        <span class="max-w-[100px] truncate">{{ a.original_name }}</span>
+                      </a>
+                    </template>
+                  </div>
                 </div>
               </div>
             </div>
             <p v-else class="text-xs text-gray-400 mb-3">Belum ada komentar.</p>
-            <div class="flex gap-2">
-              <textarea v-model="newComment" rows="2" placeholder="Tulis komentar..." class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"></textarea>
-              <button @click="postComment" :disabled="!newComment.trim() || postingComment" class="text-xs bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-40 self-end">Post</button>
+            <!-- Comment pending files preview -->
+            <div v-if="commentPendingFiles.length" class="flex flex-wrap gap-1.5 mb-2">
+              <div v-for="(f, i) in commentPendingFiles" :key="i">
+                <template v-if="isImage(f.mime_type)">
+                  <div class="flex flex-col items-center gap-0.5">
+                    <img :src="`/uploads/${f.filename}`" class="w-10 h-10 object-cover rounded-lg border border-gray-200" />
+                    <button @click="commentPendingFiles.splice(i, 1)" class="text-[10px] text-gray-400 hover:text-red-500 leading-none">✕</button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] text-gray-600">
+                    <svg class="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span class="max-w-[80px] truncate">{{ f.original_name }}</span>
+                    <button @click="commentPendingFiles.splice(i, 1)" class="text-gray-400 hover:text-red-500 ml-0.5">✕</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="flex gap-2 items-end">
+              <div class="flex-1">
+                <textarea v-model="newComment" rows="2" placeholder="Tulis komentar... (Ctrl+V untuk paste gambar)" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none" @paste="handleCommentPaste"></textarea>
+                <div class="flex items-center gap-2 mt-1">
+                  <label class="cursor-pointer text-[11px] text-gray-400 hover:text-indigo-600 flex items-center gap-1" :class="commentUploading && 'opacity-50 pointer-events-none'">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                    Lampirkan file
+                    <input type="file" multiple class="hidden" :disabled="commentUploading" @change="handleCommentFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
+                  </label>
+                  <span v-if="commentUploading" class="text-[11px] text-indigo-500">Mengupload...</span>
+                </div>
+              </div>
+              <button @click="postComment" :disabled="(!newComment.trim() && !commentPendingFiles.length) || postingComment || commentUploading" class="text-xs bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-40 self-end">Post</button>
             </div>
           </div>
 
@@ -453,6 +521,7 @@ const form = reactive({
 })
 
 const lb = useLightbox()
+function isImage(mime?: string) { return !!mime?.startsWith('image/') }
 const taskPasteImages = ref<Array<{ blobUrl: string; name: string; file: File }>>([])
 const taskPasteUploading = ref(false)
 
@@ -666,16 +735,107 @@ async function deleteChecklistItem(itemId: number) {
   selectedTask.value!.checklist = selectedTask.value!.checklist.filter((i: any) => i.id !== itemId)
 }
 
+// Attachments
+const taskUploading = ref(false)
+
+async function handleTaskAttachment(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length || !selectedTask.value) return
+  taskUploading.value = true
+  try {
+    for (const file of Array.from(input.files)) {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('menu', 'task')
+      fd.append('project_id', String(selectedTask.value.project_id || ''))
+      fd.append('project_name', selectedTask.value.project_name || '')
+      const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+      await $fetch(`/api/tasks/${selectedTask.value.id}/attachments`, { method: 'POST', body: res.data })
+    }
+    const refreshed = await $fetch<any>(`/api/tasks/${selectedTask.value.id}`)
+    selectedTask.value.attachments = refreshed.attachments || []
+  } finally {
+    taskUploading.value = false
+    input.value = ''
+  }
+}
+
+async function deleteTaskAttachment(attachId: number) {
+  if (!selectedTask.value) return
+  await $fetch(`/api/tasks/${selectedTask.value.id}/attachments/${attachId}`, { method: 'DELETE' })
+  selectedTask.value.attachments = selectedTask.value.attachments.filter((a: any) => a.id !== attachId)
+}
+
+function openTaskLightbox(attachId: number) {
+  const images = (selectedTask.value?.attachments || [])
+    .filter((a: any) => isImage(a.mime_type))
+    .map((a: any) => ({ url: `/uploads/${a.filename}`, name: a.original_name, id: a.id }))
+  const idx = images.findIndex((i: any) => i.id === attachId)
+  lb.open(images.map((i: any) => ({ url: i.url, name: i.name })), idx >= 0 ? idx : 0)
+}
+
+function openCommentLightbox(comment: any, attachId: number) {
+  const images = (comment.attachments || [])
+    .filter((a: any) => isImage(a.mime_type))
+    .map((a: any) => ({ url: `/uploads/${a.filename}`, name: a.original_name, id: a.id }))
+  const idx = images.findIndex((i: any) => i.id === attachId)
+  lb.open(images.map((i: any) => ({ url: i.url, name: i.name })), idx >= 0 ? idx : 0)
+}
+
 // Comments
 const newComment = ref('')
 const postingComment = ref(false)
+const commentPendingFiles = ref<Array<{ filename: string; original_name: string; mime_type: string; size: number }>>([])
+const commentUploading = ref(false)
+
+async function uploadCommentFile(file: File, name?: string) {
+  const fd = new FormData()
+  fd.append('file', file, name || file.name)
+  fd.append('menu', 'task')
+  fd.append('project_id', String(selectedTask.value?.project_id || ''))
+  fd.append('project_name', selectedTask.value?.project_name || '')
+  const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+  commentPendingFiles.value.push(res.data)
+}
+
+async function handleCommentFiles(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length) return
+  commentUploading.value = true
+  try {
+    for (const file of Array.from(input.files)) await uploadCommentFile(file)
+  } finally {
+    commentUploading.value = false
+    input.value = ''
+  }
+}
+
+async function handleCommentPaste(e: ClipboardEvent) {
+  const items = Array.from(e.clipboardData?.items || []).filter(i => i.type.startsWith('image/'))
+  if (!items.length) return
+  e.preventDefault()
+  commentUploading.value = true
+  try {
+    for (const item of items) {
+      const file = item.getAsFile()
+      if (file) await uploadCommentFile(file, `paste-${Date.now()}.${item.type.split('/')[1] || 'png'}`)
+    }
+  } finally {
+    commentUploading.value = false
+  }
+}
+
 async function postComment() {
-  if (!newComment.value.trim() || !selectedTask.value) return
+  if ((!newComment.value.trim() && !commentPendingFiles.value.length) || !selectedTask.value) return
   postingComment.value = true
   try {
-    const r = await $fetch<any>(`/api/tasks/${selectedTask.value.id}/comments`, { method: 'POST', body: { message: newComment.value.trim() } })
+    const r = await $fetch<any>(`/api/tasks/${selectedTask.value.id}/comments`, {
+      method: 'POST',
+      body: { message: newComment.value.trim() || ' ', attachments: commentPendingFiles.value }
+    })
     selectedTask.value.comments = [...(selectedTask.value.comments || []), r.data]
     newComment.value = ''
+    commentPendingFiles.value = []
     const hist = await $fetch<any>(`/api/tasks/${selectedTask.value.id}/history`)
     selectedTask.value.history = hist.data
   } finally {
