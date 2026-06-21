@@ -8,9 +8,16 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)
 
+  if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+
   const [oldRows] = await db.execute('SELECT t.*, u.name as assigned_to_name FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to WHERE t.id = ?', [id]) as any[]
   const old = (oldRows as any[])[0]
   if (!old) throw createError({ statusCode: 404, message: 'Task not found' })
+
+  if (user.role === 'staff') {
+    const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [old.project_id, user.id])
+    if (!(mem as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
   const allowed = ['title', 'description', 'status', 'position', 'assigned_to', 'due_date', 'system_menu_id']
   const sets: string[] = []

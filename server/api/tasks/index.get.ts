@@ -6,6 +6,8 @@ export default defineEventHandler(async (event) => {
   const db = getDb()
   const q = getQuery(event)
 
+  if (user.role === 'customer') return { success: true, data: [] }
+
   const conditions: string[] = []
   const params: any[] = []
 

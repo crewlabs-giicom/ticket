@@ -124,12 +124,19 @@ async function handleAvatarUpload(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   avatarUploading.value = true
+  profileError.value = ''
   try {
     const fd = new FormData()
     fd.append('file', file)
     const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
     currentAvatar.value = res.data.filename
     avatarPreview.value = `/uploads/${res.data.filename}`
+    // Auto-save avatar immediately
+    await $fetch(`/api/users/${user.value.id}`, {
+      method: 'PUT',
+      body: { name: user.value.name, email: user.value.email, role: user.value.role, is_active: 1, avatar: res.data.filename },
+    })
+    await auth.fetchMe()
   } catch {
     profileError.value = 'Gagal mengupload foto profil'
   } finally {

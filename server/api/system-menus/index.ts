@@ -6,10 +6,22 @@ export default defineEventHandler(async (event) => {
   const user = event.context.user
 
   if (event.method === 'GET') {
-    const query = user.role === 'admin'
-      ? 'SELECT * FROM system_menus ORDER BY module ASC, order_index ASC, type ASC, name ASC'
-      : 'SELECT * FROM system_menus WHERE is_active=1 ORDER BY module ASC, order_index ASC, type ASC, name ASC'
-    const [rows] = await db.execute(query)
+    const q = getQuery(event)
+    const conditions: string[] = []
+    const params: any[] = []
+
+    if (user.role !== 'admin') conditions.push('is_active=1')
+
+    if (q.project_id) {
+      conditions.push('(project_id = ? OR project_id IS NULL)')
+      params.push(Number(q.project_id))
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+    const [rows] = await db.execute(
+      `SELECT sm.*, p.name as project_name FROM system_menus sm LEFT JOIN projects p ON p.id = sm.project_id ${where} ORDER BY sm.module ASC, sm.order_index ASC, sm.type ASC, sm.name ASC`,
+      params
+    )
     return { success: true, data: rows }
   }
 
@@ -18,11 +30,11 @@ export default defineEventHandler(async (event) => {
   if (event.method === 'POST') {
     const body = await readBody(event)
     const [r] = await db.execute(
-      'INSERT INTO system_menus (module, type, name, order_index) VALUES (?, ?, ?, ?)',
-      [body.module, body.type || null, body.name || null, body.order_index || 99]
+      'INSERT INTO system_menus (module, type, name, order_index, project_id) VALUES (?, ?, ?, ?, ?)',
+      [body.module, body.type || null, body.name || null, body.order_index || 99, body.project_id || null]
     )
     const insertId = (r as ResultSetHeader).insertId
-    const [rows] = await db.execute('SELECT * FROM system_menus WHERE id = ?', [insertId])
+    const [rows] = await db.execute('SELECT sm.*, p.name as project_name FROM system_menus sm LEFT JOIN projects p ON p.id = sm.project_id WHERE sm.id = ?', [insertId])
     return { success: true, data: (rows as any[])[0] }
   }
 

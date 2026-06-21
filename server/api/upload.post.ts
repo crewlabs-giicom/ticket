@@ -1,5 +1,6 @@
-import { writeFileSync } from 'fs'
+import { writeFileSync, mkdirSync } from 'fs'
 import { join, extname } from 'path'
+import sharp from 'sharp'
 
 const ALLOWED_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
@@ -12,6 +13,7 @@ const ALLOWED_TYPES = [
   'text/plain', 'text/csv',
 ]
 
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_SIZE = 10 * 1024 * 1024 // 10MB
 
 export default defineEventHandler(async (event) => {
@@ -35,19 +37,37 @@ export default defineEventHandler(async (event) => {
   }
 
   const originalName = filePart.filename || 'file'
-  const ext = extname(originalName) || ''
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`
+  const baseName = `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
-  const uploadDir = join(process.cwd(), 'public', 'uploads')
-  writeFileSync(join(uploadDir, uniqueName), filePart.data)
+  const uploadDir = join(process.cwd(), 'storage', 'uploads')
+  mkdirSync(uploadDir, { recursive: true })
+
+  let uniqueName: string
+  let fileData: Buffer
+  let finalMime = mime
+
+  if (IMAGE_TYPES.includes(mime)) {
+    uniqueName = `${baseName}.jpg`
+    fileData = await sharp(filePart.data)
+      .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 80 })
+      .toBuffer()
+    finalMime = 'image/jpeg'
+  } else {
+    const ext = extname(originalName) || ''
+    uniqueName = `${baseName}${ext}`
+    fileData = filePart.data
+  }
+
+  writeFileSync(join(uploadDir, uniqueName), fileData)
 
   return {
     success: true,
     data: {
       filename: uniqueName,
       original_name: originalName,
-      mime_type: mime,
-      size: filePart.data.length,
+      mime_type: finalMime,
+      size: fileData.length,
     }
   }
 })

@@ -6,6 +6,16 @@ export default defineEventHandler(async (event) => {
   const user = event.context.user
 
   if (event.method === 'GET') {
+    let roleWhere = ''
+    const roleParams: any[] = []
+    if (user.role === 'customer') {
+      roleWhere = 'WHERE p.id IN (SELECT DISTINCT project_id FROM tickets WHERE created_by = ?)'
+      roleParams.push(user.id)
+    } else if (user.role === 'staff') {
+      roleWhere = 'WHERE p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
+      roleParams.push(user.id)
+    }
+
     const [projects] = await db.execute(`
       SELECT p.*,
         COUNT(DISTINCT t.id) AS ticket_count,
@@ -20,9 +30,10 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN tasks tk ON tk.project_id = p.id
       LEFT JOIN project_members pm ON pm.project_id = p.id
       LEFT JOIN users u ON u.id = pm.user_id
+      ${roleWhere}
       GROUP BY p.id
       ORDER BY p.id DESC
-    `)
+    `, roleParams)
     return { success: true, data: projects }
   }
 

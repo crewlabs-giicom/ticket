@@ -28,6 +28,12 @@ export default defineEventHandler(async (event) => {
     const ticket = (ticketRows as any[])[0]
     if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
 
+    if (user.role === 'customer' && ticket.created_by !== user.id) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    if (user.role === 'staff') {
+      const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [ticket.project_id, user.id])
+      if (!(mem as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
     const showInternal = user.role !== 'customer'
     const [responses] = await db.execute(`
       SELECT r.*, u.name as user_name, u.role as user_role
@@ -90,6 +96,12 @@ export default defineEventHandler(async (event) => {
     const [oldRows] = await db.execute('SELECT * FROM tickets WHERE id = ?', [id])
     const old = (oldRows as any[])[0]
     if (!old) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
+
+    if (user.role === 'customer' && old.created_by !== user.id) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    if (user.role === 'staff') {
+      const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [old.project_id, user.id])
+      if (!(mem as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
 
     const { title, description, project_id, priority_id, status_id, assigned_to } = body
     const due_date = body.due_date ? String(body.due_date).slice(0, 10) : body.due_date

@@ -524,12 +524,18 @@ async function loadUsers() {
   staffUsers.value = all.filter((u: any) => u.role === 'staff' || u.role === 'admin')
 }
 
-async function loadSystemMenus() {
-  const res = await $fetch<any>('/api/system-menus')
+async function loadSystemMenus(projectId?: string | number) {
+  const url = projectId ? `/api/system-menus?project_id=${projectId}` : '/api/system-menus'
+  const res = await $fetch<any>(url).catch(() => null)
   systemMenus.value = res?.data || []
 }
 
 watch(filterProject, loadTasks)
+
+watch(() => form.project_id, (val) => {
+  form.system_menu_id = ''
+  loadSystemMenus(val || undefined)
+})
 
 onMounted(async () => {
   await Promise.all([loadTasks(), loadProjects(), loadUsers(), loadSystemMenus()])

@@ -103,11 +103,10 @@ const emit = defineEmits(['close', 'created'])
 const { data: pd } = await useFetch('/api/priorities')
 const { data: sd } = await useFetch('/api/statuses')
 const { data: prd } = await useFetch('/api/projects')
-const { data: smd } = await useFetch('/api/system-menus')
 const priorities = computed(() => (pd.value as any)?.data || [])
 const statuses = computed(() => (sd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data?.filter((p: any) => p.is_active) || [])
-const systemMenus = computed(() => (smd.value as any)?.data || [])
+const systemMenus = ref<any[]>([])
 
 const systemMenuOptions = computed(() => {
   const opts: any[] = [{ value: '', label: '— Tidak dipilih —' }]
@@ -138,6 +137,17 @@ const form = reactive({
   system_menu_id: '',
 })
 const taskId = computed(() => props.taskId)
+
+async function loadSystemMenus(projectId?: string | number) {
+  const url = projectId ? `/api/system-menus?project_id=${projectId}` : '/api/system-menus'
+  const res = await $fetch<any>(url).catch(() => null)
+  systemMenus.value = res?.data || []
+}
+
+watch(() => form.project_id, (val) => {
+  form.system_menu_id = ''
+  loadSystemMenus(val || undefined)
+}, { immediate: true })
 
 watch(() => form.description, (val) => {
   const first = val.trim().split('\n')[0].slice(0, 80).trim()

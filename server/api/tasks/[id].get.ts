@@ -2,9 +2,11 @@ import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
 
 export default defineEventHandler(async (event) => {
-  requireAuth(event)
+  const user = requireAuth(event)
   const db = getDb()
   const id = getRouterParam(event, 'id')
+
+  if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
 
   const [rows] = await db.execute(
     `SELECT t.*, p.name as project_name, u.name as assigned_to_name,
@@ -18,6 +20,11 @@ export default defineEventHandler(async (event) => {
   )
   const task = (rows as any[])[0]
   if (!task) throw createError({ statusCode: 404, message: 'Task not found' })
+
+  if (user.role === 'staff') {
+    const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [task.project_id, user.id])
+    if (!(mem as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
   const [tickets] = await db.execute(
     `SELECT tk.id, tk.ticket_number, tk.title, tk.status_id, ts.name as status_name, ts.color as status_color

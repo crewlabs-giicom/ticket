@@ -16,7 +16,7 @@
       </div>
       <div class="divide-y divide-slate-100">
         <div v-for="item in items" :key="item.id" class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
-          <div class="flex-1 flex items-center gap-2">
+          <div class="flex-1 flex items-center gap-2 flex-wrap">
             <span v-if="item.type" class="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded"
               :class="{
                 'bg-blue-100 text-blue-700': item.type === 'master',
@@ -25,6 +25,7 @@
               }">{{ item.type }}</span>
             <span v-else class="text-[10px] text-slate-400 italic">module</span>
             <span class="text-sm text-slate-800">{{ item.name || '—' }}</span>
+            <span v-if="item.project_name" class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">{{ item.project_name }}</span>
           </div>
           <span v-if="!item.is_active" class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">nonaktif</span>
           <button @click="openForm(item)" class="btn-ghost py-1 px-2 text-xs">Edit</button>
@@ -38,6 +39,14 @@
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
         <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? 'Edit' : 'Tambah' }} Menu Sistem</h3>
         <div class="space-y-4">
+          <div>
+            <label class="label">Project <span class="text-slate-400 text-xs">(opsional)</span></label>
+            <AppSelect
+              v-model="form.project_id"
+              :options="[{ value: '', label: '— Semua Project (Global) —' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+              placeholder="— Semua Project (Global) —"
+            />
+          </div>
           <div>
             <label class="label">Modul <span class="text-red-500">*</span></label>
             <input v-model="form.module" list="module-list" class="input" placeholder="cth: Backbone" />
@@ -81,7 +90,9 @@
 definePageMeta({ middleware: 'auth' })
 
 const { data, refresh } = await useFetch('/api/system-menus')
+const { data: prd } = await useFetch('/api/projects')
 const list = ref<any[]>([])
+const projects = computed(() => (prd.value as any)?.data?.filter((p: any) => p.is_active) || [])
 watch(data, (v) => { list.value = [...((v as any)?.data || [])] }, { immediate: true })
 
 const grouped = computed(() => {
@@ -97,7 +108,7 @@ const modules = computed(() => [...new Set(list.value.map(i => i.module))])
 
 const showForm = ref(false)
 const editing = ref<any>(null)
-const form = reactive({ module: '', type: '', name: '', is_active: true })
+const form = reactive({ module: '', type: '', name: '', is_active: true, project_id: '' as string | number })
 
 function openForm(item?: any) {
   editing.value = item || null
@@ -106,11 +117,13 @@ function openForm(item?: any) {
     form.type = item.type || ''
     form.name = item.name || ''
     form.is_active = !!item.is_active
+    form.project_id = item.project_id || ''
   } else {
     form.module = ''
     form.type = ''
     form.name = ''
     form.is_active = true
+    form.project_id = ''
   }
   showForm.value = true
 }
@@ -121,6 +134,7 @@ async function save() {
     type: form.type || null,
     name: form.type ? (form.name.trim() || null) : null,
     is_active: form.is_active ? 1 : 0,
+    project_id: form.project_id || null,
   }
   if (editing.value) {
     await $fetch(`/api/system-menus/${editing.value.id}`, { method: 'PUT', body })

@@ -172,6 +172,8 @@ async function migrate(db: mysql.Pool) {
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `)
+  await db.execute(`ALTER TABLE system_menus ADD COLUMN project_id INT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE system_menus ADD CONSTRAINT fk_sysmenu_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL`).catch(() => {})
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS project_members (
