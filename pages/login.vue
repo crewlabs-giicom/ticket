@@ -30,17 +30,7 @@
         </button>
       </form>
 
-      <div class="mt-4 pt-4 border-t border-slate-100">
-        <p class="text-xs text-center text-slate-400 mb-2">Demo accounts:</p>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <button v-for="acc in demoAccounts" :key="acc.email" @click="fillDemo(acc)" class="text-left p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-            <p class="font-medium text-slate-700">{{ acc.label }}</p>
-            <p class="text-slate-400 truncate">{{ acc.email }}</p>
-          </button>
-        </div>
-      </div>
-
-      <p class="text-center text-sm text-slate-500 mt-4">
+<p class="text-center text-sm text-slate-500 mt-4">
         Belum punya akun?
         <NuxtLink to="/register" class="text-primary-600 hover:underline font-medium">Daftar</NuxtLink>
       </p>
@@ -59,17 +49,6 @@ const form = reactive({ email: '', password: '' })
 const showPass = ref(false)
 const error = ref('')
 
-const demoAccounts = [
-  { label: 'Admin', email: 'admin@ticketing.com', password: 'password123' },
-  { label: 'Staff', email: 'budi@ticketing.com', password: 'password123' },
-  { label: 'Staff 2', email: 'siti@ticketing.com', password: 'password123' },
-  { label: 'Customer', email: 'customer1@example.com', password: 'password123' }
-]
-
-function fillDemo(acc: any) {
-  form.email = acc.email
-  form.password = acc.password
-}
 
 async function handleLogin() {
   error.value = ''

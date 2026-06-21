@@ -62,10 +62,18 @@
             <input type="file" multiple class="hidden" :disabled="uploading" @change="handleFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
           </label>
           <div v-if="uploadedFiles.length" class="mt-2 flex flex-wrap gap-2">
-            <div v-for="(f, i) in uploadedFiles" :key="i" class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
-              <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <span class="max-w-[120px] truncate">{{ f.original_name }}</span>
-              <button type="button" @click="uploadedFiles.splice(i, 1)" class="text-slate-400 hover:text-red-500 ml-0.5">×</button>
+            <div v-for="(f, i) in uploadedFiles" :key="i" class="relative group">
+              <template v-if="f.mime_type?.startsWith('image/')">
+                <img :src="`/uploads/${f.filename}`" :alt="f.original_name" class="w-14 h-14 object-cover rounded-lg border border-slate-200" />
+                <button type="button" @click="uploadedFiles.splice(i, 1)" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+              </template>
+              <template v-else>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
+                  <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <span class="max-w-[120px] truncate">{{ f.original_name }}</span>
+                  <button type="button" @click="uploadedFiles.splice(i, 1)" class="text-slate-400 hover:text-red-500 ml-0.5">×</button>
+                </div>
+              </template>
             </div>
           </div>
           <p v-if="uploadError" class="text-xs text-red-600 mt-1">{{ uploadError }}</p>
