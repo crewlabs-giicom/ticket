@@ -11,10 +11,11 @@
         :class="msg.sender_id === authUser?.id ? 'flex-row-reverse' : 'flex-row'"
       >
         <div
-          class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5"
+          class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 overflow-hidden"
           :class="msg.sender_id === authUser?.id ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'"
         >
-          {{ initials(msg.sender_name) }}
+          <img v-if="msg.sender_avatar" :src="`/uploads/${msg.sender_avatar}`" class="w-full h-full object-cover" />
+          <span v-else>{{ initials(msg.sender_name) }}</span>
         </div>
         <div :class="msg.sender_id === authUser?.id ? 'items-end' : 'items-start'" class="flex flex-col max-w-[75%]">
           <span class="text-[11px] text-gray-400 mb-0.5">{{ msg.sender_name }}</span>
@@ -32,7 +33,7 @@
                   <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
                   <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                 </button>
-                <a v-else :href="`/uploads/${a.filename}`" target="_blank"
+                <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank"
                   class="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] bg-white/20 hover:bg-white/30 text-inherit transition-colors">
                   <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                   <span class="max-w-[100px] truncate">{{ a.original_name }}</span>
@@ -48,12 +49,17 @@
     <!-- Pending files preview -->
     <div v-if="pendingFiles.length" class="border-t border-gray-100 px-2 py-1.5 flex flex-wrap gap-1.5 bg-gray-50">
       <div v-for="(f, i) in pendingFiles" :key="i" class="relative group">
-        <img v-if="isImage(f.mime_type)" :src="`/uploads/${f.filename}`" class="w-12 h-12 object-cover rounded-lg border border-gray-200" />
-        <div v-else class="flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] text-gray-600 max-w-[100px]">
-          <svg class="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-          <span class="truncate">{{ f.original_name }}</span>
-        </div>
-        <button @click="pendingFiles.splice(i, 1)" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+        <template v-if="isImage(f.mime_type)">
+          <img :src="`/uploads/${f.filename}`" class="w-10 h-10 object-cover rounded-lg border border-gray-200" />
+          <button @click="pendingFiles.splice(i, 1)" class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/50 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+        </template>
+        <template v-else>
+          <div class="flex items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] text-gray-600 max-w-[100px]">
+            <svg class="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <span class="truncate">{{ f.original_name }}</span>
+            <button @click="pendingFiles.splice(i, 1)" class="text-gray-400 hover:text-red-500 ml-0.5">×</button>
+          </div>
+        </template>
       </div>
       <p v-if="uploading" class="text-[11px] text-indigo-500 self-center">Mengupload...</p>
     </div>
@@ -92,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ ticketId: number }>()
+const props = defineProps<{ ticketId: number; projectId?: number; projectName?: string }>()
 
 const authStore = useAuthStore()
 const authUser = computed(() => authStore.user)
@@ -143,6 +149,11 @@ async function markRead() {
 async function uploadFile(file: File, name?: string) {
   const fd = new FormData()
   fd.append('file', file, name || file.name)
+  fd.append('menu', 'ticket')
+  if (props.projectId) {
+    fd.append('project_id', String(props.projectId))
+    fd.append('project_name', props.projectName || '')
+  }
   const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
   pendingFiles.value.push(res.data)
 }

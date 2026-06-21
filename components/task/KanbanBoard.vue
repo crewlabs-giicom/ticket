@@ -75,9 +75,12 @@
                     <!-- Right: assignee avatar -->
                     <span
                       v-if="element.assigned_to_name"
-                      class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold flex-shrink-0"
+                      class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold flex-shrink-0 overflow-hidden"
                       :title="element.assigned_to_name"
-                    >{{ initials(element.assigned_to_name) }}</span>
+                    >
+                      <img v-if="element.assigned_to_avatar" :src="`/uploads/${element.assigned_to_avatar}`" class="w-full h-full object-cover" />
+                      <span v-else>{{ initials(element.assigned_to_name) }}</span>
+                    </span>
                   </div>
                 </div>
               </template>
@@ -150,7 +153,10 @@
                   {{ statusLabel(selectedTask.status) }}
                 </span>
                 <span v-if="selectedTask.assigned_to_name" class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                  <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold">{{ initials(selectedTask.assigned_to_name) }}</span>
+                  <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold overflow-hidden">
+                    <img v-if="selectedTask.assigned_to_avatar" :src="`/uploads/${selectedTask.assigned_to_avatar}`" class="w-full h-full object-cover" />
+                    <span v-else>{{ initials(selectedTask.assigned_to_name) }}</span>
+                  </span>
                   {{ selectedTask.assigned_to_name }}
                 </span>
                 <span v-if="selectedTask.due_date" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"

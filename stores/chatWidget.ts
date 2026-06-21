@@ -5,6 +5,8 @@ export interface OpenTicket {
   ticketNumber: string
   title: string
   mode: 'minimized' | 'expanded'
+  projectId?: number
+  projectName?: string
 }
 
 export const useChatWidgetStore = defineStore('chatWidget', () => {
@@ -27,7 +29,7 @@ export const useChatWidgetStore = defineStore('chatWidget', () => {
     }
   }
 
-  function openTicket(ticket: { ticketId: number; ticketNumber: string; title: string }) {
+  function openTicket(ticket: { ticketId: number; ticketNumber: string; title: string; projectId?: number; projectName?: string }) {
     const existing = openTickets.value.find(t => t.ticketId === ticket.ticketId)
     if (existing) {
       openTickets.value.forEach(t => { t.mode = 'minimized' })

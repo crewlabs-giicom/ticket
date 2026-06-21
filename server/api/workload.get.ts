@@ -11,6 +11,7 @@ export default defineEventHandler(async (event) => {
       u.name,
       u.email,
       u.role,
+      u.avatar,
       SUM(CASE WHEN t.status = 'backlog' THEN 1 ELSE 0 END) as task_backlog,
       SUM(CASE WHEN t.status = 'todo' THEN 1 ELSE 0 END) as task_todo,
       SUM(CASE WHEN t.status = 'in_progress' THEN 1 ELSE 0 END) as task_in_progress,

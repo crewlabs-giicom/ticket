@@ -128,6 +128,7 @@ async function handleAvatarUpload(e: Event) {
   try {
     const fd = new FormData()
     fd.append('file', file)
+    fd.append('menu', 'profile')
     const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
     currentAvatar.value = res.data.filename
     avatarPreview.value = `/uploads/${res.data.filename}`

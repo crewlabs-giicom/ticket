@@ -64,8 +64,8 @@
           <div v-if="uploadedFiles.length" class="mt-2 flex flex-wrap gap-2">
             <div v-for="(f, i) in uploadedFiles" :key="i" class="relative group">
               <template v-if="f.mime_type?.startsWith('image/')">
-                <img :src="`/uploads/${f.filename}`" :alt="f.original_name" class="w-14 h-14 object-cover rounded-lg border border-slate-200" />
-                <button type="button" @click="uploadedFiles.splice(i, 1)" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+                <img :src="`/uploads/${f.filename}`" :alt="f.original_name" class="w-10 h-10 object-cover rounded-lg border border-slate-200" />
+                <button type="button" @click="uploadedFiles.splice(i, 1)" class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/50 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
               </template>
               <template v-else>
                 <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
@@ -169,6 +169,7 @@ async function handleFiles(e: Event) {
     for (const file of Array.from(input.files)) {
       const fd = new FormData()
       fd.append('file', file)
+      appendUploadContext(fd)
       const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
       uploadedFiles.value.push(res.data)
     }
@@ -177,6 +178,15 @@ async function handleFiles(e: Event) {
   } finally {
     uploading.value = false
     input.value = ''
+  }
+}
+
+function appendUploadContext(fd: FormData) {
+  fd.append('menu', 'ticket')
+  const proj = projects.value.find((p: any) => String(p.id) === String(form.project_id))
+  if (proj) {
+    fd.append('project_id', String(proj.id))
+    fd.append('project_name', proj.name || '')
   }
 }
 
@@ -194,6 +204,7 @@ async function handlePaste(e: ClipboardEvent) {
       const ext = item.type.split('/')[1] || 'png'
       const fd = new FormData()
       fd.append('file', file, `paste-${Date.now()}.${ext}`)
+      appendUploadContext(fd)
       const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
       uploadedFiles.value.push(res.data)
     }

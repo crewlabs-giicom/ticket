@@ -30,6 +30,8 @@
           <!-- Thread -->
           <TicketChatThread
             :ticketId="expandedTicket.ticketId"
+            :projectId="expandedTicket.projectId"
+            :projectName="expandedTicket.projectName"
             :ref="el => { threadRef = el }"
             class="flex-1 min-h-0"
           />

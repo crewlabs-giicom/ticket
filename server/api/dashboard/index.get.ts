@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
   `)
 
   const [workload] = await db.execute(`
-    SELECT u.id, u.name,
+    SELECT u.id, u.name, u.avatar,
       COUNT(t.id) as open_tickets,
       SUM(CASE WHEN t.sla_breached = 1 THEN 1 ELSE 0 END) as overdue_tickets
     FROM users u
@@ -83,15 +83,15 @@ export default defineEventHandler(async (event) => {
   `)
 
   const [activity] = await db.execute(`
-    SELECT type, created_at, message, user_name, ticket_number, ticket_id
+    SELECT type, created_at, message, user_name, user_avatar, ticket_number, ticket_id
     FROM (
-      SELECT 'response' as type, r.created_at, r.message, u.name as user_name, t.ticket_number, t.id as ticket_id
+      SELECT 'response' as type, r.created_at, r.message, u.name as user_name, u.avatar as user_avatar, t.ticket_number, t.id as ticket_id
       FROM ticket_responses r
       JOIN users u ON u.id = r.user_id
       JOIN tickets t ON t.id = r.ticket_id
       WHERE r.is_internal = 0
       UNION ALL
-      SELECT 'ticket' as type, t.created_at, t.title as message, u.name as user_name, t.ticket_number, t.id as ticket_id
+      SELECT 'ticket' as type, t.created_at, t.title as message, u.name as user_name, u.avatar as user_avatar, t.ticket_number, t.id as ticket_id
       FROM tickets t JOIN users u ON u.id = t.created_by
     ) activity_feed
     ORDER BY created_at DESC

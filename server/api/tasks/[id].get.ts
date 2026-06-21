@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
   )
 
   const [comments] = await db.execute(
-    `SELECT tc.*, u.name as user_name, u.role as user_role
+    `SELECT tc.*, u.name as user_name, u.role as user_role, u.avatar as user_avatar
      FROM task_comments tc LEFT JOIN users u ON u.id = tc.user_id
      WHERE tc.task_id = ? ORDER BY tc.created_at ASC`,
     [id]

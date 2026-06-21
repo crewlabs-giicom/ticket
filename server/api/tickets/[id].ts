@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
 
     const showInternal = user.role !== 'customer'
     const [responses] = await db.execute(`
-      SELECT r.*, u.name as user_name, u.role as user_role
+      SELECT r.*, u.name as user_name, u.role as user_role, u.avatar as user_avatar
       FROM ticket_responses r
       LEFT JOIN users u ON u.id = r.user_id
       WHERE r.ticket_id = ? ${!showInternal ? 'AND r.is_internal = 0' : ''}

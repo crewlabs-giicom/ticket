@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
         SUM(CASE WHEN tk.status IN ('todo','in_progress','review') THEN 1 ELSE 0 END) AS task_waiting,
         SUM(CASE WHEN tk.due_date < NOW() AND tk.status != 'done' THEN 1 ELSE 0 END) AS task_overdue,
         COUNT(DISTINCT pm.user_id) AS member_count,
-        GROUP_CONCAT(DISTINCT CONCAT(u.id,'|',u.name,'|',u.role) ORDER BY u.id SEPARATOR ';;') AS members_raw
+        GROUP_CONCAT(DISTINCT CONCAT(u.id,'|',u.name,'|',u.role,'|',IFNULL(u.avatar,'')) ORDER BY u.id SEPARATOR ';;') AS members_raw
       FROM projects p
       LEFT JOIN tickets t ON t.project_id = p.id
       LEFT JOIN tasks tk ON tk.project_id = p.id
@@ -29,8 +29,8 @@ export default defineEventHandler(async (event) => {
     // Parse members_raw into array
     const members = project.members_raw
       ? project.members_raw.split(';;').map((s: string) => {
-          const [mid, name, role] = s.split('|')
-          return { id: Number(mid), name, role }
+          const [mid, name, role, avatar] = s.split('|')
+          return { id: Number(mid), name, role, avatar: avatar || null }
         })
       : []
     delete project.members_raw

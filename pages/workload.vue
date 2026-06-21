@@ -17,8 +17,9 @@
           <!-- Name & meta -->
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                {{ initials(member.name) }}
+              <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-semibold flex-shrink-0 overflow-hidden">
+                <img v-if="member.avatar" :src="`/uploads/${member.avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ initials(member.name) }}</span>
               </div>
               <div>
                 <p class="font-semibold text-gray-800 text-sm">{{ member.name }}</p>

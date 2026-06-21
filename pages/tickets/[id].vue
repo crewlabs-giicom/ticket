@@ -77,7 +77,7 @@
                 <svg class="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
               </div>
             </button>
-            <a v-else :href="`/uploads/${a.filename}`" target="_blank" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700">
+            <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700">
               <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
               {{ a.original_name }}
             </a>
@@ -106,9 +106,10 @@
       <div class="space-y-3">
         <div v-for="r in ticket.responses" :key="r.id" :class="['flex gap-2', r.user_id === auth.user?.id ? 'flex-row-reverse' : 'flex-row']">
           <!-- Avatar -->
-          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-1"
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-1 overflow-hidden"
             :class="r.user_id === auth.user?.id ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-600'">
-            {{ r.user_name?.charAt(0) }}
+            <img v-if="r.user_avatar" :src="`/uploads/${r.user_avatar}`" class="w-full h-full object-cover" />
+            <span v-else>{{ r.user_name?.charAt(0) }}</span>
           </div>
 
           <!-- Bubble -->
@@ -138,7 +139,7 @@
                     <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                   </button>
-                  <a v-else :href="`/uploads/${a.filename}`" target="_blank"
+                  <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank"
                     :class="['flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-colors',
                       r.user_id === auth.user?.id
                         ? 'bg-white/20 hover:bg-white/30 text-white'
@@ -167,8 +168,8 @@
         <div v-if="replyFiles.length" class="flex flex-wrap gap-2 mt-2">
           <div v-for="(f, i) in replyFiles" :key="i" class="relative group">
             <template v-if="f.mime_type?.startsWith('image/')">
-              <img :src="`/uploads/${f.filename}`" class="w-14 h-14 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" @click="openReplyImageLightbox(i)" />
-              <button type="button" @click="replyFiles.splice(i, 1)" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
+              <img :src="`/uploads/${f.filename}`" class="w-10 h-10 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" @click="openReplyImageLightbox(i)" />
+              <button type="button" @click="replyFiles.splice(i, 1)" class="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/50 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
             </template>
             <template v-else>
               <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
@@ -345,7 +346,7 @@ function openLightbox(images: any[], index: number) {
 
 function openChat() {
   if (!ticket.value) return
-  chatWidget.openTicket({ ticketId: ticket.value.id, ticketNumber: ticket.value.ticket_number, title: ticket.value.title })
+  chatWidget.openTicket({ ticketId: ticket.value.id, ticketNumber: ticket.value.ticket_number, title: ticket.value.title, projectId: ticket.value.project_id, projectName: ticket.value.project_name })
 }
 const route = useRoute()
 const id = route.params.id
@@ -407,6 +408,7 @@ async function handleReplyPaste(e: ClipboardEvent) {
         const ext = item.type.split('/')[1] || 'png'
         const fd = new FormData()
         fd.append('file', file, `paste-${Date.now()}.${ext}`)
+        appendTicketUploadContext(fd)
         const r = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
         replyFiles.value.push(r.data)
       }
@@ -437,6 +439,7 @@ async function handleReplyFiles(e: Event) {
     for (const file of Array.from(input.files)) {
       const fd = new FormData()
       fd.append('file', file)
+      appendTicketUploadContext(fd)
       const r = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
       replyFiles.value.push(r.data)
     }
@@ -445,6 +448,15 @@ async function handleReplyFiles(e: Event) {
   } finally {
     uploading.value = false
     input.value = ''
+  }
+}
+
+function appendTicketUploadContext(fd: FormData) {
+  const t = ticket.value
+  fd.append('menu', 'ticket')
+  if (t?.project_id) {
+    fd.append('project_id', String(t.project_id))
+    fd.append('project_name', t.project_name || '')
   }
 }
 

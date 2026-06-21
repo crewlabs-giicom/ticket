@@ -26,10 +26,13 @@
           <div class="flex items-center mr-1">
             <div
               v-for="(m, i) in (project.members || []).slice(0, 4)" :key="m.id"
-              class="w-7 h-7 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-indigo-700"
+              class="w-7 h-7 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-indigo-700 overflow-hidden"
               :style="{ marginLeft: i === 0 ? '0' : '-8px' }"
               :title="m.name"
-            >{{ initials(m.name) }}</div>
+            >
+              <img v-if="m.avatar" :src="`/uploads/${m.avatar}`" class="w-full h-full object-cover" />
+              <span v-else>{{ initials(m.name) }}</span>
+            </div>
             <span
               v-if="project.member_count > 4"
               class="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-semibold text-slate-500"
@@ -110,7 +113,10 @@
           </div>
           <div v-if="project.members?.length" class="flex flex-wrap gap-3">
             <div v-for="m in project.members" :key="m.id" class="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
-              <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center flex-shrink-0">{{ initials(m.name) }}</div>
+              <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img v-if="m.avatar" :src="`/uploads/${m.avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ initials(m.name) }}</span>
+              </div>
               <div>
                 <p class="text-sm font-medium text-slate-800 leading-none">{{ m.name }}</p>
                 <p class="text-xs text-slate-400 capitalize mt-0.5">{{ m.role }}</p>
@@ -344,8 +350,9 @@
           <div v-if="!members.length" class="p-6 text-center text-slate-400 text-sm">Belum ada member.</div>
           <div v-else class="divide-y divide-slate-100">
             <div v-for="m in members" :key="m.id" class="flex items-center gap-3 px-5 py-3.5">
-              <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold flex items-center justify-center flex-shrink-0">
-                {{ initials(m.name) }}
+              <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img v-if="m.avatar" :src="`/uploads/${m.avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ initials(m.name) }}</span>
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-slate-800">{{ m.name }}</p>

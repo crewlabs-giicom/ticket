@@ -20,7 +20,10 @@
           <tr v-for="u in users" :key="u.id" class="hover:bg-slate-50">
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-xs flex-shrink-0">{{ u.name?.charAt(0)?.toUpperCase() }}</div>
+                <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-xs flex-shrink-0 overflow-hidden">
+                  <img v-if="u.avatar" :src="`/uploads/${u.avatar}`" class="w-full h-full object-cover" />
+                  <span v-else>{{ u.name?.charAt(0)?.toUpperCase() }}</span>
+                </div>
                 <span class="font-medium text-slate-900 text-sm">{{ u.name }}</span>
               </div>
             </td>

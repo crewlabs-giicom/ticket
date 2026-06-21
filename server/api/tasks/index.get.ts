@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
 
   const [rows] = await db.execute(
     `SELECT t.*, p.name as project_name,
-            u.name as assigned_to_name,
+            u.name as assigned_to_name, u.avatar as assigned_to_avatar,
             (SELECT COUNT(*) FROM tickets tk WHERE tk.task_id = t.id) as ticket_count
      FROM tasks t
      LEFT JOIN projects p ON p.id = t.project_id

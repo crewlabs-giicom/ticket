@@ -88,7 +88,10 @@
         <h3 class="text-sm font-semibold text-slate-900 mb-3">Workload Staff</h3>
         <div class="space-y-2">
           <div v-for="s in d?.workload" :key="s.id" class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-semibold flex-shrink-0">{{ s.name?.charAt(0) }}</div>
+            <div class="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-semibold flex-shrink-0 overflow-hidden">
+              <img v-if="s.avatar" :src="`/uploads/${s.avatar}`" class="w-full h-full object-cover" />
+              <span v-else>{{ s.name?.charAt(0) }}</span>
+            </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
                 <span class="text-xs font-medium text-slate-700 truncate">{{ s.name }}</span>
@@ -108,7 +111,10 @@
       <h3 class="text-sm font-semibold text-slate-900 mb-3">Aktivitas Terbaru</h3>
       <div class="space-y-3">
         <div v-for="a in d?.activity" :key="a.ticket_id + a.created_at" class="flex items-start gap-3">
-          <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-xs font-semibold flex-shrink-0">{{ a.user_name?.charAt(0) }}</div>
+          <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-xs font-semibold flex-shrink-0 overflow-hidden">
+            <img v-if="a.user_avatar" :src="`/uploads/${a.user_avatar}`" class="w-full h-full object-cover" />
+            <span v-else>{{ a.user_name?.charAt(0) }}</span>
+          </div>
           <div class="flex-1 min-w-0">
             <p class="text-xs text-slate-700"><span class="font-medium">{{ a.user_name }}</span> {{ a.type === 'ticket' ? 'membuat ticket' : 'membalas' }} <span class="text-primary-600 cursor-pointer hover:underline" @click="tabs.openTab({ id: a.ticket_id, ticket_number: a.ticket_number, title: a.message })">{{ a.ticket_number }}</span></p>
             <p class="text-xs text-slate-400">{{ timeAgo(a.created_at) }}</p>

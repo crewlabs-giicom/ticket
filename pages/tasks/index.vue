@@ -102,7 +102,10 @@
               </td>
               <td class="px-4 py-3 text-gray-500">
                 <span v-if="task.assigned_to_name" class="flex items-center gap-1.5">
-                  <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-semibold">{{ initials(task.assigned_to_name) }}</span>
+                  <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-semibold overflow-hidden">
+                    <img v-if="task.assigned_to_avatar" :src="`/uploads/${task.assigned_to_avatar}`" class="w-full h-full object-cover" />
+                    <span v-else>{{ initials(task.assigned_to_name) }}</span>
+                  </span>
                   {{ task.assigned_to_name }}
                 </span>
                 <span v-else class="text-gray-300">—</span>
@@ -167,7 +170,10 @@
                         <span v-if="element.ticket_count > 0" class="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">🎫 {{ element.ticket_count }}</span>
                         <span v-if="element.due_date" :class="['text-xs', isOverdue(element.due_date) ? 'text-red-500' : 'text-gray-400']">{{ formatDate(element.due_date) }}</span>
                       </div>
-                      <span v-if="element.assigned_to_name" class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-semibold flex-shrink-0">{{ initials(element.assigned_to_name) }}</span>
+                      <span v-if="element.assigned_to_name" class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-semibold flex-shrink-0 overflow-hidden">
+                        <img v-if="element.assigned_to_avatar" :src="`/uploads/${element.assigned_to_avatar}`" class="w-full h-full object-cover" />
+                        <span v-else>{{ initials(element.assigned_to_name) }}</span>
+                      </span>
                     </div>
                   </div>
                 </template>
@@ -333,7 +339,10 @@
             <h3 class="text-sm font-semibold text-gray-700 mb-2">Komentar</h3>
             <div v-if="selectedTask.comments?.length" class="space-y-3 mb-3">
               <div v-for="c in selectedTask.comments" :key="c.id" class="flex gap-2.5">
-                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">{{ c.user_name?.charAt(0).toUpperCase() }}</div>
+                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden">
+                  <img v-if="c.user_avatar" :src="`/uploads/${c.user_avatar}`" class="w-full h-full object-cover" />
+                  <span v-else>{{ c.user_name?.charAt(0).toUpperCase() }}</span>
+                </div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-0.5">
                     <span class="text-xs font-medium text-gray-800">{{ c.user_name }}</span>
@@ -585,6 +594,12 @@ async function createTask() {
       for (const img of taskPasteImages.value) {
         const fd = new FormData()
         fd.append('file', img.file, img.name)
+        fd.append('menu', 'task')
+        if (form.project_id) {
+          const proj = projects.value?.find((p: any) => String(p.id) === String(form.project_id))
+          fd.append('project_id', String(form.project_id))
+          fd.append('project_name', proj?.name || '')
+        }
         const r = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
         description += `\n\n![${img.name}](/uploads/${r.data.filename})`
       }
