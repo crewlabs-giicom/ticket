@@ -31,18 +31,30 @@ export default defineEventHandler(async (event) => {
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const paginate = q.paginate !== 'false'
+  const limit = Math.min(Number(q.limit) || 50, 500)
+  const page = Math.max(Number(q.page) || 1, 1)
+  const offset = (page - 1) * limit
 
-  const [rows] = await db.execute(
-    `SELECT t.*, p.name as project_name,
-            u.name as assigned_to_name, u.avatar as assigned_to_avatar,
-            (SELECT COUNT(*) FROM tickets tk WHERE tk.task_id = t.id) as ticket_count
-     FROM tasks t
-     LEFT JOIN projects p ON p.id = t.project_id
-     LEFT JOIN users u ON u.id = t.assigned_to
-     ${where}
-     ORDER BY t.project_id ASC, t.position ASC, t.created_at DESC`,
-    params
-  )
+  const baseQuery = `SELECT t.*, p.name as project_name,
+          u.name as assigned_to_name, u.avatar as assigned_to_avatar,
+          (SELECT COUNT(*) FROM tickets tk WHERE tk.task_id = t.id) as ticket_count
+   FROM tasks t
+   LEFT JOIN projects p ON p.id = t.project_id
+   LEFT JOIN users u ON u.id = t.assigned_to
+   ${where}
+   ORDER BY t.project_id ASC, t.position ASC, t.created_at DESC`
+
+  if (!paginate) {
+    const [rows] = await db.execute(baseQuery, params)
+    return rows
+  }
+
+  const [[{ total }]] = await db.execute(
+    `SELECT COUNT(*) as total FROM tasks t ${where}`, params
+  ) as any[]
+
+  const [rows] = await db.execute(`${baseQuery} LIMIT ? OFFSET ?`, [...params, limit, offset])
 
   if (q.group_by === 'project') {
     const projMap = new Map<number, { project_id: number; project_name: string; tasks: any[] }>()
@@ -52,8 +64,8 @@ export default defineEventHandler(async (event) => {
       }
       projMap.get(row.project_id)!.tasks.push(row)
     }
-    return [...projMap.values()]
+    return { data: [...projMap.values()], total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
-  return rows
+  return { data: rows, total, page, limit, totalPages: Math.ceil(total / limit) }
 })

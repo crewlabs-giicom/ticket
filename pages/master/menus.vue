@@ -95,8 +95,9 @@ async function saveOrder() {
   await $fetch('/api/menus', { method: 'PUT', body: items })
 }
 
+const { confirmDelete } = useConfirm()
 async function deleteMenu(id: number) {
-  if (!confirm('Hapus menu ini?')) return
+  if (!await confirmDelete()) return
   await $fetch(`/api/menus/${id}`, { method: 'DELETE' })
   await refresh()
   list.value = [...((allMenus.value as any)?.data || [])]

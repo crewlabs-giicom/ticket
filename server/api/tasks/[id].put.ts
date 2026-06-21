@@ -34,6 +34,13 @@ export default defineEventHandler(async (event) => {
 
   if (!sets.length) throw createError({ statusCode: 400, message: 'Nothing to update' })
 
+  // Set completed_at when status changes to 'done'
+  if ('status' in body && body.status === 'done' && old.status !== 'done') {
+    sets.push('completed_at = NOW()')
+  } else if ('status' in body && body.status !== 'done' && old.status === 'done') {
+    sets.push('completed_at = NULL')
+  }
+
   params.push(id)
   await db.execute(`UPDATE tasks SET ${sets.join(', ')}, updated_at = NOW() WHERE id = ?`, params)
 

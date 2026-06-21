@@ -75,8 +75,9 @@ async function saveOrder() {
   const items = list.value.map((p, i) => ({ id: p.id, order_index: i + 1 }))
   await $fetch('/api/priorities', { method: 'PUT', body: items })
 }
+const { confirmDelete } = useConfirm()
 async function deletePriority(id: number) {
-  if (!confirm('Hapus priority ini?')) return
+  if (!await confirmDelete()) return
   await $fetch(`/api/priorities/${id}`, { method: 'DELETE' })
   await refresh(); list.value = [...((data.value as any)?.data || [])]
 }

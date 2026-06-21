@@ -12,7 +12,7 @@ export function getDb(): mysql.Pool {
     database: process.env.DB_NAME || 'ticketing',
     waitForConnections: true,
     connectionLimit: 10,
-    timezone: '+00:00',
+    timezone: 'local',
   })
   initDb()
   return pool
@@ -277,6 +277,33 @@ async function migrate(db: mysql.Pool) {
   // Add system_menu_id to tickets and tasks if not present
   try { await db.execute(`ALTER TABLE tickets ADD COLUMN system_menu_id INT NULL REFERENCES system_menus(id)`) } catch {}
   try { await db.execute(`ALTER TABLE tasks ADD COLUMN system_menu_id INT NULL REFERENCES system_menus(id)`) } catch {}
+
+  // Task time tracking
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS task_timelogs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      task_id INT NOT NULL,
+      user_id INT NOT NULL,
+      started_at DATETIME NOT NULL,
+      stopped_at DATETIME,
+      duration_seconds INT,
+      note VARCHAR(500),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_tl_task (task_id)
+    )
+  `)
+
+  // Add completed_at to tasks (for lifecycle SLA)
+  try { await db.execute(`ALTER TABLE tasks ADD COLUMN completed_at DATETIME NULL`) } catch {}
+
+  // Close zombie timelogs (> 12 hours open = likely abandoned)
+  try {
+    await db.execute(
+      `UPDATE task_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE stopped_at IS NULL AND started_at < DATE_SUB(NOW(), INTERVAL 12 HOUR)`
+    )
+  } catch {}
 
   // Add task_id and subsystem to tickets if not present
   try {

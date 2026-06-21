@@ -54,15 +54,15 @@
         <div v-if="ticket.resolved_at"><span class="font-medium">Resolved:</span> {{ new Date(ticket.resolved_at).toLocaleString('id') }}</div>
       </div>
 
-      <!-- Task & subsystem links -->
+      <!-- Task & duration links -->
       <div class="mt-4 flex flex-wrap gap-3 text-xs border-t border-slate-100 pt-4">
         <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           Task: {{ ticket.task_title || ticket.task_id }}
         </NuxtLink>
-        <span v-if="ticket.subsystem" class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded-lg">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-          {{ ticket.subsystem }}
+        <span v-if="ticket.resolved_at || ticket.closed_at" class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Durasi: {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}
         </span>
       </div>
 
@@ -477,14 +477,16 @@ async function submitReply() {
   } finally { sending.value = false }
 }
 
-function timeAgo(d: string) {
-  const diff = Date.now() - new Date(d).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'baru saja'
-  if (m < 60) return `${m}m lalu`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}j lalu`
-  return `${Math.floor(h / 24)}h lalu`
+const { timeAgo } = useTimeAgo()
+
+function formatDuration(from: string, to: string) {
+  const secs = Math.floor((new Date(to).getTime() - new Date(from).getTime()) / 1000)
+  if (secs < 0) return '—'
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  if (h >= 24) return `${Math.floor(h / 24)}h ${h % 24}j`
+  if (h > 0) return `${h}j ${m}m`
+  return `${m}m`
 }
 
 // Ticket links

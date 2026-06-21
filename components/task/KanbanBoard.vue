@@ -335,8 +335,9 @@ async function openTask(task: any) {
   selectedTask.value = detail
 }
 
+const { confirmDelete } = useConfirm()
 async function deleteTask(id: number) {
-  if (!confirm('Delete this task?')) return
+  if (!await confirmDelete('Task ini akan dihapus permanen.', 'Hapus task?')) return
   await $fetch(`/api/tasks/${id}`, { method: 'DELETE' })
   selectedTask.value = null
   emit('taskDeleted', id)

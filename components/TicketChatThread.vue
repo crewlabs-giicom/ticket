@@ -229,15 +229,7 @@ function initials(name: string) {
   return name?.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'baru saja'
-  if (mins < 60) return `${mins}m`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}j`
-  return `${Math.floor(hrs / 24)}h`
-}
+const { timeAgo } = useTimeAgo()
 
 const chatWidget = useChatWidgetStore()
 

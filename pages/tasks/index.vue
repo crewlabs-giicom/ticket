@@ -123,6 +123,7 @@
           </tbody>
         </table>
       </div>
+      <AppPagination :page="taskPagination.page" :total-pages="taskPagination.totalPages" :total="taskPagination.total" :limit="taskPagination.limit" @page-change="onTaskPageChange" />
     </div>
 
     <!-- KANBAN MODE — grouped by project -->
@@ -253,6 +254,31 @@
               placeholder="— Tidak dipilih —"
             />
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Lampiran</label>
+            <label class="flex items-center gap-2 cursor-pointer px-3 py-2 border-2 border-dashed border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+              <span class="text-xs text-slate-500">{{ taskUploading ? 'Mengupload...' : 'Pilih file (maks. 10MB)' }}</span>
+              <input type="file" multiple class="hidden" :disabled="taskUploading" @change="handleTaskFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
+            </label>
+            <div v-if="taskUploadedFiles.length" class="mt-2 flex flex-wrap gap-2">
+              <div v-for="(f, i) in taskUploadedFiles" :key="i">
+                <template v-if="f.mime_type?.startsWith('image/')">
+                  <div class="flex flex-col items-center gap-0.5">
+                    <img :src="`/uploads/${f.filename}`" :alt="f.original_name" class="w-10 h-10 object-cover rounded-lg border border-slate-200" />
+                    <button type="button" @click="taskUploadedFiles.splice(i, 1)" class="text-[10px] text-slate-400 hover:text-red-500">✕</button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
+                    <span class="max-w-[120px] truncate">{{ f.original_name }}</span>
+                    <button type="button" @click="taskUploadedFiles.splice(i, 1)" class="text-slate-400 hover:text-red-500">✕</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <p v-if="taskUploadError" class="text-xs text-red-600 mt-1">{{ taskUploadError }}</p>
+          </div>
         </div>
         <div class="flex justify-end gap-3 mt-6">
           <button @click="() => { taskPasteImages.forEach(i => URL.revokeObjectURL(i.blobUrl)); taskPasteImages.length = 0; showCreateModal = false }" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
@@ -300,6 +326,8 @@ onMounted(() => {
 function setViewMode(mode: 'list' | 'kanban') {
   viewMode.value = mode
   localStorage.setItem('task_view_mode', mode)
+  taskPagination.page = 1
+  loadTasks()
 }
 
 // Filters
@@ -346,6 +374,35 @@ const form = reactive({
 
 const taskPasteImages = ref<Array<{ blobUrl: string; name: string; file: File }>>([])
 const taskPasteUploading = ref(false)
+const taskUploadedFiles = ref<Array<{ filename: string; original_name: string; mime_type: string; size: number }>>([])
+const taskUploading = ref(false)
+const taskUploadError = ref('')
+
+async function handleTaskFiles(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length) return
+  taskUploading.value = true
+  taskUploadError.value = ''
+  try {
+    for (const file of Array.from(input.files)) {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('menu', 'task')
+      if (form.project_id) {
+        const proj = projects.value?.find((p: any) => String(p.id) === String(form.project_id))
+        fd.append('project_id', String(form.project_id))
+        fd.append('project_name', proj?.name || '')
+      }
+      const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+      taskUploadedFiles.value.push(res.data)
+    }
+  } catch (err: any) {
+    taskUploadError.value = err?.data?.statusMessage || 'Gagal mengupload file'
+  } finally {
+    taskUploading.value = false
+    input.value = ''
+  }
+}
 
 function handleTaskPaste(e: ClipboardEvent) {
   const items = Array.from(e.clipboardData?.items || []).filter(i => i.type.startsWith('image/'))
@@ -409,10 +466,30 @@ const tasksByProjectAndStatus = computed(() => {
   return result
 })
 
+const taskPagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 50 })
+
 async function loadTasks() {
-  const url = filterProject.value ? `/api/tasks?project_id=${filterProject.value}` : '/api/tasks'
-  tasks.value = await $fetch(url)
+  if (viewMode.value === 'kanban') {
+    // Kanban loads all tasks (no pagination)
+    const q: Record<string, any> = { paginate: 'false' }
+    if (filterProject.value) q.project_id = filterProject.value
+    const res = await $fetch<any[]>('/api/tasks', { query: q })
+    tasks.value = Array.isArray(res) ? res : (res as any)?.data || []
+  } else {
+    // List mode — paginated
+    const q: Record<string, any> = { page: taskPagination.page, limit: taskPagination.limit }
+    if (filterProject.value) q.project_id = filterProject.value
+    if (filterStatus.value) q.status = filterStatus.value
+    if (filterAssignee.value) q.assigned_to = filterAssignee.value
+    const res = await $fetch<any>('/api/tasks', { query: q })
+    tasks.value = res?.data || []
+    taskPagination.total = res?.total ?? 0
+    taskPagination.totalPages = res?.totalPages ?? 1
+    taskPagination.page = res?.page ?? 1
+  }
 }
+
+function onTaskPageChange(p: number) { taskPagination.page = p; loadTasks() }
 
 async function loadProjects() {
   projects.value = (await $fetch<any>('/api/projects'))?.data || []
@@ -430,7 +507,7 @@ async function loadSystemMenus(projectId?: string | number) {
   systemMenus.value = res?.data || []
 }
 
-watch(filterProject, loadTasks)
+watch([filterProject, filterStatus, filterAssignee], () => { taskPagination.page = 1; loadTasks() })
 
 watch(() => form.project_id, (val) => {
   form.system_menu_id = ''
@@ -503,9 +580,12 @@ async function createTask() {
       assigned_to: form.assigned_to ? Number(form.assigned_to) : undefined,
       due_date: form.due_date || undefined,
       system_menu_id: form.system_menu_id ? Number(form.system_menu_id) : undefined,
+      attachments: taskUploadedFiles.value.length ? taskUploadedFiles.value : undefined,
     })
     await loadTasks()
     showCreateModal.value = false
+    taskUploadedFiles.value = []
+    taskUploadError.value = ''
     Object.assign(form, { project_id: '', title: '', description: '', status: 'backlog', assigned_to: '', due_date: '', system_menu_id: '' })
   } finally {
     creating.value = false

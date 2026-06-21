@@ -24,6 +24,16 @@ export default defineEventHandler(async (event) => {
     [project_id, title, description || null, status, position, assigned_to || null, user.id, due_date || null, system_menu_id || null]
   ) as any[]
 
+  const attachments = body.attachments as Array<{ filename: string; original_name: string; mime_type?: string; size?: number }> | undefined
+  if (attachments?.length) {
+    for (const a of attachments) {
+      await db.execute(
+        'INSERT INTO task_attachments (task_id, filename, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)',
+        [result.insertId, a.filename, a.original_name, a.mime_type || null, a.size || null, user.id]
+      )
+    }
+  }
+
   await logActivity(db, {
     entity_type: 'task',
     entity_id: result.insertId,

@@ -16,22 +16,13 @@
             placeholder="Pilih project"
           />
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="label">Priority</label>
-            <AppSelect
-              v-model="form.priority_id"
-              :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
-              placeholder="Priority"
-            />
-          </div>
-          <div>
-            <label class="label">Subsystem</label>
-            <AppSelect
-              v-model="form.subsystem"
-              :options="[{ value: '', label: '— Pilih —' }, ...SUBSYSTEMS.map(s => ({ value: s, label: s }))]"
-              placeholder="— Pilih —"
-            />
-          </div>
+        <div>
+          <label class="label">Priority</label>
+          <AppSelect
+            v-model="form.priority_id"
+            :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
+            placeholder="Priority"
+          />
         </div>
         <div v-if="systemMenus.length">
           <label class="label">Modul / Menu Sistem</label>
@@ -91,8 +82,6 @@
   </div>
 </template>
 <script setup lang="ts">
-const SUBSYSTEMS = ['backbone', 'nvmee', 'pos', 'hris', 'wise', 'accounting', 'buzzbot', 'dementer', 'lainnya']
-
 const props = defineProps<{
   taskId?: number | string
   taskTitle?: string

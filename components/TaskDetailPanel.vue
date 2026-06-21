@@ -194,6 +194,36 @@
           </div>
         </div>
 
+        <!-- Time Tracker -->
+        <div class="border border-slate-200 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-700">Time Tracker</h3>
+              <p class="text-xs text-slate-400 mt-0.5">Total: <span class="font-medium text-slate-600">{{ timer.totalFormatted.value }}</span></p>
+            </div>
+            <button
+              @click="timer.isRunning.value ? timer.stop() : timer.start()"
+              :class="['flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors', timer.isRunning.value ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100']"
+            >
+              <span v-if="timer.isRunning.value" class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-sm bg-red-500 animate-pulse"></span>
+                Stop · {{ timer.elapsedFormatted.value }}
+              </span>
+              <span v-else class="flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                Mulai
+              </span>
+            </button>
+          </div>
+          <div v-if="timer.timelogs.value.length" class="space-y-1.5 max-h-32 overflow-y-auto">
+            <div v-for="log in timer.timelogs.value.slice(0, 5)" :key="log.id" class="flex items-center justify-between text-xs">
+              <span class="text-slate-600">{{ log.user_name }}</span>
+              <span class="text-slate-400">{{ log.duration_seconds ? timer.formatSeconds(log.duration_seconds) : '...' }}</span>
+              <span class="text-slate-300">{{ timeAgo(log.started_at) }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Activity -->
         <div v-if="task.history?.length">
           <h3 class="text-sm font-semibold text-gray-700 mb-2">Activity</h3>
@@ -238,28 +268,25 @@ const COLUMNS = [
 ]
 
 const lb = useLightbox()
+const taskIdRef = computed(() => task.id)
+const timer = useTaskTimer(taskIdRef)
+onMounted(() => timer.fetchLogs())
+
 function isImage(mime?: string) { return !!mime?.startsWith('image/') }
 function initials(name: string) { return name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 function statusColor(status: string) { return COLUMNS.find(c => c.status === status)?.color ?? '#94a3b8' }
 function statusLabel(status: string) { return COLUMNS.find(c => c.status === status)?.label ?? status }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) }
 function isOverdue(d: string) { return new Date(d) < new Date() }
-function timeAgo(d: string) {
-  const diff = Date.now() - new Date(d).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'baru saja'
-  if (m < 60) return `${m}m lalu`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}j lalu`
-  return `${Math.floor(h / 24)}h lalu`
-}
+const { timeAgo } = useTimeAgo()
 
 function createTicketFromTask() {
   navigateTo(`/tickets/new?task_id=${task.id}&project_id=${task.project_id}&title=${encodeURIComponent(task.title)}`)
 }
 
+const { confirmDelete } = useConfirm()
 async function deleteTask() {
-  if (!confirm('Hapus task ini?')) return
+  if (!await confirmDelete('Task ini akan dihapus permanen.', 'Hapus task?')) return
   await $fetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
   emit('deleted', task.id)
   emit('close')

@@ -156,13 +156,12 @@ const statusData = computed(() => {
 const lineOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' as const, labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } } }
 const donutOpts = { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 11 } } } } }
 
-function timeAgo(d: string) {
-  const diff = Date.now() - new Date(d).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'baru saja'
-  if (m < 60) return `${m}m lalu`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}j lalu`
-  return `${Math.floor(h / 24)}h lalu`
-}
+const { timeAgo } = useTimeAgo()
+const { startTour, isCompleted } = useTour()
+
+onMounted(() => {
+  if (!isCompleted()) {
+    setTimeout(() => startTour(), 800)
+  }
+})
 </script>

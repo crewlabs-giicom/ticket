@@ -32,6 +32,14 @@ export default defineEventHandler(async (event) => {
     if (query.task_id) { where += ' AND t.task_id = ?'; params.push(query.task_id) }
     if (query.subsystem) { where += ' AND t.subsystem = ?'; params.push(query.subsystem) }
 
+    const limit = Math.min(Number(query.limit) || 50, 200)
+    const page = Math.max(Number(query.page) || 1, 1)
+    const offset = (page - 1) * limit
+
+    const [[{ total }]] = await db.execute(
+      `SELECT COUNT(*) as total FROM tickets t WHERE ${where}`, params
+    ) as any[]
+
     const [tickets] = await db.execute(`
       SELECT t.*,
         p.name as project_name,
@@ -49,10 +57,10 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN users u2 ON u2.id = t.assigned_to
       WHERE ${where}
       ORDER BY t.created_at DESC
-      LIMIT 200
-    `, params)
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset])
 
-    return { success: true, data: tickets }
+    return { success: true, data: tickets, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
   if (event.method === 'POST') {

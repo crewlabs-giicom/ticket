@@ -321,6 +321,53 @@
           </div>
         </div>
       </div>
+
+      <!-- ─ SYSTEM MENUS ─ -->
+      <div v-else-if="activeTab === 'system-menus'" class="space-y-4">
+        <div v-if="auth.isAdmin" class="card p-4 space-y-3">
+          <h3 class="text-sm font-semibold text-slate-700">Tambah Menu Sistem</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="label">Modul</label>
+              <input v-model="smForm.module" type="text" class="input w-full" placeholder="Nama modul…" />
+            </div>
+            <div>
+              <label class="label">Tipe</label>
+              <AppSelect v-model="smForm.type" :options="[{ value: '', label: '— Pilih —' }, { value: 'Master', label: 'Master' }, { value: 'Transaction', label: 'Transaction' }, { value: 'Report', label: 'Report' }]" placeholder="— Pilih —" />
+            </div>
+          </div>
+          <div>
+            <label class="label">Nama Menu</label>
+            <input v-model="smForm.name" type="text" class="input w-full" placeholder="Nama menu…" />
+          </div>
+          <div class="flex justify-end">
+            <button @click="addSystemMenu" :disabled="smSaving || !smForm.module.trim()" class="btn-primary text-sm disabled:opacity-50">
+              {{ smSaving ? 'Menyimpan…' : 'Tambah' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div v-if="!projectSystemMenus.length" class="p-6 text-center text-slate-400 text-sm">Belum ada menu sistem untuk project ini.</div>
+          <div v-else>
+            <div v-for="(items, mod) in groupedSystemMenus" :key="mod" class="border-b border-slate-100 last:border-0">
+              <div class="px-5 py-2 bg-slate-50 flex items-center gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">{{ mod }}</span>
+              </div>
+              <div v-for="item in items" :key="item.id" class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 border-t border-slate-50">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-slate-800">{{ item.name || '—' }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">{{ item.type || 'Umum' }}</p>
+                </div>
+                <span :class="['text-xs px-2 py-0.5 rounded-full', item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500']">
+                  {{ item.is_active ? 'Aktif' : 'Nonaktif' }}
+                </span>
+                <button v-if="auth.isAdmin" @click="deleteSystemMenu(item.id)" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors">Hapus</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ── Create task modal ── -->
@@ -357,6 +404,14 @@
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Due date</label>
             <input v-model="taskForm.due_date" type="date" class="input w-full" />
+          </div>
+          <div v-if="projectSystemMenus.length">
+            <label class="block text-sm font-medium text-slate-700 mb-1">Modul / Menu Sistem</label>
+            <AppSelect
+              v-model="taskForm.system_menu_id"
+              :options="[{ value: '', label: '— Tidak dipilih —' }, ...projectSystemMenus.map((m: any) => ({ value: m.id, label: m.name ? `[${m.module}] ${m.name}` : m.module }))]"
+              placeholder="— Tidak dipilih —"
+            />
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-6">
@@ -407,10 +462,11 @@
 definePageMeta({ middleware: 'auth' })
 
 const TABS = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'tasks',    label: 'Tasks' },
-  { key: 'tickets',  label: 'Tickets' },
-  { key: 'members',  label: 'Members' },
+  { key: 'overview',      label: 'Overview' },
+  { key: 'tasks',         label: 'Tasks' },
+  { key: 'tickets',       label: 'Tickets' },
+  { key: 'members',       label: 'Members' },
+  { key: 'system-menus',  label: 'System Menus' },
 ] as const
 type TabKey = typeof TABS[number]['key']
 
@@ -492,8 +548,9 @@ async function addMember() {
   }
 }
 
+const { confirmDelete } = useConfirm()
 async function removeMember(userId: number) {
-  if (!confirm('Hapus member ini?')) return
+  if (!await confirmDelete('Member ini akan dihapus dari project.', 'Hapus member?')) return
   await $fetch(`/api/projects/${projectId}/members`, { method: 'DELETE', body: { user_id: userId } })
   await Promise.all([loadMembers(), refreshProject()])
 }
@@ -577,7 +634,7 @@ const kanbanRef = ref<any>(null)
 const showCreateModal = ref(false)
 const creating = ref(false)
 
-const taskForm = reactive({ title: '', description: '', status: 'backlog', assigned_to: '', due_date: '' })
+const taskForm = reactive({ title: '', description: '', status: 'backlog', assigned_to: '', due_date: '', system_menu_id: '' })
 
 function onKanbanQuickAdd(payload: { status: string }) {
   taskForm.status = payload.status
@@ -595,9 +652,10 @@ async function createTask() {
       status: taskForm.status,
       assigned_to: taskForm.assigned_to ? Number(taskForm.assigned_to) : undefined,
       due_date: taskForm.due_date || undefined,
+      system_menu_id: taskForm.system_menu_id ? Number(taskForm.system_menu_id) : undefined,
     })
     showCreateModal.value = false
-    Object.assign(taskForm, { title: '', description: '', status: 'backlog', assigned_to: '', due_date: '' })
+    Object.assign(taskForm, { title: '', description: '', status: 'backlog', assigned_to: '', due_date: '', system_menu_id: '' })
     if (taskViewMode.value === 'list') await loadProjectTasks()
     else kanbanRef.value?.load()
     await refreshProject()
@@ -605,6 +663,52 @@ async function createTask() {
     creating.value = false
   }
 }
+
+// ── System Menus tab ──────────────────────────────────────────────────────────
+const projectSystemMenus = ref<any[]>([])
+const smForm = reactive({ module: '', type: '', name: '' })
+const smSaving = ref(false)
+
+const groupedSystemMenus = computed(() => {
+  const groups: Record<string, any[]> = {}
+  for (const item of projectSystemMenus.value) {
+    if (!groups[item.module]) groups[item.module] = []
+    groups[item.module].push(item)
+  }
+  return groups
+})
+
+async function loadSystemMenus() {
+  const res = await $fetch<any>(`/api/system-menus?project_id=${projectId}`)
+  projectSystemMenus.value = res?.data || []
+}
+
+async function addSystemMenu() {
+  if (!smForm.module.trim()) return
+  smSaving.value = true
+  try {
+    await $fetch('/api/system-menus', {
+      method: 'POST',
+      body: { module: smForm.module.trim(), type: smForm.type || null, name: smForm.name.trim() || null, project_id: projectId }
+    })
+    Object.assign(smForm, { module: '', type: '', name: '' })
+    await loadSystemMenus()
+  } finally {
+    smSaving.value = false
+  }
+}
+
+async function deleteSystemMenu(id: number) {
+  if (!await confirmDelete('Menu sistem ini akan dihapus permanen.', 'Hapus menu sistem?')) return
+  await $fetch(`/api/system-menus/${id}`, { method: 'DELETE' })
+  await loadSystemMenus()
+}
+
+watch(() => activeTab.value, (tab) => {
+  if (tab === 'system-menus') loadSystemMenus()
+})
+
+onMounted(() => { loadSystemMenus() })
 
 // ── Edit project ──────────────────────────────────────────────────────────────
 const showEditModal = ref(false)
@@ -643,13 +747,5 @@ function initials(name: string) {
   return name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) ?? '?'
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const m = Math.floor(diff / 60000)
-  if (m < 1) return 'baru saja'
-  if (m < 60) return `${m}m lalu`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}j lalu`
-  return `${Math.floor(h / 24)}h lalu`
-}
+const { timeAgo } = useTimeAgo()
 </script>

@@ -93,8 +93,9 @@ async function saveOrder() {
   await $fetch('/api/statuses', { method: 'PUT', body: items })
 }
 
+const { confirmDelete } = useConfirm()
 async function deleteStatus(id: number) {
-  if (!confirm('Hapus status ini?')) return
+  if (!await confirmDelete()) return
   await $fetch(`/api/statuses/${id}`, { method: 'DELETE' })
   await refresh()
   list.value = [...((data.value as any)?.data || [])]

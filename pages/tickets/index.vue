@@ -75,6 +75,7 @@
           </tbody>
         </table>
       </div>
+      <AppPagination :page="pagination.page" :total-pages="pagination.totalPages" :total="pagination.total" :limit="pagination.limit" @page-change="onPageChange" />
     </div>
 
     <!-- Create Ticket Modal -->
@@ -90,6 +91,7 @@ const loading = ref(false)
 const tickets = ref<any[]>([])
 
 const filters = reactive({ search: '', status_id: '', priority_id: '', project_id: '' })
+const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 50 })
 
 const { data: sd } = await useFetch('/api/statuses')
 const { data: pd } = await useFetch('/api/priorities')
@@ -101,13 +103,17 @@ const projects = computed(() => (prd.value as any)?.data || [])
 async function fetchTickets() {
   loading.value = true
   try {
-    const q = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
+    const q = { ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '')), page: pagination.page, limit: pagination.limit }
     const res = await $fetch('/api/tickets', { query: q }) as any
     tickets.value = res.data
+    pagination.total = res.total ?? 0
+    pagination.totalPages = res.totalPages ?? 1
+    pagination.page = res.page ?? 1
   } finally { loading.value = false }
 }
 
-watchDebounced(filters, fetchTickets, { debounce: 300, maxWait: 1000 })
+function onPageChange(p: number) { pagination.page = p; fetchTickets() }
+watchDebounced(filters, () => { pagination.page = 1; fetchTickets() }, { debounce: 300, maxWait: 1000 })
 await fetchTickets()
 
 function openTicket(t: any) { tabs.openTab(t) }

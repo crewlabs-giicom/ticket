@@ -146,8 +146,9 @@ async function save() {
   list.value = [...((data.value as any)?.data || [])]
 }
 
+const { confirmDelete } = useConfirm()
 async function deleteItem(id: number) {
-  if (!confirm('Hapus item ini?')) return
+  if (!await confirmDelete()) return
   await $fetch(`/api/system-menus/${id}`, { method: 'DELETE' })
   await refresh()
   list.value = [...((data.value as any)?.data || [])]

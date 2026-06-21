@@ -1,4 +1,4 @@
-# TicketingApp — Panduan Setup & Deploy
+# Shadow Care — Panduan Setup & Deploy
 
 ## Demo Accounts
 | Role | Email | Password |
@@ -131,7 +131,7 @@ Masih di halaman Node.js App, scroll ke bagian **Environment Variables**, tambah
 | Key | Value |
 |-----|-------|
 | JWT_SECRET | secret-key-kamu-minimal-32-karakter |
-| APP_NAME | TicketingApp |
+| APP_NAME | Shadow Care |
 | NODE_ENV | production |
 
 Atau pastikan file `.env` sudah ada di folder aplikasi.
