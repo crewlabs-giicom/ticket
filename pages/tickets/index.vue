@@ -136,11 +136,11 @@ const priorities = computed(() => (pd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data || [])
 
 // Default: all statuses except closed
-watchOnce(statuses, (val) => {
+watch(statuses, (val) => {
   if (val.length && !filters.status_ids.length) {
     filters.status_ids = val.filter((s: any) => !/closed/i.test(s.name)).map((s: any) => s.id)
   }
-}, { immediate: true })
+}, { immediate: true, once: true })
 
 async function fetchTickets() {
   loading.value = true

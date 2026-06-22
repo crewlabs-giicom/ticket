@@ -4,7 +4,7 @@
     <button
       type="button"
       :disabled="disabled"
-      @click="toggle"
+      @click="toggleDropdown"
       :class="[
         'input text-left flex items-center justify-between gap-2 cursor-pointer',
         disabled && 'opacity-50 cursor-not-allowed',
@@ -13,7 +13,7 @@
       <span class="truncate flex-1 text-sm" :class="selectedLabels.length ? 'text-slate-900' : 'text-slate-400'">
         {{ selectedLabels.length ? selectedLabels.join(', ') : placeholder }}
       </span>
-      <span v-if="selectedLabels.length" class="flex-shrink-0 text-[10px] bg-primary-100 text-primary-700 font-semibold rounded-full px-1.5 py-0.5">
+      <span v-if="modelValue.length" class="flex-shrink-0 text-[10px] bg-primary-100 text-primary-700 font-semibold rounded-full px-1.5 py-0.5">
         {{ modelValue.length }}
       </span>
       <svg class="w-4 h-4 text-slate-400 flex-shrink-0 transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +49,7 @@
         <li
           v-for="opt in filteredOptions"
           :key="String(opt.value)"
-          @click="toggle(opt)"
+          @click="toggleOption(opt)"
           class="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 transition-colors hover:bg-slate-50"
         >
           <span
@@ -105,13 +105,12 @@ function isSelected(val: any) {
   return props.modelValue.some(v => String(v) === String(val))
 }
 
-function toggle(opt?: SelectOption) {
-  if (!opt) {
-    // called without arg = button click
-    if (props.disabled) return
-    open.value ? closeDropdown() : openDropdown()
-    return
-  }
+function toggleDropdown() {
+  if (props.disabled) return
+  open.value ? closeDropdown() : openDropdown()
+}
+
+function toggleOption(opt: SelectOption) {
   const cur = [...props.modelValue]
   const idx = cur.findIndex(v => String(v) === String(opt.value))
   if (idx === -1) cur.push(opt.value)
