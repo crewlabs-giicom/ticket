@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
       where += ' AND t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
       params.push(user.id)
     }
-    if (user.role === 'admin' && query.assigned_to) {
+    if (user.role !== 'customer' && query.assigned_to) {
       where += ' AND t.assigned_to = ?'
       params.push(query.assigned_to)
     }
