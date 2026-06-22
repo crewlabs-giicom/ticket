@@ -92,7 +92,7 @@
             </div>
             <div class="flex items-center gap-2">
               <span class="text-lg">⏳</span>
-              <div><p class="font-semibold text-slate-800">{{ project.task_waiting ?? 0 }}</p><p class="text-xs text-slate-400">In Progress</p></div>
+              <div><p class="font-semibold text-slate-800">{{ project.task_waiting ?? 0 }}</p><p class="text-xs text-slate-400">Aktif</p></div>
             </div>
             <div class="flex items-center gap-2">
               <span class="text-lg">🔴</span>
