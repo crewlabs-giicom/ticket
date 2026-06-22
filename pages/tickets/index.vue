@@ -4,24 +4,30 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-2">
         <input v-model="filters.search" class="input w-48" placeholder="Cari ticket..." />
-        <AppSelect
-          v-model="filters.status_id"
-          :options="[{ value: '', label: 'Semua Status' }, ...statuses.map((s: any) => ({ value: s.id, label: s.name }))]"
+        <AppMultiSelect
+          v-model="filters.status_ids"
+          :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
           placeholder="Semua Status"
-          class="w-40"
+          class="w-44"
         />
-        <AppSelect
-          v-model="filters.priority_id"
-          :options="[{ value: '', label: 'Semua Priority' }, ...priorities.map((p: any) => ({ value: p.id, label: p.name }))]"
+        <AppMultiSelect
+          v-model="filters.priority_ids"
+          :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
           placeholder="Semua Priority"
-          class="w-40"
+          class="w-44"
         />
         <AppSelect
           v-model="filters.project_id"
           :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
           placeholder="Semua Project"
-          class="w-40"
+          class="w-52"
         />
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-slate-500">Dari</span>
+          <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 w-36" />
+          <span class="text-xs text-slate-500">s/d</span>
+          <input v-model="filters.date_to" type="date" class="input text-xs py-1.5 w-36" />
+        </div>
       </div>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="refreshing" @click="handleRefresh" />
@@ -107,7 +113,19 @@ const showForm = ref(false)
 const loading = ref(false)
 const tickets = ref<any[]>([])
 
-const filters = reactive({ search: '', status_id: '', priority_id: '', project_id: '' })
+const today = new Date()
+const oneMonthAgo = new Date(today)
+oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+const toDateStr = (d: Date) => d.toISOString().slice(0, 10)
+
+const filters = reactive({
+  search: '',
+  status_ids: [] as number[],
+  priority_ids: [] as number[],
+  project_id: '',
+  date_from: toDateStr(oneMonthAgo),
+  date_to: toDateStr(today),
+})
 const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 
 const { data: sd } = await useFetch('/api/statuses')
@@ -117,10 +135,23 @@ const statuses = computed(() => (sd.value as any)?.data || [])
 const priorities = computed(() => (pd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data || [])
 
+// Default: all statuses except closed
+watchOnce(statuses, (val) => {
+  if (val.length && !filters.status_ids.length) {
+    filters.status_ids = val.filter((s: any) => !/closed/i.test(s.name)).map((s: any) => s.id)
+  }
+}, { immediate: true })
+
 async function fetchTickets() {
   loading.value = true
   try {
-    const q = { ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '')), page: pagination.page, limit: pagination.limit }
+    const q: Record<string, any> = { page: pagination.page, limit: pagination.limit }
+    if (filters.search) q.search = filters.search
+    if (filters.status_ids.length) q.status_ids = filters.status_ids.join(',')
+    if (filters.priority_ids.length) q.priority_ids = filters.priority_ids.join(',')
+    if (filters.project_id) q.project_id = filters.project_id
+    if (filters.date_from) q.date_from = filters.date_from
+    if (filters.date_to) q.date_to = filters.date_to
     const res = await $fetch('/api/tickets', { query: q }) as any
     tickets.value = res.data
     pagination.total = res.total ?? 0

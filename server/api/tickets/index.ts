@@ -23,8 +23,14 @@ export default defineEventHandler(async (event) => {
       params.push(query.assigned_to)
     }
 
-    if (query.status_id) { where += ' AND t.status_id = ?'; params.push(query.status_id) }
-    if (query.priority_id) { where += ' AND t.priority_id = ?'; params.push(query.priority_id) }
+    if (query.status_ids) {
+      const ids = String(query.status_ids).split(',').map(Number).filter(Boolean)
+      if (ids.length) { where += ` AND t.status_id IN (${ids.map(() => '?').join(',')})`; params.push(...ids) }
+    } else if (query.status_id) { where += ' AND t.status_id = ?'; params.push(query.status_id) }
+    if (query.priority_ids) {
+      const ids = String(query.priority_ids).split(',').map(Number).filter(Boolean)
+      if (ids.length) { where += ` AND t.priority_id IN (${ids.map(() => '?').join(',')})`; params.push(...ids) }
+    } else if (query.priority_id) { where += ' AND t.priority_id = ?'; params.push(query.priority_id) }
     if (query.project_id) { where += ' AND t.project_id = ?'; params.push(query.project_id) }
     if (query.search) { where += ' AND (t.title LIKE ? OR t.ticket_number LIKE ?)'; params.push(`%${query.search}%`, `%${query.search}%`) }
     if (query.date_from) { where += ' AND DATE(t.created_at) >= ?'; params.push(query.date_from) }

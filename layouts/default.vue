@@ -95,6 +95,11 @@
                 <p class="text-xs text-slate-400 mt-1">{{ timeAgo(n.created_at) }}</p>
               </div>
             </div>
+            <div class="px-4 py-2.5 border-t border-slate-100 text-center">
+              <NuxtLink to="/notifications" @click="notifOpen = false" class="text-xs text-primary-600 hover:underline">
+                Lihat semua notifikasi
+              </NuxtLink>
+            </div>
           </div>
         </div>
       </header>
@@ -202,6 +207,7 @@ function fallbackMenus(role?: string) {
     { id: 'f2', name: 'Projects', path: '/projects', icon: 'folder' },
     { id: 'f3', name: 'Tasks', path: '/tasks', icon: 'check-square' },
     { id: 'f4', name: 'Tickets', path: '/tickets', icon: 'ticket' },
+    { id: 'f4n', name: 'Notifikasi', path: '/notifications', icon: 'bell' },
     { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar' },
   ]
   if (role === 'admin') {
@@ -240,7 +246,7 @@ const pageTitle = computed(() => {
     '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Reports',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
     '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
-    '/profile': 'Profil Saya'
+    '/notifications': 'Notifikasi', '/profile': 'Profil Saya'
   }
   return titles[route.path] || 'Shadow Care'
 })
@@ -274,6 +280,7 @@ function getIcon(name: string) {
     flag: resolveComponent('IconFlag'),
     tag: resolveComponent('IconTag'),
     menu: resolveComponent('IconMenu'),
+    bell: resolveComponent('IconBell'),
     'check-square': resolveComponent('IconTicket'), // reuse ticket icon for tasks
   }
   return icons[name] || resolveComponent('IconDashboard')
