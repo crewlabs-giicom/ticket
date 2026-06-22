@@ -145,13 +145,15 @@
 
             <!-- Body -->
             <div class="p-6 space-y-5 flex-1">
-              <!-- Meta pills -->
-              <div class="flex flex-wrap gap-2">
-                <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border"
-                  :style="{ borderColor: statusColor(selectedTask.status) + '60', background: statusColor(selectedTask.status) + '15', color: statusColor(selectedTask.status) }">
-                  <span class="w-1.5 h-1.5 rounded-full" :style="{ background: statusColor(selectedTask.status) }"></span>
-                  {{ statusLabel(selectedTask.status) }}
-                </span>
+              <!-- Status + meta -->
+              <div class="flex flex-wrap gap-2 items-center">
+                <AppSelect
+                  :model-value="selectedTask.status"
+                  :options="COLUMNS.map(c => ({ value: c.status, label: c.label }))"
+                  placeholder="Status"
+                  class="w-36"
+                  @update:model-value="updateSelectedStatus"
+                />
                 <span v-if="selectedTask.assigned_to_name" class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
                   <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold overflow-hidden">
                     <img v-if="selectedTask.assigned_to_avatar" :src="`/uploads/${selectedTask.assigned_to_avatar}`" class="w-full h-full object-cover" />
@@ -161,7 +163,6 @@
                 </span>
                 <span v-if="selectedTask.due_date" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
                   :class="isOverdue(selectedTask.due_date) ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500'">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                   {{ fmtDate(selectedTask.due_date) }}
                 </span>
               </div>
@@ -306,29 +307,34 @@ onMounted(() => {
 
 // ─── Drag & drop ─────────────────────────────────────────────────────────────
 
-async function onDragEnd(
-  evt: { newIndex: number; oldIndex: number },
+function onColChange(
+  evt: { added?: { element: any; newIndex: number } },
   proj: { project_id: number; tasks: any[] },
   toStatus: string
 ) {
-  // vuedraggable already mutated byStatus(proj)[toStatus] in place via :list binding.
-  // Re-derive the column list from proj.tasks to get the updated order.
-  const colTasks = byStatus(proj)[toStatus]
-  for (let i = 0; i < colTasks.length; i++) {
-    const t = colTasks[i]
-    if (t.status !== toStatus || t.position !== i) {
-      t.status = toStatus
-      t.position = i
-      // Fire-and-forget — optimistic update already applied
-      $fetch(`/api/tasks/${t.id}`, {
-        method: 'PUT',
-        body: { status: toStatus, position: i },
-      }).catch(() => {})
-    }
-  }
+  if (!evt.added) return
+  const task = evt.added.element
+  // Update in proj.tasks so byStatus stays correct
+  const t = proj.tasks.find(t => t.id === task.id)
+  if (t) t.status = toStatus
+  $fetch(`/api/tasks/${task.id}`, {
+    method: 'PUT',
+    body: { status: toStatus },
+  }).catch(() => {})
 }
 
 // ─── Task detail ─────────────────────────────────────────────────────────────
+
+async function updateSelectedStatus(status: string) {
+  if (!selectedTask.value) return
+  selectedTask.value.status = status
+  await $fetch(`/api/tasks/${selectedTask.value.id}`, { method: 'PUT', body: { status } }).catch(() => {})
+  // Reflect in kanban board
+  for (const proj of rawGroups.value) {
+    const t = proj.tasks.find(t => t.id === selectedTask.value.id)
+    if (t) { t.status = status; break }
+  }
+}
 
 async function openTask(task: any) {
   const detail = await $fetch<any>(`/api/tasks/${task.id}`)

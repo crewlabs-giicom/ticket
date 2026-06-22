@@ -115,7 +115,8 @@ export default defineEventHandler(async (event) => {
       const [statusRows] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id = ?', [status_id])
       const newStatus = (statusRows as any[])[0]
       if (newStatus?.is_resolved && !old.resolved_at) {
-        resolved_at = new Date().toISOString().slice(0, 19).replace('T', ' ')
+        const [[{ now }]] = await db.execute('SELECT NOW() as now') as any[]
+        resolved_at = now instanceof Date ? now.toISOString().slice(0, 19).replace('T', ' ') : String(now).slice(0, 19)
         const [msgs] = await db.execute(`
           SELECT tm.message, tm.created_at, u.name as sender_name, u.role
           FROM ticket_messages tm

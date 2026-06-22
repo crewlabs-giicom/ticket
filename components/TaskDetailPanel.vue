@@ -14,13 +14,15 @@
 
       <!-- Body -->
       <div class="p-6 space-y-5 flex-1">
-        <!-- Status / Assignee / Due -->
+        <!-- Status / Due -->
         <div class="flex flex-wrap gap-2 items-center">
-          <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border"
-            :style="{ borderColor: statusColor(task.status)+'60', background: statusColor(task.status)+'15', color: statusColor(task.status) }">
-            <span class="w-1.5 h-1.5 rounded-full" :style="{ background: statusColor(task.status) }"></span>
-            {{ statusLabel(task.status) }}
-          </span>
+          <AppSelect
+            :model-value="task.status"
+            :options="COLUMNS.map(c => ({ value: c.status, label: c.label }))"
+            placeholder="Status"
+            class="w-36"
+            @update:model-value="updateStatus"
+          />
           <span v-if="task.due_date" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
             :class="isOverdue(task.due_date) ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'">
             {{ fmtDate(task.due_date) }}
@@ -271,6 +273,13 @@ onMounted(async () => {
   const res = await $fetch<any>('/api/users', { query: { project_id: task.project_id, limit: 100 } }).catch(() => null)
   assignableUsers.value = (res?.data || []).filter((u: any) => u.is_active && u.role !== 'customer')
 })
+
+async function updateStatus(status: string) {
+  task.status = status
+  await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { status } })
+  const hist = await $fetch<any>(`/api/tasks/${task.id}/history`)
+  task.history = hist.data
+}
 
 async function updateAssigned(value: any) {
   await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { assigned_to: value || null } })
