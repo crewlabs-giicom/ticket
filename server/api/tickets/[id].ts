@@ -103,7 +103,8 @@ export default defineEventHandler(async (event) => {
       if (!(mem as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     }
 
-    const { title, description, project_id, priority_id, status_id, assigned_to } = body
+    const { title, description, project_id, status_id, assigned_to } = body
+    const priority_id = user.role === 'customer' ? undefined : body.priority_id
     const due_date = body.due_date ? String(body.due_date).slice(0, 10) : body.due_date
 
     const dueCheck = due_date || old.due_date

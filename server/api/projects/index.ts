@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     let roleWhere = ''
     const roleParams: any[] = []
     if (user.role === 'customer') {
-      roleWhere = 'WHERE p.id IN (SELECT DISTINCT project_id FROM tickets WHERE created_by = ?)'
+      roleWhere = 'WHERE p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
       roleParams.push(user.id)
     } else if (user.role === 'staff') {
       roleWhere = 'WHERE p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)'

@@ -40,12 +40,13 @@
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Priority</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Assigned</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell">Menu</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell">Due</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-if="loading"><td colspan="6" class="text-center py-8 text-slate-400">Memuat...</td></tr>
-            <tr v-else-if="!tickets.length"><td colspan="6" class="text-center py-8 text-slate-400">Tidak ada ticket</td></tr>
+            <tr v-if="loading"><td colspan="7" class="text-center py-8 text-slate-400">Memuat...</td></tr>
+            <tr v-else-if="!tickets.length"><td colspan="7" class="text-center py-8 text-slate-400">Tidak ada ticket</td></tr>
             <tr v-for="t in tickets" :key="t.id" @click="openTicket(t)" class="hover:bg-slate-50 cursor-pointer transition-colors">
               <td class="px-4 py-3">
                 <div class="flex items-start gap-2">
@@ -61,13 +62,24 @@
               </td>
               <td class="px-4 py-3 hidden md:table-cell"><span class="text-xs text-slate-500">{{ t.project_name }}</span></td>
               <td class="px-4 py-3 hidden md:table-cell"><span class="badge text-white text-[10px]" :style="{ background: t.status_color }">{{ t.status_name }}</span></td>
-              <td class="px-4 py-3 hidden lg:table-cell">
-                <div class="flex items-center gap-1.5">
+              <td class="px-4 py-3 hidden lg:table-cell" @click.stop>
+                <div v-if="auth.isStaffOrAdmin" class="flex items-center gap-1.5">
+                  <span class="priority-dot flex-shrink-0" :style="{ background: t.priority_color }" />
+                  <select
+                    :value="t.priority_id"
+                    @change="updatePriority(t, ($event.target as HTMLSelectElement).value)"
+                    class="text-xs text-slate-600 bg-transparent border-none outline-none cursor-pointer hover:text-slate-900 max-w-[90px] truncate"
+                  >
+                    <option v-for="p in priorities" :key="p.id" :value="p.id">{{ p.name }}</option>
+                  </select>
+                </div>
+                <div v-else class="flex items-center gap-1.5">
                   <span class="priority-dot" :style="{ background: t.priority_color }" />
                   <span class="text-xs text-slate-600">{{ t.priority_name }}</span>
                 </div>
               </td>
               <td class="px-4 py-3 hidden lg:table-cell"><span class="text-xs text-slate-500">{{ t.assigned_to_name || '—' }}</span></td>
+              <td class="px-4 py-3 hidden xl:table-cell"><span class="text-xs text-slate-500">{{ t.system_menu_name || '—' }}</span></td>
               <td class="px-4 py-3 hidden xl:table-cell">
                 <span class="text-xs" :class="t.sla_breached ? 'text-red-600 font-medium' : 'text-slate-500'">{{ t.due_date ? new Date(t.due_date).toLocaleDateString('id') : '—' }}</span>
               </td>
@@ -86,6 +98,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 const tabs = useTabStore()
+const auth = useAuthStore()
 const showForm = ref(false)
 const loading = ref(false)
 const tickets = ref<any[]>([])
@@ -118,4 +131,14 @@ await fetchTickets()
 
 function openTicket(t: any) { tabs.openTab(t) }
 function onCreated() { showForm.value = false; fetchTickets() }
+
+async function updatePriority(ticket: any, priorityId: string | number) {
+  const pid = Number(priorityId)
+  if (pid === ticket.priority_id) return
+  const pri = priorities.value.find((p: any) => p.id === pid)
+  ticket.priority_id = pid
+  ticket.priority_name = pri?.name ?? ticket.priority_name
+  ticket.priority_color = pri?.color ?? ticket.priority_color
+  await $fetch(`/api/tickets/${ticket.id}`, { method: 'PUT', body: { priority_id: pid } })
+}
 </script>

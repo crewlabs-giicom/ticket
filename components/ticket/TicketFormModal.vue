@@ -9,10 +9,23 @@
         <button @click="$emit('close')" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
       </div>
       <form @submit.prevent="submit" class="p-6 space-y-4">
-        <div><label class="label">Project <span class="text-red-500">*</span></label>
+        <div>
+          <label class="label">Modul / Menu Sistem <span class="text-red-500">*</span></label>
+          <AppSelect
+            v-model="form.system_menu_id"
+            :options="systemMenuOptions"
+            placeholder="Pilih menu sistem..."
+          />
+          <p v-if="selectedMenu?.project_name" class="mt-1.5 flex items-center gap-1.5">
+            <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{{ selectedMenu.project_name }}</span>
+          </p>
+          <p v-else-if="form.system_menu_id && !selectedMenu?.project_id" class="mt-1 text-[11px] text-slate-400">Menu global — pilih project:</p>
+        </div>
+        <div v-if="form.system_menu_id && selectedMenu && !selectedMenu.project_id">
+          <label class="label">Project <span class="text-red-500">*</span></label>
           <AppSelect
             v-model="form.project_id"
-            :options="[{ value: '', label: 'Pilih project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+            :options="projects.map((p: any) => ({ value: p.id, label: p.name }))"
             placeholder="Pilih project"
           />
         </div>
@@ -22,14 +35,6 @@
             v-model="form.priority_id"
             :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
             placeholder="Priority"
-          />
-        </div>
-        <div v-if="systemMenus.length">
-          <label class="label">Modul / Menu Sistem</label>
-          <AppSelect
-            v-model="form.system_menu_id"
-            :options="systemMenuOptions"
-            placeholder="— Tidak dipilih —"
           />
         </div>
 
@@ -100,7 +105,7 @@ const projects = computed(() => (prd.value as any)?.data?.filter((p: any) => p.i
 const systemMenus = ref<any[]>([])
 
 const systemMenuOptions = computed(() => {
-  const opts: any[] = [{ value: '', label: '— Tidak dipilih —' }]
+  const opts: any[] = [{ value: '', label: '— Pilih menu sistem —' }]
   const byModule: Record<string, any[]> = {}
   for (const item of systemMenus.value) {
     if (!byModule[item.module]) byModule[item.module] = []
@@ -109,14 +114,16 @@ const systemMenuOptions = computed(() => {
   for (const [mod, items] of Object.entries(byModule)) {
     opts.push({ group: mod })
     for (const item of items) {
-      const label = item.type
-        ? `${mod} › ${item.type.charAt(0).toUpperCase() + item.type.slice(1)} › ${item.name}`
-        : mod
-      opts.push({ value: item.id, label })
+      const namePart = item.name ? ` › ${item.name}` : ''
+      const typePart = item.type ? ` [${item.type.charAt(0).toUpperCase() + item.type.slice(1)}]` : ''
+      const projPart = item.project_name ? ` · ${item.project_name}` : ''
+      opts.push({ value: item.id, label: `${mod}${namePart}${typePart}${projPart}` })
     }
   }
   return opts
 })
+
+const selectedMenu = computed(() => systemMenus.value.find((m: any) => String(m.id) === String(form.system_menu_id)) ?? null)
 
 const form = reactive({
   title: props.prefillTitle || '',
@@ -129,16 +136,20 @@ const form = reactive({
 })
 const taskId = computed(() => props.taskId)
 
-async function loadSystemMenus(projectId?: string | number) {
-  const url = projectId ? `/api/system-menus?project_id=${projectId}` : '/api/system-menus'
-  const res = await $fetch<any>(url).catch(() => null)
-  systemMenus.value = res?.data || []
-}
+// Auto-set project_id from selected menu's project
+watch(selectedMenu, (menu) => {
+  if (menu?.project_id) form.project_id = String(menu.project_id)
+  else if (menu && !menu.project_id) form.project_id = ''
+})
 
-watch(() => form.project_id, (val) => {
-  form.system_menu_id = ''
-  loadSystemMenus(val || undefined)
-}, { immediate: true })
+// Load all system menus on mount (filtered by role server-side)
+const res = await $fetch<any>('/api/system-menus').catch(() => null)
+systemMenus.value = res?.data || []
+
+// If created from a task/project context, pre-select matching menu
+if (props.projectId && !form.system_menu_id) {
+  form.project_id = String(props.projectId)
+}
 
 watch(() => form.description, (val) => {
   const first = val.trim().split('\n')[0].slice(0, 80).trim()
@@ -208,6 +219,10 @@ async function handlePaste(e: ClipboardEvent) {
 
 async function submit() {
   error.value = ''
+  if (!form.system_menu_id) {
+    error.value = 'Modul / menu sistem wajib dipilih'
+    return
+  }
   if (!form.project_id || !form.priority_id || !form.status_id) {
     error.value = 'Project dan priority wajib diisi'
     return

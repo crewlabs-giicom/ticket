@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
         s.name as status_name, s.color as status_color,
         u1.name as created_by_name,
         u2.name as assigned_to_name,
+        sm.name as system_menu_name,
         (SELECT COUNT(*) FROM ticket_responses r WHERE r.ticket_id = t.id AND r.is_internal = 0) as response_count,
         (SELECT COUNT(*) FROM ticket_attachments a WHERE a.ticket_id = t.id) as attachment_count
       FROM tickets t
@@ -55,6 +56,7 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN ticket_statuses s ON s.id = t.status_id
       LEFT JOIN users u1 ON u1.id = t.created_by
       LEFT JOIN users u2 ON u2.id = t.assigned_to
+      LEFT JOIN system_menus sm ON sm.id = t.system_menu_id
       WHERE ${where}
       ORDER BY t.created_at DESC
       LIMIT ? OFFSET ?

@@ -10,11 +10,14 @@ export default defineEventHandler(async (event) => {
     const conditions: string[] = []
     const params: any[] = []
 
-    if (user.role !== 'admin') conditions.push('is_active=1')
+    if (user.role !== 'admin') conditions.push('sm.is_active=1')
 
     if (q.project_id) {
-      conditions.push('(project_id = ? OR project_id IS NULL)')
+      conditions.push('(sm.project_id = ? OR sm.project_id IS NULL)')
       params.push(Number(q.project_id))
+    } else if (user.role === 'staff' || user.role === 'customer') {
+      conditions.push('(sm.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?) OR sm.project_id IS NULL)')
+      params.push(user.id)
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
