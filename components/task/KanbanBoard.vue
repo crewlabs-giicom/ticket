@@ -38,14 +38,14 @@
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ background: col.color }"></span>
             <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{{ col.label }}</span>
             <span class="ml-auto text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
-              {{ byStatus(proj)[col.status].length }}
+              {{ buckets[proj.project_id]?.[col.status]?.length ?? 0 }}
             </span>
           </div>
 
           <!-- Draggable card list -->
           <ClientOnly>
             <draggable
-              :list="byStatus(proj)[col.status]"
+              :list="buckets[proj.project_id]?.[col.status] ?? []"
               :group="`proj-${proj.project_id}`"
               item-key="id"
               class="min-h-12 space-y-2"
@@ -90,7 +90,7 @@
             <template #fallback>
               <div class="min-h-12 space-y-2">
                 <div
-                  v-for="t in byStatus(proj)[col.status]"
+                  v-for="t in buckets[proj.project_id]?.[col.status] ?? []"
                   :key="t.id"
                   class="bg-white rounded-xl border border-gray-200 p-3 cursor-pointer"
                   @click="openTask(t)"
@@ -243,6 +243,8 @@ const COLUMNS = [
 
 const loading = ref(true)
 const rawGroups = ref<{ project_id: number; project_name: string; tasks: any[] }[]>([])
+// Stable reactive bucket arrays per project — vuedraggable mutates these in-place
+const buckets = ref<Record<number, Record<string, any[]>>>({})
 const selectedTask = ref<any>(null)
 const collapseState = ref<Record<number, boolean>>({})
 
@@ -253,15 +255,18 @@ const groupedProjects = computed(() => {
   return rawGroups.value.filter(p => String(p.project_id) === String(props.filterProject))
 })
 
-// Returns tasks bucketed by status for a given project group
-function byStatus(proj: { tasks: any[] }): Record<string, any[]> {
-  const map: Record<string, any[]> = {}
-  for (const col of COLUMNS) map[col.status] = []
-  for (const t of proj.tasks) {
-    const bucket = map[t.status] ?? map['backlog']
-    bucket.push(t)
+function buildBuckets(groups: { project_id: number; tasks: any[] }[]) {
+  const result: Record<number, Record<string, any[]>> = {}
+  for (const proj of groups) {
+    const map: Record<string, any[]> = {}
+    for (const col of COLUMNS) map[col.status] = []
+    for (const t of proj.tasks) {
+      const bucket = map[t.status] ?? map['backlog']
+      bucket.push(t)
+    }
+    result[proj.project_id] = map
   }
-  return map
+  buckets.value = result
 }
 
 // ─── Collapse ─────────────────────────────────────────────────────────────────
@@ -292,7 +297,9 @@ async function load() {
     const url = props.filterProject
       ? `/api/tasks?group_by=project&project_id=${props.filterProject}`
       : '/api/tasks?group_by=project'
-    rawGroups.value = await $fetch<any[]>(url)
+    const groups = await $fetch<any[]>(url)
+    rawGroups.value = groups
+    buildBuckets(groups)
   } finally {
     loading.value = false
   }
@@ -314,13 +321,11 @@ function onColChange(
 ) {
   if (!evt.added) return
   const task = evt.added.element
-  // Update in proj.tasks so byStatus stays correct
-  const t = proj.tasks.find(t => t.id === task.id)
+  task.status = toStatus
+  const t = proj.tasks.find((t: any) => t.id === task.id)
   if (t) t.status = toStatus
-  $fetch(`/api/tasks/${task.id}`, {
-    method: 'PUT',
-    body: { status: toStatus },
-  }).catch(() => {})
+  $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { status: toStatus } })
+    .catch(() => load()) // reload on error to restore correct state
 }
 
 // ─── Task detail ─────────────────────────────────────────────────────────────

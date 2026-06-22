@@ -253,7 +253,7 @@ function setRange(preset: string) {
 }
 
 const { data: pd } = await useFetch('/api/projects')
-const { data: ud } = await useFetch('/api/users')
+const { data: ud } = await useFetch('/api/users', { query: { limit: 200 } })
 const projects = computed(() => (pd.value as any)?.data || [])
 const staff = computed(() => ((ud.value as any)?.data || []).filter((u: any) => u.role !== 'customer'))
 

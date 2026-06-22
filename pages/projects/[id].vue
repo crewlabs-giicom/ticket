@@ -608,7 +608,7 @@ const filteredProjectTasks = computed(() => {
 async function loadProjectTasks() {
   tasksLoading.value = true
   try {
-    projectTasks.value = await $fetch<any[]>(`/api/tasks?project_id=${projectId}`) as any[]
+    projectTasks.value = await $fetch<any[]>(`/api/tasks?project_id=${projectId}&paginate=false`) as any[]
   } finally {
     tasksLoading.value = false
   }
