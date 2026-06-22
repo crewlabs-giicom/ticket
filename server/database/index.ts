@@ -160,10 +160,12 @@ async function migrate(db: mysql.Pool) {
       message TEXT NOT NULL,
       type VARCHAR(50) NOT NULL DEFAULT 'info',
       ticket_id INT,
+      task_id INT,
       is_read TINYINT(1) NOT NULL DEFAULT 0,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id),
-      FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id),
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
     )
   `)
 
@@ -312,6 +314,10 @@ async function migrate(db: mysql.Pool) {
   } catch {}
   try {
     await db.execute(`ALTER TABLE tickets ADD COLUMN subsystem VARCHAR(100)`)
+  } catch {}
+  // Add task_id to notifications if not present
+  try {
+    await db.execute(`ALTER TABLE notifications ADD COLUMN task_id INT, ADD CONSTRAINT fk_notif_task FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE`)
   } catch {}
 
   await db.execute(`

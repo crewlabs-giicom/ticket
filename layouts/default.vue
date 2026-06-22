@@ -123,6 +123,8 @@ const auth = useAuthStore()
 const notif = useNotifStore()
 const tabs = useTabStore()
 const route = useRoute()
+const router = useRouter()
+
 const sidebarOpen = ref(false)
 const notifOpen = ref(false)
 const notifRef = ref(null)
@@ -135,7 +137,11 @@ onClickOutside(notifRef, () => { notifOpen.value = false })
 function handleNotifClick(n: any) {
   notif.markRead(n.id)
   notifOpen.value = false
-  if (n.ticket_id) tabs.openTab({ id: n.ticket_id, ticket_number: '', title: n.title })
+  if (n.ticket_id) {
+    tabs.openTab({ id: n.ticket_id, ticket_number: '', title: n.title })
+  } else if (n.task_id) {
+    router.push(`/tasks?open=${n.task_id}`)
+  }
 }
 
 const menus = ref<any[]>([])

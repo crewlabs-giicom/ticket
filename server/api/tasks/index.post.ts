@@ -1,6 +1,7 @@
 import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
 import { logActivity } from '../../utils/activity'
+import { broadcastToUser } from '../../utils/sse'
 
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)
@@ -41,6 +42,19 @@ export default defineEventHandler(async (event) => {
     label: `Task dibuat oleh ${user.name}`,
     user_id: user.id,
   })
+
+  // Notifikasi ke assignee jika bukan diri sendiri
+  if (assigned_to && Number(assigned_to) !== user.id) {
+    const notifTitle = 'Task di-assign ke kamu'
+    const notifMsg = `${user.name} menugaskan task "${title}" ke kamu`
+    await db.execute(
+      'INSERT INTO notifications (user_id, title, message, type, task_id) VALUES (?, ?, ?, ?, ?)',
+      [assigned_to, notifTitle, notifMsg, 'task_assigned', result.insertId]
+    )
+    broadcastToUser(Number(assigned_to), 'notification', {
+      title: notifTitle, message: notifMsg, type: 'task_assigned', task_id: result.insertId
+    })
+  }
 
   const [rows] = await db.execute('SELECT * FROM tasks WHERE id = ?', [result.insertId])
   return (rows as any[])[0]

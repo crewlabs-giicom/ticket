@@ -1,6 +1,7 @@
 import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
 import { logActivity } from '../../utils/activity'
+import { broadcastToUser } from '../../utils/sse'
 
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)
@@ -64,6 +65,18 @@ export default defineEventHandler(async (event) => {
         label: `${user.name} menugaskan task ke ${toName}`,
         user_id: user.id,
       })
+      // Notifikasi ke assignee baru (bukan diri sendiri)
+      if (Number(body.assigned_to) !== user.id) {
+        const notifTitle = 'Task di-assign ke kamu'
+        const notifMsg = `${user.name} menugaskan task "${old.title}" ke kamu`
+        await db.execute(
+          'INSERT INTO notifications (user_id, title, message, type, task_id) VALUES (?, ?, ?, ?, ?)',
+          [body.assigned_to, notifTitle, notifMsg, 'task_assigned', id]
+        )
+        broadcastToUser(Number(body.assigned_to), 'notification', {
+          title: notifTitle, message: notifMsg, type: 'task_assigned', task_id: Number(id)
+        })
+      }
     } else {
       await logActivity(db, {
         entity_type: 'task', entity_id: Number(id), action: 'unassigned',
