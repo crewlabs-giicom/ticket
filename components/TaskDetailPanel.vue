@@ -15,23 +15,28 @@
       <!-- Body -->
       <div class="p-6 space-y-5 flex-1">
         <!-- Status / Assignee / Due -->
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2 items-center">
           <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border"
             :style="{ borderColor: statusColor(task.status)+'60', background: statusColor(task.status)+'15', color: statusColor(task.status) }">
             <span class="w-1.5 h-1.5 rounded-full" :style="{ background: statusColor(task.status) }"></span>
             {{ statusLabel(task.status) }}
           </span>
-          <span v-if="task.assigned_to_name" class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-            <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold overflow-hidden">
-              <img v-if="task.assigned_to_avatar" :src="`/uploads/${task.assigned_to_avatar}`" class="w-full h-full object-cover" />
-              <span v-else>{{ initials(task.assigned_to_name) }}</span>
-            </span>
-            {{ task.assigned_to_name }}
-          </span>
           <span v-if="task.due_date" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
             :class="isOverdue(task.due_date) ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'">
             {{ fmtDate(task.due_date) }}
           </span>
+        </div>
+
+        <!-- Assign -->
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-gray-500 w-20 flex-shrink-0">Assigned to</span>
+          <AppSelect
+            v-model="editAssigned"
+            :options="[{ value: '', label: 'Unassigned' }, ...assignableUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            placeholder="Unassigned"
+            class="flex-1"
+            @update:modelValue="updateAssigned"
+          />
         </div>
 
         <!-- Description -->
@@ -258,6 +263,24 @@ const emit = defineEmits<{
 // Local reactive copy so we can mutate (add comment, checklist, etc.)
 const task = reactive(JSON.parse(JSON.stringify(props.task)))
 watch(() => props.task, (val) => Object.assign(task, JSON.parse(JSON.stringify(val))))
+
+const editAssigned = ref(task.assigned_to || '')
+const assignableUsers = ref<any[]>([])
+
+onMounted(async () => {
+  const res = await $fetch<any>('/api/users', { query: { project_id: task.project_id, limit: 100 } }).catch(() => null)
+  assignableUsers.value = (res?.data || []).filter((u: any) => u.is_active && u.role !== 'customer')
+})
+
+async function updateAssigned(value: any) {
+  await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { assigned_to: value || null } })
+  const found = assignableUsers.value.find((u: any) => String(u.id) === String(value))
+  task.assigned_to = value || null
+  task.assigned_to_name = found?.name || null
+  task.assigned_to_avatar = found?.avatar || null
+  const hist = await $fetch<any>(`/api/tasks/${task.id}/history`)
+  task.history = hist.data
+}
 
 const COLUMNS = [
   { status: 'backlog',     label: 'Backlog',     color: '#94a3b8' },

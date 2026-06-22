@@ -357,12 +357,21 @@ const { data: res, refresh } = await useFetch(`/api/tickets/${id}`)
 const ticket = computed(() => (res.value as any)?.data)
 
 const { data: sd } = await useFetch('/api/statuses')
-const { data: ud } = await useFetch('/api/users')
+const { data: ud } = await useFetch('/api/users', {
+  query: { project_id: ticket.value?.project_id, limit: 100 }
+})
 const statuses = computed(() => (sd.value as any)?.data || [])
-const staff = computed(() => ((ud.value as any)?.data || []).filter((u: any) => u.role !== 'customer' && u.is_active))
+const staff = computed(() => ((ud.value as any)?.data || []).filter((u: any) => u.is_active && u.role !== 'customer'))
 
 const editStatus = ref(ticket.value?.status_id)
 const editAssigned = ref(ticket.value?.assigned_to || '')
+
+watch(ticket, (t) => {
+  if (t) {
+    editStatus.value = t.status_id
+    editAssigned.value = t.assigned_to || ''
+  }
+})
 
 const showTranscriptModal = ref(false)
 const transcriptData = ref<any>(null)

@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
     const params: any[] = []
     if (q.search) { conditions.push('(name LIKE ? OR email LIKE ?)'); params.push(`%${q.search}%`, `%${q.search}%`) }
     if (q.role) { conditions.push('role = ?'); params.push(q.role) }
+    if (q.project_id) { conditions.push('(role = \'admin\' OR id IN (SELECT user_id FROM project_members WHERE project_id = ?))'); params.push(Number(q.project_id)) }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
     const [[{ total }]] = await db.execute(`SELECT COUNT(*) as total FROM users ${where}`, params) as any[]
