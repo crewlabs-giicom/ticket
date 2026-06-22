@@ -22,6 +22,13 @@
           placeholder="Semua Project"
           class="w-52"
         />
+        <AppSelect
+          v-if="auth.isStaffOrAdmin"
+          v-model="filters.assigned_to"
+          :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+          placeholder="Semua Assignee"
+          class="w-44"
+        />
         <div class="flex items-center gap-1.5">
           <span class="text-xs text-slate-500">Dari</span>
           <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 w-36" />
@@ -123,6 +130,7 @@ const filters = reactive({
   status_ids: [] as number[],
   priority_ids: [] as number[],
   project_id: '',
+  assigned_to: '',
   date_from: toDateStr(oneMonthAgo),
   date_to: toDateStr(today),
 })
@@ -131,9 +139,11 @@ const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 const { data: sd } = await useFetch('/api/statuses')
 const { data: pd } = await useFetch('/api/priorities')
 const { data: prd } = await useFetch('/api/projects')
+const { data: ud } = await useFetch('/api/users', { query: { role: 'staff', limit: 200 } })
 const statuses = computed(() => (sd.value as any)?.data || [])
 const priorities = computed(() => (pd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data || [])
+const staffUsers = computed(() => (ud.value as any)?.data || [])
 
 // Default: all statuses except closed
 watch(statuses, (val) => {
@@ -150,6 +160,7 @@ async function fetchTickets() {
     if (filters.status_ids.length) q.status_ids = filters.status_ids.join(',')
     if (filters.priority_ids.length) q.priority_ids = filters.priority_ids.join(',')
     if (filters.project_id) q.project_id = filters.project_id
+    if (filters.assigned_to) q.assigned_to = filters.assigned_to
     if (filters.date_from) q.date_from = filters.date_from
     if (filters.date_to) q.date_to = filters.date_to
     const res = await $fetch('/api/tickets', { query: q }) as any

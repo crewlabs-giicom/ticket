@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
     } else if (user.role === 'staff') {
       where += ' AND t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
       params.push(user.id)
-    } else if (query.assigned_to) {
+    }
+    if (user.role === 'admin' && query.assigned_to) {
       where += ' AND t.assigned_to = ?'
       params.push(query.assigned_to)
     }
