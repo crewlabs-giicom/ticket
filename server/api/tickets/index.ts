@@ -84,13 +84,9 @@ export default defineEventHandler(async (event) => {
 
     let finalDueDate = due_date
     if (!finalDueDate) {
-      const [priRows] = await db.execute('SELECT sla_hours FROM priorities WHERE id = ?', [priority_id])
+      const [priRows] = await db.execute('SELECT DATE_ADD(NOW(), INTERVAL sla_hours HOUR) as due FROM priorities WHERE id = ?', [priority_id])
       const pri = (priRows as any[])[0]
-      if (pri) {
-        const d = new Date()
-        d.setHours(d.getHours() + pri.sla_hours)
-        finalDueDate = d.toISOString().slice(0, 19).replace('T', ' ')
-      }
+      if (pri?.due) finalDueDate = pri.due instanceof Date ? pri.due.toISOString().slice(0, 19).replace('T', ' ') : String(pri.due).slice(0, 19)
     }
 
     const conn = await db.getConnection()

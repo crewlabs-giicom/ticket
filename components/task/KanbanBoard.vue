@@ -51,7 +51,7 @@
               class="min-h-12 space-y-2"
               ghost-class="opacity-40"
               chosen-class="ring-2 ring-indigo-400"
-              @end="(evt) => onDragEnd(evt, proj, col.status)"
+              @change="(evt) => onColChange(evt, proj, col.status)"
             >
               <template #item="{ element }">
                 <div

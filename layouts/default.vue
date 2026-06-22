@@ -85,7 +85,7 @@
             </div>
             <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
               <div v-if="!notif.items.length" class="p-4 text-center text-sm text-slate-400">Tidak ada notifikasi</div>
-              <div v-for="n in notif.items.slice(0,20)" :key="n.id" @click="notif.markRead(n.id); notifOpen=false" :class="['px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors', !n.is_read && 'bg-primary-50']">
+              <div v-for="n in notif.items.slice(0,20)" :key="n.id" @click="handleNotifClick(n)" :class="['px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors', !n.is_read && 'bg-primary-50']">
                 <p class="text-sm font-medium text-slate-900">{{ n.title }}</p>
                 <p class="text-xs text-slate-500 mt-0.5">{{ n.message }}</p>
                 <p class="text-xs text-slate-400 mt-1">{{ timeAgo(n.created_at) }}</p>
@@ -131,6 +131,12 @@ const { pendingCount, setupListeners, retrySync, clearQueue } = useSync()
 
 
 onClickOutside(notifRef, () => { notifOpen.value = false })
+
+function handleNotifClick(n: any) {
+  notif.markRead(n.id)
+  notifOpen.value = false
+  if (n.ticket_id) tabs.openTab({ id: n.ticket_id, ticket_number: '', title: n.title })
+}
 
 const menus = ref<any[]>([])
 
