@@ -15,6 +15,10 @@ export function getDb(): mysql.Pool {
     timezone: '+07:00',
     dateStrings: true,
   })
+  // Set session timezone on every new connection so NOW() returns WIB time
+  pool.on('connection', (conn) => {
+    conn.query("SET time_zone = '+07:00'")
+  })
   initDb()
   return pool
 }

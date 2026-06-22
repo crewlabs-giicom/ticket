@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
   )
 
   const [history] = await db.execute(
-    `SELECT al.*, u.name as user_name FROM activity_logs al LEFT JOIN users u ON u.id = al.user_id WHERE al.entity_type = 'task' AND al.entity_id = ? ORDER BY al.created_at ASC`,
+    `SELECT al.*, u.name as user_name FROM activity_logs al LEFT JOIN users u ON u.id = al.user_id WHERE al.entity_type = 'task' AND al.entity_id = ? ORDER BY al.created_at DESC`,
     [id]
   )
 
