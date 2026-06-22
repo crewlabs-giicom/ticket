@@ -1,7 +1,15 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <p class="text-sm text-slate-500">Kelola akun pengguna sistem</p>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <input v-model="filters.search" class="input w-48" placeholder="Cari nama / email..." />
+        <AppSelect
+          v-model="filters.role"
+          :options="[{ value: '', label: 'Semua Role' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'customer', label: 'Customer' }]"
+          placeholder="Semua Role"
+          class="w-36"
+        />
+      </div>
       <button @click="openForm()" class="btn-primary">+ Tambah User</button>
     </div>
 
@@ -17,6 +25,8 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
+          <tr v-if="loading"><td colspan="5" class="text-center py-8 text-slate-400">Memuat...</td></tr>
+          <tr v-else-if="!users.length"><td colspan="5" class="text-center py-8 text-slate-400">Tidak ada user</td></tr>
           <tr v-for="u in users" :key="u.id" class="hover:bg-slate-50">
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
@@ -43,6 +53,7 @@
           </tr>
         </tbody>
       </table>
+      <AppPagination :page="pagination.page" :total-pages="pagination.totalPages" :total="pagination.total" :limit="pagination.limit" @page-change="onPageChange" @limit-change="onLimitChange" />
     </div>
 
     <!-- Form Modal -->
@@ -74,8 +85,29 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const { data, refresh } = await useFetch('/api/users')
-const users = computed(() => (data.value as any)?.data || [])
+const loading = ref(false)
+const users = ref<any[]>([])
+const filters = reactive({ search: '', role: '' })
+const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
+
+async function fetchUsers() {
+  loading.value = true
+  try {
+    const q: any = { page: pagination.page, limit: pagination.limit }
+    if (filters.search) q.search = filters.search
+    if (filters.role) q.role = filters.role
+    const res = await $fetch('/api/users', { query: q }) as any
+    users.value = res.data
+    pagination.total = res.total ?? 0
+    pagination.totalPages = res.totalPages ?? 1
+    pagination.page = res.page ?? 1
+  } finally { loading.value = false }
+}
+
+function onPageChange(p: number) { pagination.page = p; fetchUsers() }
+function onLimitChange(l: number) { pagination.limit = l; pagination.page = 1; fetchUsers() }
+watchDebounced(filters, () => { pagination.page = 1; fetchUsers() }, { debounce: 300, maxWait: 1000 })
+await fetchUsers()
 
 const showForm = ref(false)
 const editing = ref<any>(null)
@@ -104,7 +136,7 @@ async function save() {
       await $fetch('/api/users', { method: 'POST', body: { ...body, password: form.password } })
     }
     showForm.value = false
-    await refresh()
+    await fetchUsers()
   } catch (e: any) {
     formError.value = e?.data?.statusMessage || 'Gagal menyimpan'
   } finally { saving.value = false }
@@ -112,6 +144,6 @@ async function save() {
 
 async function toggleActive(u: any) {
   await $fetch(`/api/users/${u.id}`, { method: 'PUT', body: { name: u.name, email: u.email, role: u.role, is_active: u.is_active ? 0 : 1 } })
-  await refresh()
+  await fetchUsers()
 }
 </script>

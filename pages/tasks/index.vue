@@ -123,7 +123,7 @@
           </tbody>
         </table>
       </div>
-      <AppPagination :page="taskPagination.page" :total-pages="taskPagination.totalPages" :total="taskPagination.total" :limit="taskPagination.limit" @page-change="onTaskPageChange" />
+      <AppPagination :page="taskPagination.page" :total-pages="taskPagination.totalPages" :total="taskPagination.total" :limit="taskPagination.limit" @page-change="onTaskPageChange" @limit-change="onTaskLimitChange" />
     </div>
 
     <!-- KANBAN MODE — grouped by project -->
@@ -466,7 +466,7 @@ const tasksByProjectAndStatus = computed(() => {
   return result
 })
 
-const taskPagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 50 })
+const taskPagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 
 async function loadTasks() {
   if (viewMode.value === 'kanban') {
@@ -490,6 +490,7 @@ async function loadTasks() {
 }
 
 function onTaskPageChange(p: number) { taskPagination.page = p; loadTasks() }
+function onTaskLimitChange(l: number) { taskPagination.limit = l; taskPagination.page = 1; loadTasks() }
 
 async function loadProjects() {
   projects.value = (await $fetch<any>('/api/projects'))?.data || []

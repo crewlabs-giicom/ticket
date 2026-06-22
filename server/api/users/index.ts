@@ -7,8 +7,20 @@ export default defineEventHandler(async (event) => {
   const user = event.context.user
 
   if (event.method === 'GET') {
-    const [users] = await db.execute('SELECT id, name, email, role, avatar, is_active, created_at FROM users ORDER BY id DESC')
-    return { success: true, data: users }
+    const q = getQuery(event)
+    const limit = Math.min(Number(q.limit) || 20, 100)
+    const page = Math.max(Number(q.page) || 1, 1)
+    const offset = (page - 1) * limit
+
+    const conditions: string[] = []
+    const params: any[] = []
+    if (q.search) { conditions.push('(name LIKE ? OR email LIKE ?)'); params.push(`%${q.search}%`, `%${q.search}%`) }
+    if (q.role) { conditions.push('role = ?'); params.push(q.role) }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    const [[{ total }]] = await db.execute(`SELECT COUNT(*) as total FROM users ${where}`, params) as any[]
+    const [users] = await db.execute(`SELECT id, name, email, role, avatar, is_active, created_at FROM users ${where} ORDER BY id DESC LIMIT ? OFFSET ?`, [...params, limit, offset])
+    return { success: true, data: users, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
   if (event.method === 'POST') {

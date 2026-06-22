@@ -1,7 +1,16 @@
 <template>
-  <div v-if="totalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white">
-    <span class="text-xs text-slate-500">{{ from }}–{{ to }} dari {{ total }}</span>
-    <div class="flex items-center gap-1">
+  <div v-if="total > 10" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white gap-3 flex-wrap">
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-slate-500">{{ from }}–{{ to }} dari {{ total }}</span>
+      <select
+        :value="limit"
+        @change="$emit('limit-change', Number(($event.target as HTMLSelectElement).value))"
+        class="text-xs border border-slate-200 rounded-lg px-2 py-1 text-slate-600 bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-300"
+      >
+        <option v-for="n in limitOptions" :key="n" :value="n">{{ n }} / hal</option>
+      </select>
+    </div>
+    <div v-if="totalPages > 1" class="flex items-center gap-1">
       <button
         :disabled="page <= 1"
         @click="$emit('page-change', page - 1)"
@@ -30,9 +39,14 @@
 
 <script setup lang="ts">
 const props = defineProps<{ page: number; totalPages: number; total: number; limit: number }>()
-defineEmits<{ (e: 'page-change', page: number): void }>()
+defineEmits<{
+  (e: 'page-change', page: number): void
+  (e: 'limit-change', limit: number): void
+}>()
 
-const from = computed(() => Math.min((props.page - 1) * props.limit + 1, props.total))
+const limitOptions = [10, 20, 50, 100]
+
+const from = computed(() => props.total === 0 ? 0 : Math.min((props.page - 1) * props.limit + 1, props.total))
 const to = computed(() => Math.min(props.page * props.limit, props.total))
 
 const pages = computed(() => {

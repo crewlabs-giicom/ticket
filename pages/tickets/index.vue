@@ -87,7 +87,7 @@
           </tbody>
         </table>
       </div>
-      <AppPagination :page="pagination.page" :total-pages="pagination.totalPages" :total="pagination.total" :limit="pagination.limit" @page-change="onPageChange" />
+      <AppPagination :page="pagination.page" :total-pages="pagination.totalPages" :total="pagination.total" :limit="pagination.limit" @page-change="onPageChange" @limit-change="onLimitChange" />
     </div>
 
     <!-- Create Ticket Modal -->
@@ -104,7 +104,7 @@ const loading = ref(false)
 const tickets = ref<any[]>([])
 
 const filters = reactive({ search: '', status_id: '', priority_id: '', project_id: '' })
-const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 50 })
+const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 
 const { data: sd } = await useFetch('/api/statuses')
 const { data: pd } = await useFetch('/api/priorities')
@@ -126,6 +126,7 @@ async function fetchTickets() {
 }
 
 function onPageChange(p: number) { pagination.page = p; fetchTickets() }
+function onLimitChange(l: number) { pagination.limit = l; pagination.page = 1; fetchTickets() }
 watchDebounced(filters, () => { pagination.page = 1; fetchTickets() }, { debounce: 300, maxWait: 1000 })
 await fetchTickets()
 
