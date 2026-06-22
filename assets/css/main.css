@@ -26,6 +26,8 @@
   .nav-link.active { @apply bg-primary-50 text-primary-700; }
   .tab-item { @apply flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md border border-slate-200 bg-white text-slate-600 hover:text-slate-900 hover:border-primary-300 cursor-pointer transition-all whitespace-nowrap; }
   .tab-item.active { @apply bg-primary-50 border-primary-300 text-primary-700; }
+  .page-tab-item { @apply flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-slate-500 cursor-pointer hover:bg-slate-200 transition-colors flex-shrink-0 whitespace-nowrap; }
+  .page-tab-item.active { @apply bg-white text-primary-700 font-medium shadow-sm border border-slate-200; }
   .stat-card { @apply card p-4 flex flex-col gap-1; }
   .priority-dot { @apply w-2 h-2 rounded-full inline-block; }
   .internal-note { @apply border-l-4 border-amber-400 bg-amber-50; }

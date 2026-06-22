@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
 
 interface Tab { id: number; ticket_number: string; title: string; hasUnread: boolean; pinned: boolean }
+interface PageTab { path: string; label: string; icon: string; pinned: boolean }
 
 export const useTabStore = defineStore('tabs', () => {
   const tabs = ref<Tab[]>([])
   const activeTabId = ref<number | null>(null)
+  const pageTabs = ref<PageTab[]>([])
 
   function openTab(ticket: { id: number; ticket_number: string; title: string }) {
     const exists = tabs.value.find(t => t.id === ticket.id)
@@ -67,6 +69,44 @@ export const useTabStore = defineStore('tabs', () => {
     } catch {}
   }
 
+  function openPageTab(page: { path: string; label: string; icon: string }) {
+    if (!pageTabs.value.find(p => p.path === page.path)) {
+      pageTabs.value.push({ ...page, pinned: false })
+    }
+  }
+
+  function closePageTab(path: string) {
+    const tab = pageTabs.value.find(p => p.path === path)
+    if (tab?.pinned) return
+    const idx = pageTabs.value.findIndex(p => p.path === path)
+    if (idx !== -1) pageTabs.value.splice(idx, 1)
+  }
+
+  async function togglePagePin(path: string) {
+    const tab = pageTabs.value.find(p => p.path === path)
+    if (!tab) return
+    const willPin = !tab.pinned
+    tab.pinned = willPin
+    try {
+      if (willPin) {
+        await $fetch('/api/me/page-pins', { method: 'POST', body: { path: tab.path, label: tab.label, icon: tab.icon } })
+      } else {
+        await $fetch('/api/me/page-pins', { method: 'DELETE', body: { path: tab.path } })
+      }
+    } catch { tab.pinned = !willPin }
+  }
+
+  async function loadPinnedPageTabs() {
+    try {
+      const res = await $fetch<any>('/api/me/page-pins')
+      for (const p of res?.data ?? []) {
+        if (!pageTabs.value.find(t => t.path === p.path)) {
+          pageTabs.value.push({ path: p.path, label: p.label, icon: p.icon, pinned: true })
+        }
+      }
+    } catch {}
+  }
+
   function markUnread(ticketId: number) {
     const t = tabs.value.find(t => t.id === ticketId)
     if (t && t.id !== activeTabId.value) t.hasUnread = true
@@ -77,5 +117,5 @@ export const useTabStore = defineStore('tabs', () => {
     if (t) t.hasUnread = false
   }
 
-  return { tabs, activeTabId, openTab, addTab, closeTab, togglePin, loadPinnedTabs, markUnread, clearUnread }
+  return { tabs, activeTabId, openTab, addTab, closeTab, togglePin, loadPinnedTabs, markUnread, clearUnread, pageTabs, openPageTab, closePageTab, togglePagePin, loadPinnedPageTabs }
 })

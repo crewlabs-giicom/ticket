@@ -375,6 +375,19 @@ async function migrate(db: mysql.Pool) {
       FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
     )
   `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS user_pinned_pages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      path VARCHAR(200) NOT NULL,
+      label VARCHAR(200) NOT NULL DEFAULT '',
+      icon VARCHAR(50) NOT NULL DEFAULT 'grid',
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_user_page (user_id, path),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
 }
 
 async function seed(db: mysql.Pool) {

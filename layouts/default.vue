@@ -5,43 +5,46 @@
     <div v-if="sidebarOpen" class="fixed inset-0 bg-black/40 z-30 lg:hidden" @click="sidebarOpen = false" />
 
     <!-- Sidebar -->
-    <aside id="nav-sidebar" :class="['fixed top-0 left-0 h-full w-64 bg-white border-r border-slate-200 z-40 flex flex-col transition-transform duration-200 lg:translate-x-0', sidebarOpen ? 'translate-x-0' : '-translate-x-full']">
-      <!-- Logo -->
-      <div class="px-4 h-16 border-b border-slate-200 flex-shrink-0 flex items-center">
-        <AppLogo />
+    <aside id="nav-sidebar" :class="['fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-40 flex flex-col transition-all duration-200 lg:translate-x-0', sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'w-16' : 'w-64']">
+      <!-- Logo + collapse toggle -->
+      <div class="h-16 border-b border-slate-200 flex-shrink-0 flex items-center justify-between px-3">
+        <AppLogo v-show="!sidebarCollapsed" />
+        <button @click="sidebarCollapsed = !sidebarCollapsed" class="hidden lg:flex p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0" :title="sidebarCollapsed ? 'Perluas sidebar' : 'Sembunyikan sidebar'">
+          <svg class="w-4 h-4 transition-transform duration-200" :class="sidebarCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+        </button>
       </div>
 
       <!-- Nav -->
-      <nav class="flex-1 overflow-y-auto p-3 space-y-4">
+      <nav class="flex-1 overflow-y-auto p-2 space-y-3">
         <div v-for="group in menuGroups" :key="group.label">
-          <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 px-2 mb-1">{{ group.label }}</p>
+          <p v-show="!sidebarCollapsed" class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 px-2 mb-1">{{ group.label }}</p>
           <div class="space-y-0.5">
-            <NuxtLink v-for="m in group.items" :key="m.id" :id="navLinkId(m.path)" :to="m.path" class="nav-link" :class="{ active: isActive(m.path) }" @click="sidebarOpen = false">
+            <NuxtLink v-for="m in group.items" :key="m.id" :id="navLinkId(m.path)" :to="m.path" class="nav-link" :class="[{ active: isActive(m.path) }, sidebarCollapsed ? 'justify-center px-2' : '']" @click="sidebarOpen = false" :title="sidebarCollapsed ? m.name : undefined">
               <component :is="getIcon(m.icon)" class="w-4 h-4 flex-shrink-0" />
-              <span>{{ m.name }}</span>
+              <span v-show="!sidebarCollapsed">{{ m.name }}</span>
             </NuxtLink>
           </div>
         </div>
       </nav>
 
       <!-- User -->
-      <div class="p-3 border-t border-slate-200">
-        <div class="flex items-center gap-3 px-2 py-2">
-          <NuxtLink id="sidebar-user-profile" to="/profile" class="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity" @click="sidebarOpen = false">
+      <div class="p-2 border-t border-slate-200">
+        <div class="flex items-center gap-2 px-1 py-2">
+          <NuxtLink id="sidebar-user-profile" to="/profile" class="flex items-center gap-2 flex-1 min-w-0 hover:opacity-80 transition-opacity" @click="sidebarOpen = false" :title="sidebarCollapsed ? auth.user?.name : undefined">
             <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-semibold text-xs flex-shrink-0 overflow-hidden">
               <img v-if="auth.user?.avatar" :src="`/uploads/${auth.user.avatar}`" class="w-full h-full object-cover" />
               <span v-else>{{ initials }}</span>
             </div>
-            <div class="flex-1 min-w-0">
+            <div v-show="!sidebarCollapsed" class="flex-1 min-w-0">
               <p class="text-sm font-medium text-slate-900 truncate">{{ auth.user?.name }}</p>
               <p class="text-xs text-slate-500 capitalize">{{ auth.user?.role }}</p>
             </div>
           </NuxtLink>
-          <button @click="auth.logout()" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Logout">
+          <button v-show="!sidebarCollapsed" @click="auth.logout()" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0" title="Logout">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
           </button>
         </div>
-        <div class="flex items-center gap-1.5 px-2 pb-1">
+        <div v-show="!sidebarCollapsed" class="flex items-center gap-1.5 px-1 pb-1">
           <NuxtLink id="sidebar-help-btn" to="/help" class="flex-1 flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary-600 hover:bg-primary-50 px-2 py-1.5 rounded-lg transition-colors" @click="sidebarOpen = false">
             <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Panduan & FAQ
@@ -54,7 +57,7 @@
     </aside>
 
     <!-- Main -->
-    <div class="flex-1 flex flex-col lg:ml-64">
+    <div :class="['flex-1 flex flex-col transition-all duration-200', sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64']">
       <!-- Navbar -->
       <header class="sticky top-0 z-20 h-16 bg-white border-b border-slate-200 flex items-center px-4 gap-4">
         <button class="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg" @click="sidebarOpen = true">
@@ -95,9 +98,29 @@
         </div>
       </header>
 
-      <!-- Tab bar -->
+      <!-- Row 1: Page Tabs -->
+      <div v-if="tabs.pageTabs.length" class="bg-slate-50 border-b border-slate-200 px-4 py-1.5 flex items-center gap-1 overflow-x-auto">
+        <span class="text-[10px] text-slate-400 mr-2 flex-shrink-0 font-medium uppercase tracking-wider">Halaman</span>
+        <div v-for="pt in tabs.pageTabs" :key="pt.path" :class="['page-tab-item group', route.path === pt.path && 'active']" @click="navigateTo(pt.path)">
+          <component :is="getIcon(pt.icon)" class="w-3 h-3 flex-shrink-0" />
+          <span class="max-w-[100px] truncate">{{ pt.label }}</span>
+          <!-- Pin toggle -->
+          <button v-if="!pt.pinned" @click.stop="tabs.togglePagePin(pt.path)" class="opacity-0 group-hover:opacity-100 ml-0.5 p-0.5 rounded hover:bg-slate-300 transition-all" title="Pin halaman ini">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </button>
+          <button v-else @click.stop="tabs.togglePagePin(pt.path)" class="ml-0.5 p-0.5 rounded hover:bg-slate-300 transition-all" title="Unpin">
+            <svg class="w-3 h-3 text-primary-500" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </button>
+          <!-- Close (hanya jika tidak pinned) -->
+          <button v-if="!pt.pinned" @click.stop="tabs.closePageTab(pt.path)" class="opacity-0 group-hover:opacity-100 ml-0.5 p-0.5 rounded hover:bg-slate-300 transition-all">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: Ticket Tabs -->
       <div v-if="tabs.tabs.length" class="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
-        <span class="text-xs text-slate-400 mr-1 flex-shrink-0">Tab:</span>
+        <span class="text-xs text-slate-400 mr-1 flex-shrink-0">Ticket</span>
         <div v-for="tab in tabs.tabs" :key="tab.id" :class="['tab-item group', tab.id === tabs.activeTabId && 'active']" @click="tabs.openTab(tab)">
           <span v-if="tab.hasUnread" class="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
           <span class="max-w-[120px] truncate">{{ tab.ticket_number }}</span>
@@ -126,8 +149,14 @@ const route = useRoute()
 const router = useRouter()
 
 const sidebarOpen = ref(false)
+const sidebarCollapsed = ref(false)
 const notifOpen = ref(false)
 const notifRef = ref(null)
+
+if (process.client) {
+  sidebarCollapsed.value = localStorage.getItem('sidebar-collapsed') === 'true'
+  watch(sidebarCollapsed, v => localStorage.setItem('sidebar-collapsed', String(v)))
+}
 
 const { pendingCount, setupListeners, retrySync, clearQueue } = useSync()
 
@@ -217,6 +246,17 @@ const pageTitle = computed(() => {
 
 const initials = computed(() => auth.user?.name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U')
 
+const currentPageIcon = computed(() => {
+  const all = menuGroups.value.flatMap((g: any) => g.items) as any[]
+  return all.find((m: any) => m.path === route.path)?.icon || 'grid'
+})
+
+const PAGE_TAB_EXCLUDE = /^\/tickets\/\d+|^\/login|^\/profile/
+watch(() => route.path, (path) => {
+  if (PAGE_TAB_EXCLUDE.test(path)) return
+  tabs.openPageTab({ path, label: pageTitle.value, icon: currentPageIcon.value })
+}, { immediate: true })
+
 function isActive(path: string) {
   if (path === '/') return route.path === '/'
   return route.path.startsWith(path)
@@ -259,7 +299,10 @@ onMounted(async () => {
   notif.connectSSE()
   setupListeners()
   // Restore pinned tabs dari DB agar konsisten antar device/user
-  if (auth.user) await tabs.loadPinnedTabs()
+  if (auth.user) {
+    await tabs.loadPinnedTabs()
+    await tabs.loadPinnedPageTabs()
+  }
 })
 onUnmounted(() => notif.disconnectSSE())
 </script>
