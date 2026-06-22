@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
     const [rows] = await db.execute(
-      `SELECT sm.*, p.name as project_name FROM system_menus sm LEFT JOIN projects p ON p.id = sm.project_id ${where} ORDER BY sm.module ASC, sm.order_index ASC, sm.type ASC, sm.name ASC`,
+      `SELECT sm.*, p.name as project_name, COALESCE(p.sort_order, 999999) as project_sort FROM system_menus sm LEFT JOIN projects p ON p.id = sm.project_id ${where} ORDER BY project_sort ASC, p.id ASC, sm.order_index ASC, sm.type ASC, sm.name ASC`,
       params
     )
     return { success: true, data: rows }

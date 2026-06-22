@@ -8,10 +8,7 @@ export default defineEventHandler(async (event) => {
   if (event.method === 'GET') {
     let roleWhere = ''
     const roleParams: any[] = []
-    if (user.role === 'customer') {
-      roleWhere = 'WHERE p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
-      roleParams.push(user.id)
-    } else if (user.role === 'staff') {
+    if (user.role === 'customer' || user.role === 'staff') {
       roleWhere = 'WHERE p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
       roleParams.push(user.id)
     }
@@ -32,7 +29,7 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN users u ON u.id = pm.user_id
       ${roleWhere}
       GROUP BY p.id
-      ORDER BY p.id DESC
+      ORDER BY p.sort_order ASC, p.id ASC
     `, roleParams)
     return { success: true, data: projects }
   }
@@ -40,9 +37,49 @@ export default defineEventHandler(async (event) => {
   if (event.method === 'POST') {
     if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     const body = await readBody(event)
+
+    // Reorder endpoint: PUT-style batch via POST array
+    if (Array.isArray(body)) {
+      const conn = await db.getConnection()
+      try {
+        await conn.beginTransaction()
+        for (const item of body) {
+          await conn.execute('UPDATE projects SET sort_order=? WHERE id=?', [item.sort_order, item.id])
+        }
+        await conn.commit()
+      } catch (e) {
+        await conn.rollback()
+        throw e
+      } finally {
+        conn.release()
+      }
+      return { success: true }
+    }
+
     const [r] = await db.execute('INSERT INTO projects (name, description) VALUES (?, ?)', [body.name, body.description || ''])
     const insertId = (r as ResultSetHeader).insertId
     const [rows] = await db.execute('SELECT * FROM projects WHERE id = ?', [insertId])
     return { success: true, data: (rows as any[])[0] }
+  }
+
+  if (event.method === 'PUT') {
+    if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    const body = await readBody(event)
+    if (Array.isArray(body)) {
+      const conn = await db.getConnection()
+      try {
+        await conn.beginTransaction()
+        for (const item of body) {
+          await conn.execute('UPDATE projects SET sort_order=? WHERE id=?', [item.sort_order, item.id])
+        }
+        await conn.commit()
+      } catch (e) {
+        await conn.rollback()
+        throw e
+      } finally {
+        conn.release()
+      }
+      return { success: true }
+    }
   }
 })

@@ -57,6 +57,7 @@ async function migrate(db: mysql.Pool) {
   `)
   // Add status column to existing databases that pre-date this migration
   await db.execute(`ALTER TABLE projects ADD COLUMN status ENUM('active','on_hold','completed') NOT NULL DEFAULT 'active'`).catch(() => {})
+  await db.execute(`ALTER TABLE projects ADD COLUMN sort_order INT NOT NULL DEFAULT 0`).catch(() => {})
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS priorities (

@@ -99,7 +99,7 @@
       </header>
 
       <!-- Row 1: Page Tabs -->
-      <div v-if="tabs.pageTabs.length" class="bg-slate-50 border-b border-slate-200 px-4 py-1.5 flex items-center gap-1 overflow-x-auto">
+      <div v-if="tabs.pageTabs.length" class="sticky top-16 z-10 bg-slate-50 border-b border-slate-200 px-4 py-1.5 flex items-center gap-1 overflow-x-auto">
         <span class="text-[10px] text-slate-400 mr-2 flex-shrink-0 font-medium uppercase tracking-wider">Halaman</span>
         <div v-for="pt in tabs.pageTabs" :key="pt.path" :class="['page-tab-item group', route.path === pt.path && 'active']" @click="navigateTo(pt.path)">
           <component :is="getIcon(pt.icon)" class="w-3 h-3 flex-shrink-0" />
@@ -119,7 +119,7 @@
       </div>
 
       <!-- Row 2: Ticket Tabs -->
-      <div v-if="tabs.tabs.length" class="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto">
+      <div v-if="tabs.tabs.length" class="sticky z-10 bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto" :style="{ top: tabs.pageTabs.length ? '2.875rem' : '4rem' }">
         <span class="text-xs text-slate-400 mr-1 flex-shrink-0">Ticket</span>
         <div v-for="tab in tabs.tabs" :key="tab.id" :class="['tab-item group', tab.id === tabs.activeTabId && 'active']" @click="tabs.openTab(tab)">
           <span v-if="tab.hasUnread" class="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
