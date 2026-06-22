@@ -49,6 +49,7 @@
           </button>
         </div>
 
+        <AppRefreshButton :loading="refreshing" @click="handleRefresh" />
         <button @click="showCreateModal = true" class="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           New Task
@@ -467,6 +468,13 @@ const tasksByProjectAndStatus = computed(() => {
 })
 
 const taskPagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
+
+const refreshing = ref(false)
+async function handleRefresh() {
+  refreshing.value = true
+  await loadTasks()
+  refreshing.value = false
+}
 
 async function loadTasks() {
   if (viewMode.value === 'kanban') {

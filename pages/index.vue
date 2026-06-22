@@ -1,5 +1,9 @@
 <template>
   <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-end">
+      <AppRefreshButton :loading="pending" @click="refresh()" />
+    </div>
     <!-- Stat cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="stat-card">
@@ -134,7 +138,7 @@ const auth = useAuthStore()
 const tabs = useTabStore()
 definePageMeta({ middleware: 'auth' })
 
-const { data: res } = await useFetch('/api/dashboard')
+const { data: res, refresh, pending } = await useFetch('/api/dashboard')
 const d = computed(() => (res.value as any)?.data)
 
 const trendData = computed(() => {

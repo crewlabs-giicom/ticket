@@ -21,6 +21,7 @@
         <AppSelect v-model="filters.staff_id" :options="[{ value: '', label: 'Semua' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Semua" class="w-40" />
       </div>
       <button @click="fetchAll" class="btn-primary">Tampilkan</button>
+      <AppRefreshButton :loading="loadingReport" @click="fetchAll" />
     </div>
 
     <!-- Ticket summary report (existing) -->
@@ -335,8 +336,11 @@ async function fetchTimelogs() {
   }
 }
 
+const loadingReport = ref(false)
 async function fetchAll() {
+  loadingReport.value = true
   await Promise.all([fetchReport(), fetchTimelogs()])
+  loadingReport.value = false
 }
 
 function fmtSecs(s: number) {

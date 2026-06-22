@@ -1,8 +1,11 @@
 <template>
   <div class="p-6 max-w-6xl mx-auto">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Workload View</h1>
-      <p class="text-sm text-gray-500 mt-1">Beban kerja per anggota tim — hanya terlihat oleh admin</p>
+    <div class="mb-6 flex items-start justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Workload View</h1>
+        <p class="text-sm text-gray-500 mt-1">Beban kerja per anggota tim — hanya terlihat oleh admin</p>
+      </div>
+      <AppRefreshButton :loading="pending" @click="refresh()" />
     </div>
 
     <div v-if="pending" class="flex items-center justify-center h-48 text-gray-400">Memuat…</div>
@@ -72,7 +75,7 @@ onMounted(() => {
   if (!auth.isAdmin) navigateTo('/')
 })
 
-const { data, pending } = await useFetch<any[]>('/api/workload')
+const { data, pending, refresh } = await useFetch<any[]>('/api/workload')
 
 function initials(name: string) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)

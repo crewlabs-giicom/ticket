@@ -6,6 +6,7 @@
         <h1 class="text-xl font-bold text-slate-900">Projects</h1>
         <p class="text-sm text-slate-500 mt-0.5">{{ projects.length }} project aktif</p>
       </div>
+      <AppRefreshButton :loading="pending" @click="refresh()" />
     </div>
 
     <!-- Card grid -->
@@ -94,7 +95,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const { data } = await useFetch('/api/projects')
+const { data, refresh, pending } = await useFetch('/api/projects')
 const projects = computed(() => ((data.value as any)?.data || []).filter((p: any) => p.is_active))
 
 function memberList(p: any): string[] {

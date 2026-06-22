@@ -23,10 +23,13 @@
           class="w-40"
         />
       </div>
-      <button @click="showForm = true" class="btn-primary">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-        Ticket Baru
-      </button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="refreshing" @click="handleRefresh" />
+        <button @click="showForm = true" class="btn-primary">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          Ticket Baru
+        </button>
+      </div>
     </div>
 
     <!-- Table -->
@@ -129,6 +132,13 @@ async function fetchTickets() {
 function onPageChange(p: number) { pagination.page = p; fetchTickets() }
 function onLimitChange(l: number) { pagination.limit = l; pagination.page = 1; fetchTickets() }
 watchDebounced(filters, () => { pagination.page = 1; fetchTickets() }, { debounce: 300, maxWait: 1000 })
+
+const refreshing = ref(false)
+async function handleRefresh() {
+  refreshing.value = true
+  await fetchTickets()
+  refreshing.value = false
+}
 onMounted(fetchTickets)
 
 function openTicket(t: any) { tabs.openTab(t) }
