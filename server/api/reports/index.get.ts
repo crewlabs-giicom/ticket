@@ -1,10 +1,11 @@
 import { getDb } from '../../database/index'
+import { todayWIB, daysAgoWIB } from '../../utils/date'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
   const query = getQuery(event)
-  const from = query.from || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
-  const to = query.to || new Date().toISOString().slice(0, 10)
+  const from = query.from || daysAgoWIB(30)
+  const to = query.to || todayWIB()
   const project_id = query.project_id
   const staff_id = query.staff_id
   const priority_id = query.priority_id

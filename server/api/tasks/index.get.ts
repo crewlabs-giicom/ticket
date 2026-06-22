@@ -45,6 +45,19 @@ export default defineEventHandler(async (event) => {
    ${where}
    ORDER BY t.project_id ASC, t.position ASC, t.created_at DESC`
 
+  // Kanban group view: return ALL tasks grouped by project (no pagination)
+  if (q.group_by === 'project') {
+    const [allRows] = await db.execute(baseQuery, params)
+    const projMap = new Map<number, { project_id: number; project_name: string; tasks: any[] }>()
+    for (const row of allRows as any[]) {
+      if (!projMap.has(row.project_id)) {
+        projMap.set(row.project_id, { project_id: row.project_id, project_name: row.project_name, tasks: [] })
+      }
+      projMap.get(row.project_id)!.tasks.push(row)
+    }
+    return [...projMap.values()]
+  }
+
   if (!paginate) {
     const [rows] = await db.execute(baseQuery, params)
     return rows
@@ -55,17 +68,6 @@ export default defineEventHandler(async (event) => {
   ) as any[]
 
   const [rows] = await db.execute(`${baseQuery} LIMIT ? OFFSET ?`, [...params, limit, offset])
-
-  if (q.group_by === 'project') {
-    const projMap = new Map<number, { project_id: number; project_name: string; tasks: any[] }>()
-    for (const row of rows as any[]) {
-      if (!projMap.has(row.project_id)) {
-        projMap.set(row.project_id, { project_id: row.project_id, project_name: row.project_name, tasks: [] })
-      }
-      projMap.get(row.project_id)!.tasks.push(row)
-    }
-    return { data: [...projMap.values()], total, page, limit, totalPages: Math.ceil(total / limit) }
-  }
 
   return { data: rows, total, page, limit, totalPages: Math.ceil(total / limit) }
 })

@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'GET') {
     const q = getQuery(event)
-    const limit = Math.min(Number(q.limit) || 20, 100)
+    const limit = Math.min(Number(q.limit) || 20, 500)
     const page = Math.max(Number(q.page) || 1, 1)
     const offset = (page - 1) * limit
 

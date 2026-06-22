@@ -108,15 +108,21 @@ export default defineEventHandler(async (event) => {
     const due_date = body.due_date ? String(body.due_date).slice(0, 10) : body.due_date
 
     const dueCheck = due_date || old.due_date
-    const sla_breached = dueCheck && new Date(dueCheck) < new Date() ? 1 : 0
+    // Use DB NOW() for SLA breach check to avoid JS UTC vs WIB mismatch
+    const [[{ is_breached }]] = await db.execute(
+      'SELECT CASE WHEN ? IS NOT NULL AND ? < NOW() THEN 1 ELSE 0 END AS is_breached',
+      [dueCheck || null, dueCheck || null]
+    ) as any[]
+    const sla_breached = Number(is_breached)
 
     let resolved_at = old.resolved_at
     if (status_id && status_id !== old.status_id) {
       const [statusRows] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id = ?', [status_id])
       const newStatus = (statusRows as any[])[0]
       if (newStatus?.is_resolved && !old.resolved_at) {
+        // dateStrings: true → NOW() returns string directly in WIB
         const [[{ now }]] = await db.execute('SELECT NOW() as now') as any[]
-        resolved_at = now instanceof Date ? now.toISOString().slice(0, 19).replace('T', ' ') : String(now).slice(0, 19)
+        resolved_at = String(now).slice(0, 19)
         const [msgs] = await db.execute(`
           SELECT tm.message, tm.created_at, u.name as sender_name, u.role
           FROM ticket_messages tm

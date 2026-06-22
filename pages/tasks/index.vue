@@ -497,9 +497,9 @@ async function loadProjects() {
 }
 
 async function loadUsers() {
-  const res = await $fetch<any>('/api/users')
+  const res = await $fetch<any>('/api/users', { query: { limit: 200 } })
   const all = res?.data ?? []
-  staffUsers.value = all.filter((u: any) => u.role === 'staff' || u.role === 'admin')
+  staffUsers.value = all.filter((u: any) => u.is_active && (u.role === 'staff' || u.role === 'admin'))
 }
 
 async function loadSystemMenus(projectId?: string | number) {
@@ -532,13 +532,7 @@ function statusLabel(status: string) {
   return COLUMNS.find(c => c.status === status)?.label ?? status
 }
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-}
-
-function isOverdue(d: string) {
-  return new Date(d) < new Date()
-}
+const { fmtShort: formatDate, isOverdue } = useDate()
 
 async function openTask(task: any) {
   selectedTask.value = await $fetch<any>(`/api/tasks/${task.id}`)

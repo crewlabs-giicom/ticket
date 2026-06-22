@@ -297,7 +297,9 @@ async function load() {
     const url = props.filterProject
       ? `/api/tasks?group_by=project&project_id=${props.filterProject}`
       : '/api/tasks?group_by=project'
-    const groups = await $fetch<any[]>(url)
+    const res = await $fetch<any>(url)
+    // API returns array directly for group_by=project
+    const groups: any[] = Array.isArray(res) ? res : (res as any)?.data ?? []
     rawGroups.value = groups
     buildBuckets(groups)
   } finally {
@@ -315,29 +317,50 @@ onMounted(() => {
 // ─── Drag & drop ─────────────────────────────────────────────────────────────
 
 function onColChange(
-  evt: { added?: { element: any; newIndex: number } },
+  evt: { added?: { element: any; newIndex: number }; removed?: any; moved?: any },
   proj: { project_id: number; tasks: any[] },
   toStatus: string
 ) {
   if (!evt.added) return
   const task = evt.added.element
+  // Update status on the task object (already in bucket via vuedraggable mutation)
   task.status = toStatus
-  const t = proj.tasks.find((t: any) => t.id === task.id)
-  if (t) t.status = toStatus
+  // Sync back to rawGroups so project task count stays consistent
+  const rawProj = rawGroups.value.find((p: any) => p.project_id === proj.project_id)
+  if (rawProj) {
+    const t = rawProj.tasks.find((t: any) => t.id === task.id)
+    if (t) t.status = toStatus
+  }
   $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { status: toStatus } })
-    .catch(() => load()) // reload on error to restore correct state
+    .catch(() => load())
 }
 
 // ─── Task detail ─────────────────────────────────────────────────────────────
 
 async function updateSelectedStatus(status: string) {
   if (!selectedTask.value) return
+  const taskId = selectedTask.value.id
+  const oldStatus = selectedTask.value.status
   selectedTask.value.status = status
-  await $fetch(`/api/tasks/${selectedTask.value.id}`, { method: 'PUT', body: { status } }).catch(() => {})
-  // Reflect in kanban board
+  await $fetch(`/api/tasks/${taskId}`, { method: 'PUT', body: { status } }).catch(() => {})
+  // Move task between buckets
   for (const proj of rawGroups.value) {
-    const t = proj.tasks.find(t => t.id === selectedTask.value.id)
-    if (t) { t.status = status; break }
+    const idx = proj.tasks.findIndex((t: any) => t.id === taskId)
+    if (idx !== -1) {
+      proj.tasks[idx].status = status
+      // Move in buckets
+      const pid = proj.project_id
+      if (buckets.value[pid]) {
+        const srcBucket = buckets.value[pid][oldStatus]
+        const taskInBucket = srcBucket?.find((t: any) => t.id === taskId)
+        if (taskInBucket && srcBucket) {
+          srcBucket.splice(srcBucket.indexOf(taskInBucket), 1)
+          buckets.value[pid][status]?.push(taskInBucket)
+          taskInBucket.status = status
+        }
+      }
+      break
+    }
   }
 }
 
@@ -373,13 +396,7 @@ function statusLabel(status: string) {
   return COLUMNS.find(c => c.status === status)?.label ?? status
 }
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-}
-
-function isOverdue(d: string) {
-  return new Date(d) < new Date()
-}
+const { fmtShort: fmtDate, isOverdue } = useDate()
 
 // ─── Expose for parent ────────────────────────────────────────────────────────
 defineExpose({ load })

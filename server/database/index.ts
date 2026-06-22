@@ -12,7 +12,8 @@ export function getDb(): mysql.Pool {
     database: process.env.DB_NAME || 'ticketing',
     waitForConnections: true,
     connectionLimit: 10,
-    timezone: 'local',
+    timezone: '+07:00',
+    dateStrings: true,
   })
   initDb()
   return pool
@@ -352,6 +353,20 @@ async function migrate(db: mysql.Pool) {
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
       INDEX idx_entity (entity_type, entity_id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS user_pinned_tabs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      ticket_id INT NOT NULL,
+      ticket_number VARCHAR(50) NOT NULL DEFAULT '',
+      title VARCHAR(500) NOT NULL DEFAULT '',
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_user_ticket (user_id, ticket_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
     )
   `)
 }

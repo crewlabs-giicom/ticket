@@ -252,6 +252,8 @@ onMounted(async () => {
   await notif.fetchNotifs()
   notif.connectSSE()
   setupListeners()
+  // Restore pinned tabs dari DB agar konsisten antar device/user
+  if (auth.user) await tabs.loadPinnedTabs()
 })
 onUnmounted(() => notif.disconnectSSE())
 </script>

@@ -1,9 +1,10 @@
 import { getDb } from '../../database/index'
+import { todayWIB } from '../../utils/date'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
   const user = event.context.user
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayWIB()
 
   const isAdmin = user.role === 'admin' || user.role === 'staff'
   const userFilter = isAdmin ? '' : `AND t.created_by = ${user.id}`

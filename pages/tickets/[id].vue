@@ -23,6 +23,13 @@
               @update:modelValue="updateField('status_id', $event)"
             />
             <AppSelect
+              v-model="editPriority"
+              :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
+              placeholder="Priority"
+              class="w-32"
+              @update:modelValue="updateField('priority_id', $event)"
+            />
+            <AppSelect
               v-model="editAssigned"
               :options="[{ value: '', label: 'Unassigned' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]"
               placeholder="Unassigned"
@@ -49,9 +56,9 @@
 
       <div class="mt-4 flex flex-wrap gap-4 text-xs text-slate-500 border-t border-slate-100 pt-4">
         <div><span class="font-medium">Assigned:</span> {{ ticket.assigned_to_name || 'Belum di-assign' }}</div>
-        <div><span class="font-medium">Due:</span> <span :class="ticket.sla_breached ? 'text-red-600 font-medium' : ''">{{ ticket.due_date ? new Date(ticket.due_date).toLocaleString('id') : '—' }}</span></div>
-        <div><span class="font-medium">Dibuat:</span> {{ new Date(ticket.created_at).toLocaleString('id') }}</div>
-        <div v-if="ticket.resolved_at"><span class="font-medium">Resolved:</span> {{ new Date(ticket.resolved_at).toLocaleString('id') }}</div>
+        <div><span class="font-medium">Due:</span> <span :class="ticket.sla_breached ? 'text-red-600 font-medium' : ''">{{ fmtDateTime(ticket.due_date) }}</span></div>
+        <div><span class="font-medium">Dibuat:</span> {{ fmtDateTime(ticket.created_at) }}</div>
+        <div v-if="ticket.resolved_at"><span class="font-medium">Resolved:</span> {{ fmtDateTime(ticket.resolved_at) }}</div>
       </div>
 
       <!-- Task & duration links -->
@@ -272,7 +279,7 @@
           <div>
             <h3 class="font-semibold text-slate-900 text-sm">Transcript Chat</h3>
             <p class="text-xs text-slate-400 mt-0.5">
-              {{ transcriptData?.message_count }} pesan · Ticket ditutup {{ transcriptData ? new Date(transcriptData.created_at).toLocaleString('id') : '' }}
+              {{ transcriptData?.message_count }} pesan · Ticket ditutup {{ fmtDateTime(transcriptData?.created_at) }}
             </p>
           </div>
           <button @click="showTranscriptModal = false" class="text-slate-400 hover:text-slate-600 p-1 rounded transition">
@@ -300,7 +307,7 @@
               <div class="rounded-2xl rounded-tl-sm px-3 py-2 text-sm break-words bg-slate-100 text-slate-800">
                 {{ msg.message }}
               </div>
-              <span class="text-[10px] text-slate-400 mt-0.5">{{ new Date(msg.created_at).toLocaleString('id') }}</span>
+              <span class="text-[10px] text-slate-400 mt-0.5">{{ fmtDateTime(msg.created_at) }}</span>
             </div>
           </div>
         </div>
@@ -312,6 +319,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { fmtDateTime } = useDate()
 const auth = useAuthStore()
 const tabs = useTabStore()
 const chatWidget = useChatWidgetStore()
@@ -357,18 +365,22 @@ const { data: res, refresh } = await useFetch(`/api/tickets/${id}`)
 const ticket = computed(() => (res.value as any)?.data)
 
 const { data: sd } = await useFetch('/api/statuses')
+const { data: pd } = await useFetch('/api/priorities')
 const { data: ud } = await useFetch('/api/users', {
-  query: { project_id: ticket.value?.project_id, limit: 100 }
+  query: { project_id: ticket.value?.project_id, limit: 500 }
 })
 const statuses = computed(() => (sd.value as any)?.data || [])
+const priorities = computed(() => (pd.value as any)?.data || [])
 const staff = computed(() => ((ud.value as any)?.data || []).filter((u: any) => u.is_active && u.role !== 'customer'))
 
 const editStatus = ref(ticket.value?.status_id)
+const editPriority = ref(ticket.value?.priority_id)
 const editAssigned = ref(ticket.value?.assigned_to || '')
 
 watch(ticket, (t) => {
   if (t) {
     editStatus.value = t.status_id
+    editPriority.value = t.priority_id
     editAssigned.value = t.assigned_to || ''
   }
 })

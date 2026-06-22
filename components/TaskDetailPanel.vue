@@ -270,7 +270,7 @@ const editAssigned = ref(task.assigned_to || '')
 const assignableUsers = ref<any[]>([])
 
 onMounted(async () => {
-  const res = await $fetch<any>('/api/users', { query: { project_id: task.project_id, limit: 100 } }).catch(() => null)
+  const res = await $fetch<any>('/api/users', { query: { project_id: task.project_id, limit: 500 } }).catch(() => null)
   assignableUsers.value = (res?.data || []).filter((u: any) => u.is_active && u.role !== 'customer')
 })
 
@@ -308,8 +308,7 @@ function isImage(mime?: string) { return !!mime?.startsWith('image/') }
 function initials(name: string) { return name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 function statusColor(status: string) { return COLUMNS.find(c => c.status === status)?.color ?? '#94a3b8' }
 function statusLabel(status: string) { return COLUMNS.find(c => c.status === status)?.label ?? status }
-function fmtDate(d: string) { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) }
-function isOverdue(d: string) { return new Date(d) < new Date() }
+const { fmtShort: fmtDate, isOverdue } = useDate()
 const { timeAgo } = useTimeAgo()
 
 function createTicketFromTask() {

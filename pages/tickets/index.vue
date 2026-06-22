@@ -81,7 +81,7 @@
               <td class="px-4 py-3 hidden lg:table-cell"><span class="text-xs text-slate-500">{{ t.assigned_to_name || '—' }}</span></td>
               <td class="px-4 py-3 hidden xl:table-cell"><span class="text-xs text-slate-500">{{ t.system_menu_name || '—' }}</span></td>
               <td class="px-4 py-3 hidden xl:table-cell">
-                <span class="text-xs" :class="t.sla_breached ? 'text-red-600 font-medium' : 'text-slate-500'">{{ t.due_date ? new Date(t.due_date).toLocaleDateString('id') : '—' }}</span>
+                <span class="text-xs" :class="t.sla_breached ? 'text-red-600 font-medium' : 'text-slate-500'">{{ fmtDate(t.due_date) }}</span>
               </td>
             </tr>
           </tbody>
@@ -97,6 +97,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { fmtDate } = useDate()
 const tabs = useTabStore()
 const auth = useAuthStore()
 const showForm = ref(false)
@@ -128,7 +129,7 @@ async function fetchTickets() {
 function onPageChange(p: number) { pagination.page = p; fetchTickets() }
 function onLimitChange(l: number) { pagination.limit = l; pagination.page = 1; fetchTickets() }
 watchDebounced(filters, () => { pagination.page = 1; fetchTickets() }, { debounce: 300, maxWait: 1000 })
-await fetchTickets()
+onMounted(fetchTickets)
 
 function openTicket(t: any) { tabs.openTab(t) }
 function onCreated() { showForm.value = false; fetchTickets() }

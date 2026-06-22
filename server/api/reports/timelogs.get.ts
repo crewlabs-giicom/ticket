@@ -1,5 +1,6 @@
 import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
+import { todayWIB, daysAgoWIB } from '../../utils/date'
 
 export default defineEventHandler(async (event) => {
   requireAuth(event)
@@ -7,8 +8,8 @@ export default defineEventHandler(async (event) => {
   const q = getQuery(event)
 
   // Default date range: last 30 days
-  const dateTo = String(q.date_to || q.to || new Date().toISOString().slice(0, 10))
-  const dateFrom = String(q.date_from || q.from || new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10))
+  const dateTo = String(q.date_to || q.to || todayWIB())
+  const dateFrom = String(q.date_from || q.from || daysAgoWIB(29))
   const dateFromFull = `${dateFrom} 00:00:00`
   const dateToFull = `${dateTo} 23:59:59`
 

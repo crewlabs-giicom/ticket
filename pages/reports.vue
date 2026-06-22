@@ -348,10 +348,10 @@ function fmtSecs(s: number) {
   return `${m}m`
 }
 
-function fmtDatetime(dt: string | null) {
+function fmtDatetime(dt: string | null | undefined): string {
   if (!dt) return '—'
-  const d = new Date(dt)
-  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const d = new Date((/[TZ+]/.test(dt) ? dt : dt.replace(' ', 'T') + '+07:00'))
+  return d.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
 const trendData = computed(() => {

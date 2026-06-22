@@ -516,10 +516,10 @@ const taskProgress = computed(() => {
 
 // ── Users for dropdowns ───────────────────────────────────────────────────────
 const allUsers = ref<any[]>([])
-const staffUsers = computed(() => allUsers.value.filter(u => u.role === 'staff' || u.role === 'admin'))
+const staffUsers = computed(() => allUsers.value.filter((u: any) => u.is_active && (u.role === 'staff' || u.role === 'admin')))
 
 onMounted(async () => {
-  const res = await $fetch<any>('/api/users')
+  const res = await $fetch<any>('/api/users', { query: { limit: 200 } })
   allUsers.value = res?.data ?? res ?? []
 })
 
@@ -740,8 +740,7 @@ async function saveEdit() {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function colColor(status: string) { return COLUMNS.find(c => c.status === status)?.color ?? '#94a3b8' }
 function colLabel(status: string) { return COLUMNS.find(c => c.status === status)?.label ?? status }
-function fmtDate(d: string) { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) }
-function isOverdue(d: string) { return new Date(d) < new Date() }
+const { fmtShort: fmtDate, isOverdue } = useDate()
 
 function initials(name: string) {
   return name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) ?? '?'

@@ -107,7 +107,7 @@ async function fetchUsers() {
 function onPageChange(p: number) { pagination.page = p; fetchUsers() }
 function onLimitChange(l: number) { pagination.limit = l; pagination.page = 1; fetchUsers() }
 watchDebounced(filters, () => { pagination.page = 1; fetchUsers() }, { debounce: 300, maxWait: 1000 })
-await fetchUsers()
+onMounted(fetchUsers)
 
 const showForm = ref(false)
 const editing = ref<any>(null)
