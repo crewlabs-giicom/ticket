@@ -41,6 +41,61 @@
           />
         </div>
 
+        <!-- Participants -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs text-gray-500 w-20 flex-shrink-0">Peserta</span>
+            <button @click="showTaskInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Undang
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <div v-for="p in taskParticipants" :key="p.user_id" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5 text-xs text-slate-700">
+              <div class="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-[9px] font-bold text-indigo-700 overflow-hidden flex-shrink-0">
+                <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ p.name?.charAt(0) }}</span>
+              </div>
+              <span>{{ p.name }}</span>
+              <button @click="removeTaskParticipant(p.user_id)" class="text-slate-300 hover:text-red-500 transition-colors">✕</button>
+            </div>
+            <span v-if="!taskParticipants.length" class="text-xs text-gray-400">Belum ada peserta.</span>
+          </div>
+        </div>
+
+        <!-- Invite Task Participant Modal -->
+        <div v-if="showTaskInviteModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="closeTaskInviteModal">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h3 class="font-semibold mb-4">Undang Peserta ke Task</h3>
+            <div class="space-y-3">
+              <input v-model="taskInviteSearch" @input="searchTaskInviteUsers" type="text" placeholder="Cari customer by nama / email…" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+              <div v-if="taskInviteResults.length" class="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-xl p-2">
+                <button
+                  v-for="u in taskInviteResults" :key="u.id"
+                  @click="addTaskParticipant(u)"
+                  :disabled="isAlreadyTaskParticipant(u.id)"
+                  class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-50 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600 flex-shrink-0 overflow-hidden">
+                    <img v-if="u.avatar" :src="`/uploads/${u.avatar}`" class="w-full h-full object-cover" />
+                    <span v-else>{{ u.name?.charAt(0) }}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium truncate">{{ u.name }}</p>
+                    <p class="text-xs text-slate-400 truncate">{{ u.email }}</p>
+                  </div>
+                  <span v-if="isAlreadyTaskParticipant(u.id)" class="text-xs text-green-600">Sudah</span>
+                  <span v-else class="text-xs text-indigo-600">+ Undang</span>
+                </button>
+              </div>
+              <p v-else-if="taskInviteSearch.length > 1" class="text-xs text-slate-400 text-center py-2">Tidak ada hasil</p>
+            </div>
+            <div class="flex justify-end mt-4">
+              <button @click="closeTaskInviteModal" class="text-sm text-slate-600 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">Tutup</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Description -->
         <p v-if="task.description" class="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{{ task.description }}</p>
         <p v-else class="text-sm text-gray-300 italic">Tidak ada deskripsi.</p>
@@ -441,5 +496,48 @@ async function postComment() {
   } finally {
     postingComment.value = false
   }
+}
+
+// Task Participants
+const taskParticipants = ref<any[]>([])
+const showTaskInviteModal = ref(false)
+const taskInviteSearch = ref('')
+const taskInviteResults = ref<any[]>([])
+
+onMounted(async () => {
+  const r = await $fetch<any>(`/api/tasks/${task.id}/participants`).catch(() => null)
+  taskParticipants.value = r?.data || []
+})
+
+function closeTaskInviteModal() {
+  showTaskInviteModal.value = false
+  taskInviteSearch.value = ''
+  taskInviteResults.value = []
+}
+
+let taskInviteTimer: ReturnType<typeof setTimeout>
+function searchTaskInviteUsers() {
+  clearTimeout(taskInviteTimer)
+  taskInviteTimer = setTimeout(async () => {
+    if (taskInviteSearch.value.trim().length < 2) { taskInviteResults.value = []; return }
+    const res = await $fetch<any>('/api/users', { query: { search: taskInviteSearch.value, role: 'customer', limit: 20 } })
+    taskInviteResults.value = res?.data || []
+  }, 300)
+}
+
+function isAlreadyTaskParticipant(userId: number) {
+  return taskParticipants.value.some((p: any) => p.user_id === userId)
+}
+
+async function addTaskParticipant(u: any) {
+  if (isAlreadyTaskParticipant(u.id)) return
+  await $fetch(`/api/tasks/${task.id}/participants`, { method: 'POST', body: { user_id: u.id } })
+  const r = await $fetch<any>(`/api/tasks/${task.id}/participants`)
+  taskParticipants.value = r?.data || []
+}
+
+async function removeTaskParticipant(userId: number) {
+  await $fetch(`/api/tasks/${task.id}/participants`, { method: 'DELETE', body: { user_id: userId } })
+  taskParticipants.value = taskParticipants.value.filter((p: any) => p.user_id !== userId)
 }
 </script>

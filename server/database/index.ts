@@ -393,6 +393,32 @@ async function migrate(db: mysql.Pool) {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ticket_participants (
+      ticket_id INT NOT NULL,
+      user_id INT NOT NULL,
+      invited_by INT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (ticket_id, user_id),
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS task_participants (
+      task_id INT NOT NULL,
+      user_id INT NOT NULL,
+      invited_by INT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (task_id, user_id),
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
 }
 
 async function seed(db: mysql.Pool) {

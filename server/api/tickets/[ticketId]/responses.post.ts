@@ -60,6 +60,11 @@ export default defineEventHandler(async (event) => {
       if (ticket.created_by !== user.id) notifyIds.add(ticket.created_by)
       if (ticket.assigned_to && ticket.assigned_to !== user.id) notifyIds.add(ticket.assigned_to)
 
+      const [partRows] = await db.execute('SELECT user_id FROM ticket_participants WHERE ticket_id=?', [ticketId])
+      for (const p of partRows as any[]) {
+        if (p.user_id !== user.id) notifyIds.add(p.user_id)
+      }
+
       for (const uid of notifyIds) {
         await db.execute(
           'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
