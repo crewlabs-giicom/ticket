@@ -23,6 +23,18 @@
               {{ tabs.tabs.find(t=>t.id===ticket.id)?.pinned ? 'Unpin' : 'Pin Tab' }}
             </button>
           </template>
+          <!-- Customer: tombol tandai selesai/tutup, hanya jika ticket belum resolved -->
+          <template v-if="auth.user?.role === 'customer' && !ticket.status_is_resolved">
+            <button
+              v-for="s in resolvedStatuses"
+              :key="s.id"
+              @click="customerCloseTicket(s)"
+              :disabled="closingTicket"
+              class="btn-ghost text-xs py-1.5 border border-slate-200 hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-40"
+            >
+              Tandai {{ s.name }}
+            </button>
+          </template>
           <AppRefreshButton :loading="ticketPending" @click="refresh()" />
           <button @click="openChat" class="btn-ghost text-xs py-1.5 flex items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
@@ -436,6 +448,21 @@ const staff = computed(() => ((ud.value as any)?.data || []).filter((u: any) => 
 const editStatus = ref(ticket.value?.status_id)
 const editPriority = ref(ticket.value?.priority_id)
 const editAssigned = ref(ticket.value?.assigned_to || '')
+
+const resolvedStatuses = computed(() => statuses.value.filter((s: any) => s.is_resolved))
+const closingTicket = ref(false)
+
+async function customerCloseTicket(status: any) {
+  const ok = await useConfirm(`Tandai ticket sebagai "${status.name}"? Tindakan ini tidak dapat dibatalkan.`)
+  if (!ok) return
+  closingTicket.value = true
+  try {
+    await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { status_id: status.id } })
+    await refresh()
+  } finally {
+    closingTicket.value = false
+  }
+}
 
 watch(ticket, (t) => {
   if (t) {

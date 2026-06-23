@@ -153,6 +153,14 @@ export default defineEventHandler(async (event) => {
 
     const { title, description, project_id, status_id, assigned_to } = body
     const priority_id = user.role === 'customer' ? undefined : body.priority_id
+
+    // Customer hanya boleh mengubah ke status is_resolved=1, dan hanya jika ticket belum resolved
+    if (user.role === 'customer' && status_id && status_id !== old.status_id) {
+      const [[curStatus]] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id=?', [old.status_id]) as any[]
+      if (curStatus?.is_resolved) throw createError({ statusCode: 403, statusMessage: 'Ticket sudah selesai' })
+      const [[targetStatus]] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id=?', [status_id]) as any[]
+      if (!targetStatus?.is_resolved) throw createError({ statusCode: 403, statusMessage: 'Customer hanya bisa menutup atau menyelesaikan ticket' })
+    }
     const due_date = body.due_date ? String(body.due_date).slice(0, 10) : body.due_date
 
     const dueCheck = due_date || old.due_date
