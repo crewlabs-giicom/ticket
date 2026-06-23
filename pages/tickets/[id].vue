@@ -643,12 +643,12 @@ function isAlreadyParticipant(userId: number) {
 
 async function addParticipant(u: any) {
   if (isAlreadyParticipant(u.id)) return
-  await $fetch(`/api/tickets/${id}/participants`, { method: 'POST', body: { user_id: u.id } })
+  await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { _action: 'participant_add', user_id: u.id } })
   await refresh()
 }
 
 async function removeParticipant(userId: number) {
-  await $fetch(`/api/tickets/${id}/participants`, { method: 'DELETE', body: { user_id: userId } })
+  await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { _action: 'participant_remove', user_id: userId } })
   await refresh()
 }
 </script>

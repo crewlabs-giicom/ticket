@@ -107,6 +107,34 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'PUT') {
     const body = await readBody(event)
+
+    // Participant actions piggyback on PUT to avoid needing a separate route
+    if (body._action === 'participant_add') {
+      if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      const { user_id } = body
+      const [ticketRows] = await db.execute('SELECT id, ticket_number, title FROM tickets WHERE id=?', [id])
+      const ticket = (ticketRows as any[])[0]
+      if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
+      try {
+        await db.execute('INSERT INTO ticket_participants (ticket_id, user_id, invited_by) VALUES (?, ?, ?)', [id, user_id, user.id])
+      } catch (e: any) {
+        if (e.code === 'ER_DUP_ENTRY') throw createError({ statusCode: 409, statusMessage: 'User sudah menjadi peserta' })
+        throw e
+      }
+      await db.execute(
+        'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
+        [user_id, 'Diundang ke ticket', `${user.name} mengundang Anda ke ticket ${ticket.ticket_number}: ${ticket.title}`, 'ticket_invite', id]
+      )
+      broadcastToUser(user_id, 'notification', { title: 'Diundang ke ticket', message: `${user.name} mengundang Anda ke ticket ${ticket.ticket_number}`, type: 'ticket_invite', ticket_id: Number(id) })
+      return { success: true }
+    }
+
+    if (body._action === 'participant_remove') {
+      if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      await db.execute('DELETE FROM ticket_participants WHERE ticket_id=? AND user_id=?', [id, body.user_id])
+      return { success: true }
+    }
+
     const [oldRows] = await db.execute('SELECT * FROM tickets WHERE id = ?', [id])
     const old = (oldRows as any[])[0]
     if (!old) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
