@@ -21,7 +21,12 @@ export default defineEventHandler(async (event) => {
       [taskId]
     ) as any[]
     const [[activeLog]] = await db.execute(
-      `SELECT tl.*, u.name as user_name FROM task_timelogs tl LEFT JOIN users u ON u.id = tl.user_id WHERE tl.task_id = ? AND tl.user_id = ? AND tl.stopped_at IS NULL LIMIT 1`,
+      `SELECT tl.*, u.name as user_name, t.title as task_name,
+              (SELECT ti.title FROM tickets ti WHERE ti.task_id = tl.task_id LIMIT 1) as ticket_title
+       FROM task_timelogs tl
+       LEFT JOIN users u ON u.id = tl.user_id
+       LEFT JOIN tasks t ON t.id = tl.task_id
+       WHERE tl.task_id = ? AND tl.user_id = ? AND tl.stopped_at IS NULL LIMIT 1`,
       [taskId, user.id]
     ) as any[]
     return { data: logs, total_seconds, active_log: activeLog || null }

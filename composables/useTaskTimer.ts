@@ -1,4 +1,8 @@
+import { useActiveTimerStore } from '~/stores/activeTimer'
+
 export function useTaskTimer(taskId: Ref<number>) {
+  const store = useActiveTimerStore()
+
   const activeLogId = ref<number | null>(null)
   const startedAt = ref<Date | null>(null)
   const elapsed = ref(0)
@@ -8,6 +12,8 @@ export function useTaskTimer(taskId: Ref<number>) {
   let interval: ReturnType<typeof setInterval> | null = null
 
   const storageKey = computed(() => `task_timer_${taskId.value}`)
+
+  const isPaused = ref(false)
 
   const elapsedFormatted = computed(() => formatSeconds(elapsed.value))
   const totalFormatted = computed(() => formatSeconds(totalSeconds.value + (activeLogId.value ? elapsed.value : 0)))
@@ -28,6 +34,7 @@ export function useTaskTimer(taskId: Ref<number>) {
     interval = setInterval(() => {
       if (startedAt.value) {
         elapsed.value = Math.floor((Date.now() - startedAt.value.getTime()) / 1000)
+        store.updateElapsed(elapsed.value)
       }
     }, 1000)
   }
@@ -52,10 +59,35 @@ export function useTaskTimer(taskId: Ref<number>) {
         startedAt.value = new Date(active.started_at)
         elapsed.value = Math.floor((Date.now() - startedAt.value.getTime()) / 1000)
         localStorage.setItem(storageKey.value, JSON.stringify({ logId: active.id, start: active.started_at }))
+        isPaused.value = false
         startTick()
+        store.setActive(
+          taskId.value,
+          active.task_name || '',
+          active.ticket_title || '',
+          active.id,
+          startedAt.value
+        )
       } else {
-        // No active log on server — clear local state and localStorage
-        clearTimer()
+        // Check paused state in localStorage
+        const raw = localStorage.getItem(storageKey.value)
+        if (raw) {
+          try {
+            const saved = JSON.parse(raw)
+            if (saved.paused) {
+              isPaused.value = true
+              store.setPaused(taskId.value, saved.taskName || '', saved.ticketTitle || '', saved.pausedElapsed || 0)
+            } else {
+              isPaused.value = false
+              clearTimer()
+              if (store.taskId === taskId.value) store.clearActive()
+            }
+          } catch { isPaused.value = false; clearTimer() }
+        } else {
+          isPaused.value = false
+          clearTimer()
+          if (store.taskId === taskId.value) store.clearActive()
+        }
       }
     } finally {
       loading.value = false
@@ -72,15 +104,53 @@ export function useTaskTimer(taskId: Ref<number>) {
     await fetchLogs()
   }
 
-  async function stop() {
+  async function pause() {
     if (!activeLogId.value) return
     const logId = activeLogId.value
+    const currentElapsed = elapsed.value
+    // Get task/ticket info from store before clearing
+    const taskName = store.taskId === taskId.value ? store.taskName : ''
+    const ticketTitle = store.taskId === taskId.value ? store.ticketTitle : ''
+    // Stop interval
+    if (interval) { clearInterval(interval); interval = null }
+    activeLogId.value = null
+    startedAt.value = null
+    // Stop in DB
+    await $fetch(`/api/tasks/${taskId.value}/timelogs?log_id=${logId}`, { method: 'PUT' })
+    // Save paused state to localStorage
+    localStorage.setItem(storageKey.value, JSON.stringify({
+      paused: true,
+      taskName,
+      ticketTitle,
+      pausedElapsed: currentElapsed,
+    }))
+    isPaused.value = true
+    store.setPaused(taskId.value, taskName, ticketTitle, currentElapsed)
+    await fetchLogs()
+  }
+
+  async function resume() {
+    // Clear paused localStorage before starting
+    localStorage.removeItem(storageKey.value)
+    await start()
+  }
+
+  async function stop() {
+    isPaused.value = false
+    if (!activeLogId.value) {
+      // If paused, just clear state
+      clearTimer()
+      if (store.taskId === taskId.value) store.clearActive()
+      return
+    }
+    const logId = activeLogId.value
     clearTimer()
+    if (store.taskId === taskId.value) store.clearActive()
     await $fetch(`/api/tasks/${taskId.value}/timelogs?log_id=${logId}`, { method: 'PUT' })
     await fetchLogs()
   }
 
   onUnmounted(() => { if (interval) clearInterval(interval) })
 
-  return { timelogs, totalSeconds, totalFormatted, elapsedFormatted, isRunning, loading, elapsed, start, stop, fetchLogs, formatSeconds }
+  return { timelogs, totalSeconds, totalFormatted, elapsedFormatted, isRunning, isPaused, loading, elapsed, start, pause, resume, stop, fetchLogs, formatSeconds, storageKey }
 }

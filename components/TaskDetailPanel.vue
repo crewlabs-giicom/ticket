@@ -263,19 +263,46 @@
               <h3 class="text-sm font-semibold text-gray-700">Time Tracker</h3>
               <p class="text-xs text-slate-400 mt-0.5">Total: <span class="font-medium text-slate-600">{{ timer.totalFormatted.value }}</span></p>
             </div>
-            <button
-              @click="timer.isRunning.value ? timer.stop() : timer.start()"
-              :class="['flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors', timer.isRunning.value ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100']"
-            >
-              <span v-if="timer.isRunning.value" class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-sm bg-red-500 animate-pulse"></span>
-                Stop · {{ timer.elapsedFormatted.value }}
-              </span>
-              <span v-else class="flex items-center gap-1.5">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                Mulai
-              </span>
-            </button>
+            <div class="flex items-center gap-1.5">
+              <!-- Running: show Pause + Stop -->
+              <template v-if="timer.isRunning.value">
+                <span class="text-xs text-slate-500 flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-sm bg-emerald-500 animate-pulse"></span>
+                  {{ timer.elapsedFormatted.value }}
+                </span>
+                <button @click="timer.pause()"
+                  class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                  Jeda
+                </button>
+                <button @click="timer.stop()"
+                  class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                  Stop
+                </button>
+              </template>
+              <!-- Paused: show Resume + Stop -->
+              <template v-else-if="timer.isPaused.value">
+                <button @click="timer.resume()"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  Lanjutkan
+                </button>
+                <button @click="timer.stop()"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                  Stop
+                </button>
+              </template>
+              <!-- Idle: show Mulai -->
+              <template v-else>
+                <button @click="timer.start()"
+                  class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  Mulai
+                </button>
+              </template>
+            </div>
           </div>
           <div v-if="timer.timelogs.value.length" class="space-y-1.5 max-h-32 overflow-y-auto">
             <div v-for="log in timer.timelogs.value.slice(0, 5)" :key="log.id" class="flex items-center justify-between text-xs">

@@ -7,23 +7,17 @@ export default defineNuxtPlugin(() => {
       const key = localStorage.key(i)
       if (!key?.startsWith('task_timer_')) continue
       try {
-        const { logId } = JSON.parse(localStorage.getItem(key) || '{}')
-        if (logId) {
-          navigator.sendBeacon('/api/tasks/timelogs/stop', JSON.stringify({ log_id: logId }))
-          localStorage.removeItem(key)
+        const saved = JSON.parse(localStorage.getItem(key) || '{}')
+        // Only stop running timers (not paused ones — paused have no active DB log)
+        if (saved.logId && !saved.paused) {
+          navigator.sendBeacon('/api/tasks/timelogs/stop', JSON.stringify({ log_id: saved.logId }))
         }
+        localStorage.removeItem(key)
       } catch { /* ignore parse errors */ }
     }
   }
 
-  // Stop when tab becomes hidden (minimize, switch tab, lock screen)
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      stopAllActiveTimers()
-    }
-  })
-
-  // Stop when browser/tab is closed
+  // Stop only when browser/tab is actually closed (not on tab switch or minimize)
   window.addEventListener('beforeunload', () => {
     stopAllActiveTimers()
   })

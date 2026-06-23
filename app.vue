@@ -4,6 +4,7 @@
   </NuxtLayout>
   <ClientOnly><ToastContainer /></ClientOnly>
   <ClientOnly><TicketChatWidget /></ClientOnly>
+  <ClientOnly><TimerWidget /></ClientOnly>
 </template>
 
 <script setup lang="ts">
