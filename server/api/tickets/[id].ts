@@ -118,7 +118,6 @@ export default defineEventHandler(async (event) => {
 
     // Participant actions piggyback on PUT to avoid needing a separate route
     if (body._action === 'participant_add') {
-      if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
       const { user_id } = body
       const [ticketRows] = await db.execute('SELECT id, ticket_number, title FROM tickets WHERE id=?', [id])
       const ticket = (ticketRows as any[])[0]
@@ -138,7 +137,6 @@ export default defineEventHandler(async (event) => {
     }
 
     if (body._action === 'participant_remove') {
-      if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
       await db.execute('DELETE FROM ticket_participants WHERE ticket_id=? AND user_id=?', [id, body.user_id])
       return { success: true }
     }

@@ -73,7 +73,7 @@
         <div class="mt-4 pt-4 border-t border-slate-100">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Peserta <span class="font-normal text-slate-400">({{ ticket.participants?.length || 0 }})</span></span>
-            <button v-if="auth.isStaffOrAdmin" @click="showInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
+            <button v-if="canManageParticipants" @click="showInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
               Undang
             </button>
@@ -85,7 +85,7 @@
                 <span v-else>{{ p.name?.charAt(0) }}</span>
               </div>
               <span class="font-medium">{{ p.name }}</span>
-              <button v-if="auth.isStaffOrAdmin" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-400 ml-0.5 transition-colors leading-none">✕</button>
+              <button v-if="canManageParticipants" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-400 ml-0.5 transition-colors leading-none">✕</button>
             </div>
           </div>
           <p v-else class="text-xs text-slate-400 italic">Belum ada peserta yang diundang.</p>
@@ -610,6 +610,13 @@ async function submitLink() {
 }
 
 // Participants
+const canManageParticipants = computed(() => {
+  if (!ticket.value || !auth.user) return false
+  if (auth.isStaffOrAdmin) return true
+  if (Number(ticket.value.created_by) === Number(auth.user.id)) return true
+  return ticket.value.participants?.some((p: any) => Number(p.user_id) === Number(auth.user!.id)) ?? false
+})
+
 const showInviteModal = ref(false)
 const inviteSearch = ref('')
 const inviteResults = ref<any[]>([])
