@@ -28,9 +28,13 @@ export default defineEventHandler(async (event) => {
     const ticket = (ticketRows as any[])[0]
     if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
 
-    if (user.role === 'customer' && ticket.created_by !== user.id) {
-      const [partRows] = await db.execute('SELECT 1 FROM ticket_participants WHERE ticket_id=? AND user_id=?', [id, user.id])
-      if (!(partRows as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    if (user.role === 'customer' && Number(ticket.created_by) !== Number(user.id)) {
+      let isParticipant = false
+      try {
+        const [partRows] = await db.execute('SELECT 1 FROM ticket_participants WHERE ticket_id=? AND user_id=?', [id, user.id])
+        isParticipant = (partRows as any[]).length > 0
+      } catch {}
+      if (!isParticipant) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     }
     if (user.role === 'staff') {
       const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [ticket.project_id, user.id])
@@ -91,16 +95,20 @@ export default defineEventHandler(async (event) => {
       [id]
     )
 
-    const [participantRows] = await db.execute(`
-      SELECT tp.user_id, tp.invited_by, tp.created_at,
-        u.name, u.email, u.role, u.avatar,
-        inv.name as invited_by_name
-      FROM ticket_participants tp
-      LEFT JOIN users u ON u.id = tp.user_id
-      LEFT JOIN users inv ON inv.id = tp.invited_by
-      WHERE tp.ticket_id = ?
-      ORDER BY tp.created_at ASC
-    `, [id])
+    let participantRows: any[] = []
+    try {
+      const [rows] = await db.execute(`
+        SELECT tp.user_id, tp.invited_by, tp.created_at,
+          u.name, u.email, u.role, u.avatar,
+          inv.name as invited_by_name
+        FROM ticket_participants tp
+        LEFT JOIN users u ON u.id = tp.user_id
+        LEFT JOIN users inv ON inv.id = tp.invited_by
+        WHERE tp.ticket_id = ?
+        ORDER BY tp.created_at ASC
+      `, [id])
+      participantRows = rows as any[]
+    } catch {}
 
     return { success: true, data: { ...ticket, responses: responsesWithAttachments, attachments, links, backLinks, history: historyRows, participants: participantRows } }
   }

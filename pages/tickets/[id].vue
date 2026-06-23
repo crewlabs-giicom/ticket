@@ -59,16 +59,13 @@
             <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Dibuat</p>
             <p class="text-xs font-semibold text-slate-700 truncate">{{ fmtDateTime(ticket.created_at) }}</p>
           </div>
-          <div v-if="ticket.resolved_at" class="bg-emerald-50 rounded-xl px-3 py-2.5">
-            <p class="text-[10px] text-emerald-500 uppercase tracking-wide font-medium mb-0.5">Resolved</p>
-            <p class="text-xs font-semibold text-emerald-700 truncate">{{ fmtDateTime(ticket.resolved_at) }}</p>
+          <div v-if="ticket.resolved_at || ticket.closed_at" class="bg-emerald-50 rounded-xl px-3 py-2.5">
+            <p class="text-[10px] text-emerald-500 uppercase tracking-wide font-medium mb-0.5">Resolved · {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}</p>
+            <p class="text-xs font-semibold text-emerald-700 truncate">{{ fmtDateTime(ticket.resolved_at || ticket.closed_at) }}</p>
           </div>
           <div v-else class="bg-slate-50 rounded-xl px-3 py-2.5">
-            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Durasi</p>
-            <p class="text-xs font-semibold text-slate-700">
-              <span v-if="ticket.resolved_at || ticket.closed_at">{{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}</span>
-              <span v-else class="text-slate-400">Ongoing</span>
-            </p>
+            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Resolved</p>
+            <p class="text-xs font-semibold text-slate-400">Ongoing</p>
           </div>
         </div>
 
@@ -94,16 +91,12 @@
           <p v-else class="text-xs text-slate-400 italic">Belum ada peserta yang diundang.</p>
         </div>
 
-        <!-- Task link & badges -->
-        <div v-if="ticket.task_id || ticket.resolved_at || ticket.closed_at" class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
-          <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
+        <!-- Task link -->
+        <div v-if="ticket.task_id" class="mt-4 pt-4 border-t border-slate-100">
+          <NuxtLink :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             Task: {{ ticket.task_title || ticket.task_id }}
           </NuxtLink>
-          <span v-if="ticket.resolved_at || ticket.closed_at" class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-xs">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Durasi: {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}
-          </span>
         </div>
 
         <!-- Ticket-level Attachments -->
