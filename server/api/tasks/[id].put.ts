@@ -47,12 +47,30 @@ export default defineEventHandler(async (event) => {
 
   if ('status' in body && body.status !== old.status) {
     const LABELS: Record<string, string> = { backlog: 'Backlog', todo: 'Todo', in_progress: 'In Progress', review: 'Review', done: 'Done' }
+    const statusLabel = LABELS[body.status] ?? body.status
     await logActivity(db, {
       entity_type: 'task', entity_id: Number(id), action: 'status_changed',
       from_value: old.status, to_value: body.status,
-      label: `${user.name} mengubah status dari "${LABELS[old.status] ?? old.status}" ke "${LABELS[body.status] ?? body.status}"`,
+      label: `${user.name} mengubah status dari "${LABELS[old.status] ?? old.status}" ke "${statusLabel}"`,
       user_id: user.id,
     })
+
+    // Notifikasi status berubah ke assignee & creator (bukan actor)
+    const notifyIds = new Set<number>()
+    if (old.assigned_to && Number(old.assigned_to) !== user.id) notifyIds.add(Number(old.assigned_to))
+    if (old.created_by && Number(old.created_by) !== user.id) notifyIds.add(Number(old.created_by))
+    for (const uid of notifyIds) {
+      await db.execute(
+        'INSERT INTO notifications (user_id, title, message, type, task_id) VALUES (?, ?, ?, ?, ?)',
+        [uid, 'Status task diubah', `${user.name} mengubah status task "${old.title}" ke ${statusLabel}`, 'task_updated', id]
+      )
+      broadcastToUser(uid, 'notification', {
+        title: 'Status task diubah',
+        message: `${user.name}: "${old.title}" → ${statusLabel}`,
+        type: 'task_updated',
+        task_id: Number(id),
+      })
+    }
   }
 
   if ('assigned_to' in body && body.assigned_to !== old.assigned_to) {

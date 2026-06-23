@@ -6,8 +6,8 @@
           v-for="t in notif.toasts"
           :key="t._id"
           class="pointer-events-auto w-80 bg-white border border-slate-200 rounded-xl shadow-lg p-3.5 animate-slide-in"
-          :class="t.ticket_id ? 'cursor-pointer' : ''"
-          @click="t.ticket_id && goToTicket(t)"
+          :class="(t.ticket_id || t.task_id) ? 'cursor-pointer' : ''"
+          @click="t.ticket_id ? goToTicket(t) : t.task_id ? goToTask(t) : null"
         >
           <div class="flex items-start gap-3">
             <div :class="['w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', typeClass(t.type)]">
@@ -38,14 +38,25 @@ const router = useRouter()
 function typeClass(type: string) {
   const map: Record<string, string> = {
     ticket_assigned: 'bg-primary-100 text-primary-600',
-    new_response: 'bg-green-100 text-green-600',
     ticket_created: 'bg-blue-100 text-blue-600',
+    ticket_invite: 'bg-primary-100 text-primary-600',
+    new_response: 'bg-green-100 text-green-600',
+    task_assigned: 'bg-primary-100 text-primary-600',
+    task_created: 'bg-blue-100 text-blue-600',
+    task_updated: 'bg-amber-100 text-amber-600',
+    task_comment: 'bg-green-100 text-green-600',
+    task_invite: 'bg-primary-100 text-primary-600',
   }
   return map[type] || 'bg-slate-100 text-slate-600'
 }
 
 function goToTicket(t: any) {
   router.push(`/tickets/${t.ticket_id}`)
+  notif.dismissToast(t._id)
+}
+
+function goToTask(t: any) {
+  router.push('/tasks')
   notif.dismissToast(t._id)
 }
 </script>

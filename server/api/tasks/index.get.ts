@@ -11,7 +11,13 @@ export default defineEventHandler(async (event) => {
   const conditions: string[] = []
   const params: any[] = []
 
-  if (q.project_id) {
+  if (q.project_ids) {
+    const ids = String(q.project_ids).split(',').map(Number).filter(Boolean)
+    if (ids.length) {
+      conditions.push(`t.project_id IN (${ids.map(() => '?').join(',')})`)
+      params.push(...ids)
+    }
+  } else if (q.project_id) {
     conditions.push('t.project_id = ?')
     params.push(Number(q.project_id))
   }

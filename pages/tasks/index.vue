@@ -11,12 +11,6 @@
       <div class="flex items-center gap-3">
         <!-- Filters -->
         <AppSelect
-          v-model="filterProject"
-          :options="[{ value: '', label: 'All Projects' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-          placeholder="All Projects"
-          class="w-40"
-        />
-        <AppSelect
           v-if="viewMode === 'list'"
           v-model="filterStatus"
           :options="[{ value: '', label: 'All Status' }, ...COLUMNS.map(c => ({ value: c.status, label: c.label }))]"
@@ -55,6 +49,26 @@
           New Task
         </button>
       </div>
+    </div>
+
+    <!-- Project tabs -->
+    <div v-if="projects.length" class="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+      <button
+        @click="filterProjects = []"
+        :class="['px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0',
+          filterProjects.length === 0
+            ? 'bg-indigo-600 text-white shadow-sm'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+      >Semua</button>
+      <button
+        v-for="p in projects"
+        :key="p.id"
+        @click="toggleProjectTab(String(p.id))"
+        :class="['px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 min-w-[120px] text-center',
+          filterProjects.includes(String(p.id))
+            ? 'bg-indigo-600 text-white shadow-sm'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200']"
+      >{{ p.name }}</button>
     </div>
 
     <!-- Pending sync indicator -->
@@ -332,9 +346,15 @@ function setViewMode(mode: 'list' | 'kanban') {
 }
 
 // Filters
-const filterProject = ref('')
+const filterProjects = ref<string[]>([])
 const filterStatus = ref('')
 const filterAssignee = ref('')
+
+function toggleProjectTab(id: string) {
+  const idx = filterProjects.value.indexOf(id)
+  if (idx >= 0) filterProjects.value.splice(idx, 1)
+  else filterProjects.value.push(id)
+}
 
 const tasks = ref<any[]>([])
 const projects = ref<any[]>([])
@@ -431,7 +451,7 @@ function removeTaskPasteImage(idx: number) {
 // List mode: flat filtered tasks
 const filteredListTasks = computed(() => {
   return tasks.value.filter(t => {
-    if (filterProject.value && String(t.project_id) !== String(filterProject.value)) return false
+    if (filterProjects.value.length && !filterProjects.value.includes(String(t.project_id))) return false
     if (filterStatus.value && t.status !== filterStatus.value) return false
     if (filterAssignee.value && String(t.assigned_to) !== String(filterAssignee.value)) return false
     return true
@@ -440,8 +460,8 @@ const filteredListTasks = computed(() => {
 
 // Kanban mode: group by project, then by status
 const kanbanProjects = computed(() => {
-  const filtered = filterProject.value
-    ? tasks.value.filter(t => String(t.project_id) === String(filterProject.value))
+  const filtered = filterProjects.value.length
+    ? tasks.value.filter(t => filterProjects.value.includes(String(t.project_id)))
     : tasks.value
 
   const projMap = new Map<number, { id: number; name: string; tasks: any[] }>()
@@ -480,13 +500,15 @@ async function loadTasks() {
   if (viewMode.value === 'kanban') {
     // Kanban loads all tasks (no pagination)
     const q: Record<string, any> = { paginate: 'false' }
-    if (filterProject.value) q.project_id = filterProject.value
+    if (filterProjects.value.length === 1) q.project_id = filterProjects.value[0]
+    else if (filterProjects.value.length > 1) q.project_ids = filterProjects.value.join(',')
     const res = await $fetch<any[]>('/api/tasks', { query: q })
     tasks.value = Array.isArray(res) ? res : (res as any)?.data || []
   } else {
     // List mode — paginated
     const q: Record<string, any> = { page: taskPagination.page, limit: taskPagination.limit }
-    if (filterProject.value) q.project_id = filterProject.value
+    if (filterProjects.value.length === 1) q.project_id = filterProjects.value[0]
+    else if (filterProjects.value.length > 1) q.project_ids = filterProjects.value.join(',')
     if (filterStatus.value) q.status = filterStatus.value
     if (filterAssignee.value) q.assigned_to = filterAssignee.value
     const res = await $fetch<any>('/api/tasks', { query: q })
@@ -516,7 +538,8 @@ async function loadSystemMenus(projectId?: string | number) {
   systemMenus.value = res?.data || []
 }
 
-watch([filterProject, filterStatus, filterAssignee], () => { taskPagination.page = 1; loadTasks() })
+watch(filterProjects, () => { taskPagination.page = 1; loadTasks() }, { deep: true })
+watch([filterStatus, filterAssignee], () => { taskPagination.page = 1; loadTasks() })
 
 watch(() => form.project_id, (val) => {
   form.system_menu_id = ''

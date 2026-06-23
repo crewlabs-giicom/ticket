@@ -56,6 +56,26 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Notifikasi task_created ke semua staff/admin project member (kecuali creator)
+  const [members] = await db.execute(
+    `SELECT u.id FROM users u
+     JOIN project_members pm ON pm.user_id = u.id
+     WHERE pm.project_id = ? AND u.role IN ('staff','admin') AND u.is_active = 1 AND u.id != ?`,
+    [project_id, user.id]
+  )
+  for (const m of members as any[]) {
+    await db.execute(
+      'INSERT INTO notifications (user_id, title, message, type, task_id) VALUES (?, ?, ?, ?, ?)',
+      [m.id, 'Task baru dibuat', `${user.name} membuat task: ${title}`, 'task_created', result.insertId]
+    )
+    broadcastToUser(m.id, 'notification', {
+      title: 'Task baru dibuat',
+      message: `${user.name}: ${title}`,
+      type: 'task_created',
+      task_id: result.insertId,
+    })
+  }
+
   const [rows] = await db.execute('SELECT * FROM tasks WHERE id = ?', [result.insertId])
   return (rows as any[])[0]
 })
