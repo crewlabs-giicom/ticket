@@ -155,13 +155,11 @@ const route = useRoute()
 const router = useRouter()
 
 const sidebarOpen = ref(false)
-const sidebarCollapsed = ref(process.client ? localStorage.getItem('sidebar-collapsed') === 'true' : false)
+const sidebarCollapsedCookie = useCookie<boolean>('sidebar-collapsed', { default: () => false })
+const sidebarCollapsed = ref(sidebarCollapsedCookie.value)
+watch(sidebarCollapsed, v => { sidebarCollapsedCookie.value = v })
 const notifOpen = ref(false)
 const notifRef = ref(null)
-
-if (process.client) {
-  watch(sidebarCollapsed, v => localStorage.setItem('sidebar-collapsed', String(v)))
-}
 
 const { pendingCount, setupListeners, retrySync, clearQueue } = useSync()
 

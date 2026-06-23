@@ -53,10 +53,10 @@
             <tr>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ticket</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Project</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell">Menu</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Priority</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Assigned</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell">Menu</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell">Due</th>
             </tr>
           </thead>
@@ -77,6 +77,7 @@
                 </div>
               </td>
               <td class="px-4 py-3 hidden md:table-cell"><span class="text-xs text-slate-500">{{ t.project_name }}</span></td>
+              <td class="px-4 py-3 hidden xl:table-cell"><span class="text-xs text-slate-500">{{ t.system_menu_name || '—' }}</span></td>
               <td class="px-4 py-3 hidden md:table-cell"><span class="badge text-white text-[10px]" :style="{ background: t.status_color }">{{ t.status_name }}</span></td>
               <td class="px-4 py-3 hidden lg:table-cell" @click.stop>
                 <div v-if="auth.isStaffOrAdmin" class="flex items-center gap-1.5">
@@ -95,7 +96,6 @@
                 </div>
               </td>
               <td class="px-4 py-3 hidden lg:table-cell"><span class="text-xs text-slate-500">{{ t.assigned_to_name || '—' }}</span></td>
-              <td class="px-4 py-3 hidden xl:table-cell"><span class="text-xs text-slate-500">{{ t.system_menu_name || '—' }}</span></td>
               <td class="px-4 py-3 hidden xl:table-cell">
                 <span class="text-xs" :class="t.sla_breached ? 'text-red-600 font-medium' : 'text-slate-500'">{{ fmtDate(t.due_date) }}</span>
               </td>
