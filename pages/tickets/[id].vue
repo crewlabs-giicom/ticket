@@ -164,7 +164,7 @@
                   ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-tl-sm'
                   : 'bg-slate-100 text-slate-800 rounded-tl-sm'
             ]">
-              <p class="whitespace-pre-wrap">{{ r.message }}</p>
+              <p class="whitespace-pre-wrap break-words" v-html="linkify(r.message)"></p>
 
               <!-- Response attachments -->
               <div v-if="r.attachments?.length" :class="['mt-2 flex flex-wrap gap-1.5', r.user_id === auth.user?.id ? 'justify-end' : '']">
@@ -559,6 +559,14 @@ async function submitReply() {
 }
 
 const { timeAgo } = useTimeAgo()
+
+function linkify(text: string) {
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return escaped.replace(
+    /(https?:\/\/[^\s]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 opacity-90 hover:opacity-100 break-all">$1</a>'
+  )
+}
 
 function formatDuration(from: string, to: string) {
   const secs = Math.floor((new Date(to).getTime() - new Date(from).getTime()) / 1000)
