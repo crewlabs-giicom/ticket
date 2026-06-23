@@ -1,47 +1,30 @@
 <template>
   <div v-if="ticket" class="max-w-4xl mx-auto space-y-4">
-    <!-- Header -->
-    <div class="card p-5">
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1 flex-wrap">
-            <span class="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{{ ticket.ticket_number }}</span>
-            <span class="badge text-white text-xs" :style="{ background: ticket.status_color }">{{ ticket.status_name }}</span>
-            <div class="flex items-center gap-1"><span class="priority-dot" :style="{ background: ticket.priority_color }" /><span class="text-xs text-slate-600">{{ ticket.priority_name }}</span></div>
-            <span v-if="ticket.sla_breached" class="badge bg-red-100 text-red-700">SLA Breach</span>
-          </div>
-          <h2 class="text-lg font-semibold text-slate-900">{{ ticket.title }}</h2>
-          <p class="text-sm text-slate-500 mt-1">{{ ticket.project_name }} · Dibuat oleh {{ ticket.created_by_name }} · {{ timeAgo(ticket.created_at) }}</p>
+    <!-- Header Card -->
+    <div class="card overflow-hidden">
+      <!-- Top bar: actions -->
+      <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="font-mono text-xs font-semibold text-slate-400 tracking-wide">{{ ticket.ticket_number }}</span>
+          <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+          <span class="badge text-white text-xs" :style="{ background: ticket.status_color }">{{ ticket.status_name }}</span>
+          <span class="flex items-center gap-1 text-xs" :style="{ color: ticket.priority_color }">
+            <span class="w-2 h-2 rounded-full inline-block" :style="{ background: ticket.priority_color }"></span>
+            {{ ticket.priority_name }}
+          </span>
+          <span v-if="ticket.sla_breached" class="badge bg-red-100 text-red-600 text-xs">⚠ SLA Breach</span>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <template v-if="auth.isStaffOrAdmin">
-            <AppSelect
-              v-model="editStatus"
-              :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
-              placeholder="Status"
-              class="w-36"
-              @update:modelValue="updateField('status_id', $event)"
-            />
-            <AppSelect
-              v-model="editPriority"
-              :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
-              placeholder="Priority"
-              class="w-32"
-              @update:modelValue="updateField('priority_id', $event)"
-            />
-            <AppSelect
-              v-model="editAssigned"
-              :options="[{ value: '', label: 'Unassigned' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]"
-              placeholder="Unassigned"
-              class="w-36"
-              @update:modelValue="updateField('assigned_to', $event)"
-            />
+            <AppSelect v-model="editStatus" :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))" placeholder="Status" class="w-36" @update:modelValue="updateField('status_id', $event)" />
+            <AppSelect v-model="editPriority" :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))" placeholder="Priority" class="w-32" @update:modelValue="updateField('priority_id', $event)" />
+            <AppSelect v-model="editAssigned" :options="[{ value: '', label: 'Unassigned' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Unassigned" class="w-36" @update:modelValue="updateField('assigned_to', $event)" />
             <button @click="tabs.togglePin(ticket.id)" class="btn-ghost text-xs py-1.5">
-              {{ tabs.tabs.find(t=>t.id===ticket.id)?.pinned ? 'Unpin Tab' : 'Pin Tab' }}
+              {{ tabs.tabs.find(t=>t.id===ticket.id)?.pinned ? 'Unpin' : 'Pin Tab' }}
             </button>
           </template>
           <AppRefreshButton :loading="ticketPending" @click="refresh()" />
-          <button @click="openChat" class="btn-ghost text-xs py-1.5 flex items-center gap-1">
+          <button @click="openChat" class="btn-ghost text-xs py-1.5 flex items-center gap-1.5">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
               <path d="M3.505 2.365A41.369 41.369 0 019 2c1.863 0 3.697.124 5.495.365 1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 00-.577-.069 43.141 43.141 0 00-4.706 0C9.229 4.696 7.5 6.727 7.5 9.25v.05a43.143 43.143 0 00-1.085.628 1.5 1.5 0 00-.372 2.273c.307.38.712.646 1.171.76a4.38 4.38 0 01-.103.065 1.5 1.5 0 01-1.5-2.598l.032-.018a43.167 43.167 0 00-.966-.553 1.5 1.5 0 01-.62-2.039A14.31 14.31 0 013.505 2.365z"/>
               <path d="M7.5 9.25c0-2.075 1.56-3.818 3.6-4.052a41.647 41.647 0 014.8 0C17.94 5.432 19.5 7.175 19.5 9.25v1.5c0 2.075-1.56 3.818-3.6 4.052a41.647 41.647 0 01-4.8 0C9.06 14.568 7.5 12.825 7.5 11.75v-2.5z"/>
@@ -51,70 +34,98 @@
         </div>
       </div>
 
-      <div class="mt-4 prose prose-sm max-w-none">
-        <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ ticket.description }}</p>
-      </div>
+      <!-- Body -->
+      <div class="p-5">
+        <!-- Title & meta -->
+        <h2 class="text-lg font-semibold text-slate-900 leading-snug">{{ ticket.title }}</h2>
+        <p class="text-xs text-slate-400 mt-1">
+          {{ ticket.project_name }} · Dibuat oleh <span class="text-slate-500 font-medium">{{ ticket.created_by_name }}</span> · {{ timeAgo(ticket.created_at) }}
+        </p>
 
-      <div class="mt-4 flex flex-wrap gap-4 text-xs text-slate-500 border-t border-slate-100 pt-4">
-        <div><span class="font-medium">Assigned:</span> {{ ticket.assigned_to_name || 'Belum di-assign' }}</div>
-        <div><span class="font-medium">Due:</span> <span :class="ticket.sla_breached ? 'text-red-600 font-medium' : ''">{{ fmtDateTime(ticket.due_date) }}</span></div>
-        <div><span class="font-medium">Dibuat:</span> {{ fmtDateTime(ticket.created_at) }}</div>
-        <div v-if="ticket.resolved_at"><span class="font-medium">Resolved:</span> {{ fmtDateTime(ticket.resolved_at) }}</div>
-      </div>
+        <!-- Description -->
+        <p v-if="ticket.description" class="mt-4 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{{ ticket.description }}</p>
 
-      <!-- Participants -->
-      <div class="mt-4 border-t border-slate-100 pt-4">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold text-slate-600">Peserta ({{ ticket.participants?.length || 0 }})</span>
-          <button v-if="auth.isStaffOrAdmin" @click="showInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Undang
-          </button>
-        </div>
-        <div v-if="ticket.participants?.length" class="flex flex-wrap gap-2">
-          <div v-for="p in ticket.participants" :key="p.user_id" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1 text-xs text-slate-700">
-            <div class="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-[9px] font-bold text-indigo-700 overflow-hidden flex-shrink-0">
-              <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-full h-full object-cover" />
-              <span v-else>{{ p.name?.charAt(0) }}</span>
-            </div>
-            <span>{{ p.name }}</span>
-            <button v-if="auth.isStaffOrAdmin" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-500 ml-0.5 transition-colors">✕</button>
+        <!-- Meta grid -->
+        <div class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-50 rounded-xl px-3 py-2.5">
+            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Assigned</p>
+            <p class="text-xs font-semibold text-slate-700 truncate">{{ ticket.assigned_to_name || '—' }}</p>
+          </div>
+          <div class="bg-slate-50 rounded-xl px-3 py-2.5">
+            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Due Date</p>
+            <p class="text-xs font-semibold truncate" :class="ticket.sla_breached ? 'text-red-600' : 'text-slate-700'">{{ fmtDateTime(ticket.due_date) }}</p>
+          </div>
+          <div class="bg-slate-50 rounded-xl px-3 py-2.5">
+            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Dibuat</p>
+            <p class="text-xs font-semibold text-slate-700 truncate">{{ fmtDateTime(ticket.created_at) }}</p>
+          </div>
+          <div v-if="ticket.resolved_at" class="bg-emerald-50 rounded-xl px-3 py-2.5">
+            <p class="text-[10px] text-emerald-500 uppercase tracking-wide font-medium mb-0.5">Resolved</p>
+            <p class="text-xs font-semibold text-emerald-700 truncate">{{ fmtDateTime(ticket.resolved_at) }}</p>
+          </div>
+          <div v-else class="bg-slate-50 rounded-xl px-3 py-2.5">
+            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Durasi</p>
+            <p class="text-xs font-semibold text-slate-700">
+              <span v-if="ticket.resolved_at || ticket.closed_at">{{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}</span>
+              <span v-else class="text-slate-400">Ongoing</span>
+            </p>
           </div>
         </div>
-        <p v-else class="text-xs text-slate-400">Belum ada peserta yang diundang.</p>
-      </div>
 
-      <!-- Task & duration links -->
-      <div class="mt-4 flex flex-wrap gap-3 text-xs border-t border-slate-100 pt-4">
-        <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          Task: {{ ticket.task_title || ticket.task_id }}
-        </NuxtLink>
-        <span v-if="ticket.resolved_at || ticket.closed_at" class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Durasi: {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}
-        </span>
-      </div>
-
-      <!-- Ticket-level Attachments -->
-      <div v-if="ticket.attachments?.length" class="mt-4 border-t border-slate-100 pt-4">
-        <p class="text-xs font-semibold text-slate-600 mb-2">Lampiran ({{ ticket.attachments.length }})</p>
-        <div class="flex flex-wrap gap-2">
-          <template v-for="(a, i) in ticket.attachments" :key="a.id">
-            <button v-if="isImage(a.mime_type)" @click="openLightbox(ticketImages, ticketImageIndex(i))" class="group relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-indigo-400 transition-colors shrink-0">
-              <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                <svg class="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
-              </div>
+        <!-- Participants -->
+        <div class="mt-4 pt-4 border-t border-slate-100">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Peserta <span class="font-normal text-slate-400">({{ ticket.participants?.length || 0 }})</span></span>
+            <button v-if="auth.isStaffOrAdmin" @click="showInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Undang
             </button>
-            <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700">
-              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-              {{ a.original_name }}
-            </a>
-          </template>
+          </div>
+          <div v-if="ticket.participants?.length" class="flex flex-wrap gap-2">
+            <div v-for="p in ticket.participants" :key="p.user_id" class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-full pl-1 pr-2.5 py-1 text-xs text-slate-700 shadow-sm">
+              <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600 overflow-hidden flex-shrink-0">
+                <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ p.name?.charAt(0) }}</span>
+              </div>
+              <span class="font-medium">{{ p.name }}</span>
+              <button v-if="auth.isStaffOrAdmin" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-400 ml-0.5 transition-colors leading-none">✕</button>
+            </div>
+          </div>
+          <p v-else class="text-xs text-slate-400 italic">Belum ada peserta yang diundang.</p>
         </div>
-      </div>
-    </div>
+
+        <!-- Task link & badges -->
+        <div v-if="ticket.task_id || ticket.resolved_at || ticket.closed_at" class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
+          <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Task: {{ ticket.task_title || ticket.task_id }}
+          </NuxtLink>
+          <span v-if="ticket.resolved_at || ticket.closed_at" class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-xs">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Durasi: {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}
+          </span>
+        </div>
+
+        <!-- Ticket-level Attachments -->
+        <div v-if="ticket.attachments?.length" class="mt-4 pt-4 border-t border-slate-100">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Lampiran ({{ ticket.attachments.length }})</p>
+          <div class="flex flex-wrap gap-2">
+            <template v-for="(a, i) in ticket.attachments" :key="a.id">
+              <button v-if="isImage(a.mime_type)" @click="openLightbox(ticketImages, ticketImageIndex(i))" class="group relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-indigo-400 transition-colors shrink-0">
+                <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <svg class="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                </div>
+              </button>
+              <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors text-xs text-slate-700">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                {{ a.original_name }}
+              </a>
+            </template>
+          </div>
+        </div>
+      </div><!-- end body -->
+    </div><!-- end header card -->
 
     <!-- Chat Responses -->
     <div class="card p-5">
