@@ -2,7 +2,10 @@
   <div class="max-w-2xl space-y-4">
     <div class="flex items-center justify-between">
       <p class="text-sm text-slate-500">Atur priority dan konfigurasi SLA</p>
-      <button @click="openForm()" class="btn-primary">+ Tambah Priority</button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="pending" @click="refresh()" />
+        <button @click="openForm()" class="btn-primary">+ Tambah Priority</button>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
@@ -53,7 +56,7 @@
 <script setup lang="ts">
 import draggable from 'vuedraggable'
 definePageMeta({ middleware: 'auth' })
-const { data, refresh } = await useFetch('/api/priorities')
+const { data, refresh, pending } = await useFetch('/api/priorities')
 const list = ref<any[]>([])
 watch(data, (v) => { list.value = [...((v as any)?.data || [])] }, { immediate: true })
 const showForm = ref(false)

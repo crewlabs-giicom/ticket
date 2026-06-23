@@ -2,7 +2,10 @@
   <div class="max-w-2xl space-y-4">
     <div class="flex items-center justify-between">
       <p class="text-sm text-slate-500">Atur menu navigasi dan hak akses per role</p>
-      <button @click="openForm()" class="btn-primary">+ Tambah Menu</button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="pending" @click="refresh()" />
+        <button @click="openForm()" class="btn-primary">+ Tambah Menu</button>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
@@ -66,7 +69,7 @@
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
 definePageMeta({ middleware: 'auth' })
 
-const { data: allMenus, refresh } = await useFetch('/api/menus')
+const { data: allMenus, refresh, pending } = await useFetch('/api/menus')
 const list = ref<any[]>([])
 watch(allMenus, (v) => { list.value = [...((v as any)?.data || [])] }, { immediate: true })
 

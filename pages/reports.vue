@@ -1,27 +1,31 @@
 <template>
   <div class="space-y-5">
     <!-- Filters -->
-    <div class="card p-4 flex flex-wrap items-end gap-3">
+    <div class="card p-4 space-y-3">
       <!-- Preset range buttons -->
       <div>
         <label class="label text-xs mb-1">Rentang Waktu</label>
-        <div class="flex gap-1">
+        <div class="flex flex-wrap gap-1">
           <button v-for="p in presets" :key="p.key" @click="setRange(p.key)"
             :class="['px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors', activePreset === p.key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300']">
             {{ p.label }}
           </button>
         </div>
       </div>
-      <div><label class="label text-xs">Dari</label><input v-model="filters.from" type="date" class="input text-sm w-36" @change="activePreset = ''" /></div>
-      <div><label class="label text-xs">Sampai</label><input v-model="filters.to" type="date" class="input text-sm w-36" @change="activePreset = ''" /></div>
-      <div><label class="label text-xs">Project</label>
-        <AppSelect v-model="filters.project_id" :options="[{ value: '', label: 'Semua' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]" placeholder="Semua" class="w-40" />
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div><label class="label text-xs">Dari</label><input v-model="filters.from" type="date" class="input text-sm w-full" @change="activePreset = ''" /></div>
+        <div><label class="label text-xs">Sampai</label><input v-model="filters.to" type="date" class="input text-sm w-full" @change="activePreset = ''" /></div>
+        <div><label class="label text-xs">Project</label>
+          <AppSelect v-model="filters.project_id" :options="[{ value: '', label: 'Semua' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]" placeholder="Semua" class="w-full" />
+        </div>
+        <div><label class="label text-xs">Staff</label>
+          <AppSelect v-model="filters.staff_id" :options="[{ value: '', label: 'Semua' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Semua" class="w-full" />
+        </div>
       </div>
-      <div><label class="label text-xs">Staff</label>
-        <AppSelect v-model="filters.staff_id" :options="[{ value: '', label: 'Semua' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Semua" class="w-40" />
+      <div class="flex items-center gap-2">
+        <button @click="fetchAll" class="btn-primary">Tampilkan</button>
+        <AppRefreshButton :loading="loadingReport" @click="fetchAll" />
       </div>
-      <button @click="fetchAll" class="btn-primary">Tampilkan</button>
-      <AppRefreshButton :loading="loadingReport" @click="fetchAll" />
     </div>
 
     <!-- Ticket summary report (existing) -->
@@ -54,7 +58,8 @@
       </div>
       <div class="card overflow-hidden mb-5">
         <div class="px-5 py-4 border-b border-slate-100"><h3 class="text-sm font-semibold text-slate-900">Produktivitas per Staff</h3></div>
-        <table class="w-full text-sm">
+        <!-- Desktop table -->
+        <table class="hidden sm:table w-full text-sm">
           <thead class="bg-slate-50"><tr>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Staff</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Total</th>
@@ -78,6 +83,25 @@
             </tr>
           </tbody>
         </table>
+        <!-- Mobile card list -->
+        <div class="sm:hidden divide-y divide-slate-100">
+          <div v-if="!d.byStaff?.length" class="text-center py-6 text-slate-400 text-xs">Tidak ada data</div>
+          <div v-for="s in d.byStaff" :key="s.id" class="px-4 py-3 space-y-2">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-semibold">{{ s.name?.charAt(0) }}</div>
+              <span class="text-sm font-medium text-slate-900">{{ s.name }}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-xs text-center">
+              <div class="bg-slate-50 rounded-lg py-1.5"><p class="text-slate-400">Total</p><p class="font-semibold text-slate-700">{{ s.total }}</p></div>
+              <div class="bg-green-50 rounded-lg py-1.5"><p class="text-slate-400">Resolved</p><p class="font-semibold text-green-600">{{ s.resolved }}</p></div>
+              <div :class="['rounded-lg py-1.5', s.sla_breach > 0 ? 'bg-red-50' : 'bg-slate-50']"><p class="text-slate-400">SLA Breach</p><p :class="['font-semibold', s.sla_breach > 0 ? 'text-red-600' : 'text-slate-400']">{{ s.sla_breach }}</p></div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-green-500 rounded-full" :style="{ width: s.total ? (s.resolved / s.total * 100) + '%' : '0%' }" /></div>
+              <span class="text-xs text-slate-500 w-8 flex-shrink-0">{{ s.total ? Math.round(s.resolved / s.total * 100) : 0 }}%</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -135,17 +159,17 @@
         </div>
 
         <!-- Tab: Timelog detail -->
-        <div v-if="activeTab === 'logs'">
-          <table class="w-full text-sm">
+        <div v-if="activeTab === 'logs'" class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[600px]">
             <thead class="bg-slate-50">
               <tr>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Staff</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Task</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Project</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">Project</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none" @click="toggleSort('start')">
                   Mulai <span class="text-indigo-400">{{ sortIcon('start') }}</span>
                 </th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none" @click="toggleSort('end')">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none hidden sm:table-cell" @click="toggleSort('end')">
                   Selesai <span class="text-indigo-400">{{ sortIcon('end') }}</span>
                 </th>
                 <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none" @click="toggleSort('duration')">
@@ -158,14 +182,14 @@
               <tr v-for="row in tl.logs" :key="row.id" class="hover:bg-slate-50">
                 <td class="px-4 py-2.5">
                   <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-semibold">{{ row.user_name?.charAt(0) }}</div>
-                    <span class="text-xs text-slate-600">{{ row.user_name }}</span>
+                    <div class="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-semibold flex-shrink-0">{{ row.user_name?.charAt(0) }}</div>
+                    <span class="text-xs text-slate-600 whitespace-nowrap">{{ row.user_name }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-2.5 text-xs text-slate-700 max-w-[200px] truncate">{{ row.task_title }}</td>
-                <td class="px-4 py-2.5 text-xs text-slate-400">{{ row.project_name }}</td>
+                <td class="px-4 py-2.5 text-xs text-slate-700 max-w-[140px] truncate">{{ row.task_title }}</td>
+                <td class="px-4 py-2.5 text-xs text-slate-400 hidden md:table-cell">{{ row.project_name }}</td>
                 <td class="px-4 py-2.5 text-xs text-slate-600 whitespace-nowrap">{{ fmtDatetime(row.started_at) }}</td>
-                <td class="px-4 py-2.5 text-xs text-slate-600 whitespace-nowrap">{{ fmtDatetime(row.stopped_at) }}</td>
+                <td class="px-4 py-2.5 text-xs text-slate-600 whitespace-nowrap hidden sm:table-cell">{{ fmtDatetime(row.stopped_at) }}</td>
                 <td class="px-4 py-2.5 text-right font-medium text-indigo-700 text-xs whitespace-nowrap">{{ fmtSecs(row.duration_seconds) }}</td>
               </tr>
             </tbody>
@@ -173,28 +197,26 @@
         </div>
 
         <!-- Tab: Ticket lifecycle -->
-        <div v-if="activeTab === 'ticket_lifecycle'">
-          <table class="w-full text-sm">
+        <div v-if="activeTab === 'ticket_lifecycle'" class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[560px]">
             <thead class="bg-slate-50">
               <tr>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Nomor</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Judul</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Project</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Assignee</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">Project</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden sm:table-cell">Assignee</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Dibuat</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Selesai</th>
                 <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Lifecycle</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-if="!tl.ticketLifecycle.length"><td colspan="7" class="text-center py-8 text-slate-400 text-xs">Belum ada ticket resolved/closed dalam rentang ini</td></tr>
+              <tr v-if="!tl.ticketLifecycle.length"><td colspan="6" class="text-center py-8 text-slate-400 text-xs">Belum ada ticket resolved/closed dalam rentang ini</td></tr>
               <tr v-for="tk in tl.ticketLifecycle" :key="tk.id" class="hover:bg-slate-50">
-                <td class="px-4 py-2.5 text-xs font-mono text-indigo-600">{{ tk.ticket_number }}</td>
-                <td class="px-4 py-2.5 text-xs text-slate-700 max-w-[200px] truncate">{{ tk.title }}</td>
-                <td class="px-4 py-2.5 text-xs text-slate-400">{{ tk.project_name }}</td>
-                <td class="px-4 py-2.5 text-xs text-slate-600">{{ tk.assigned_to_name || '—' }}</td>
+                <td class="px-4 py-2.5 text-xs font-mono text-indigo-600 whitespace-nowrap">{{ tk.ticket_number }}</td>
+                <td class="px-4 py-2.5 text-xs text-slate-700 max-w-[140px] truncate">{{ tk.title }}</td>
+                <td class="px-4 py-2.5 text-xs text-slate-400 hidden md:table-cell">{{ tk.project_name }}</td>
+                <td class="px-4 py-2.5 text-xs text-slate-600 hidden sm:table-cell">{{ tk.assigned_to_name || '—' }}</td>
                 <td class="px-4 py-2.5 text-xs text-slate-400 whitespace-nowrap">{{ fmtDatetime(tk.created_at) }}</td>
-                <td class="px-4 py-2.5 text-xs text-slate-400 whitespace-nowrap">{{ fmtDatetime(tk.ended_at) }}</td>
                 <td class="px-4 py-2.5 text-right font-medium text-amber-600 text-xs whitespace-nowrap">{{ fmtSecs(tk.lifecycle_seconds) }}</td>
               </tr>
             </tbody>

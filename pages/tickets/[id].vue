@@ -40,6 +40,7 @@
               {{ tabs.tabs.find(t=>t.id===ticket.id)?.pinned ? 'Unpin Tab' : 'Pin Tab' }}
             </button>
           </template>
+          <AppRefreshButton :loading="ticketPending" @click="refresh()" />
           <button @click="openChat" class="btn-ghost text-xs py-1.5 flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
               <path d="M3.505 2.365A41.369 41.369 0 019 2c1.863 0 3.697.124 5.495.365 1.247.167 2.18 1.108 2.435 2.268a4.45 4.45 0 00-.577-.069 43.141 43.141 0 00-4.706 0C9.229 4.696 7.5 6.727 7.5 9.25v.05a43.143 43.143 0 00-1.085.628 1.5 1.5 0 00-.372 2.273c.307.38.712.646 1.171.76a4.38 4.38 0 01-.103.065 1.5 1.5 0 01-1.5-2.598l.032-.018a43.167 43.167 0 00-.966-.553 1.5 1.5 0 01-.62-2.039A14.31 14.31 0 013.505 2.365z"/>
@@ -361,7 +362,7 @@ function openChat() {
 const route = useRoute()
 const id = route.params.id
 
-const { data: res, refresh } = await useFetch(`/api/tickets/${id}`)
+const { data: res, refresh, pending: ticketPending } = await useFetch(`/api/tickets/${id}`)
 const ticket = computed(() => (res.value as any)?.data)
 
 const { data: sd } = await useFetch('/api/statuses')

@@ -12,6 +12,9 @@ export const useTabStore = defineStore('tabs', () => {
     const exists = tabs.value.find(t => t.id === ticket.id)
     if (!exists) {
       tabs.value.push({ id: ticket.id, ticket_number: ticket.ticket_number, title: ticket.title, hasUnread: false, pinned: false })
+    } else {
+      if (ticket.ticket_number) exists.ticket_number = ticket.ticket_number
+      if (ticket.title) exists.title = ticket.title
     }
     activeTabId.value = ticket.id
     navigateTo(`/tickets/${ticket.id}`)

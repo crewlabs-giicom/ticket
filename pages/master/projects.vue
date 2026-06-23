@@ -2,7 +2,10 @@
   <div class="max-w-2xl space-y-4">
     <div class="flex items-center justify-between">
       <p class="text-sm text-slate-500">Kelola project untuk pengelompokan tiket. Drag baris untuk mengubah urutan.</p>
-      <button @click="openForm()" class="btn-primary">+ Tambah Project</button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="pending" @click="refresh()" />
+        <button @click="openForm()" class="btn-primary">+ Tambah Project</button>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
@@ -54,7 +57,7 @@
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
 definePageMeta({ middleware: 'auth' })
 
-const { data, refresh } = await useFetch('/api/projects')
+const { data, refresh, pending } = await useFetch('/api/projects')
 const projects = computed(() => (data.value as any)?.data || [])
 
 const sortable = ref<any[]>([])

@@ -2,9 +2,12 @@
   <div class="max-w-2xl mx-auto space-y-6">
 
     <!-- Header -->
-    <div>
-      <h1 class="text-lg font-semibold text-slate-900">Profil Saya</h1>
-      <p class="text-sm text-slate-500 mt-0.5">Kelola informasi akun dan keamanan Anda</p>
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-lg font-semibold text-slate-900">Profil Saya</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Kelola informasi akun dan keamanan Anda</p>
+      </div>
+      <AppRefreshButton :loading="refreshingProfile" @click="handleRefreshProfile" />
     </div>
 
     <!-- Stats -->
@@ -112,8 +115,15 @@ const initials = computed(() =>
 )
 
 // Stats
-const { data: statsData } = await useFetch('/api/profile/stats')
+const { data: statsData, refresh: refreshStats } = await useFetch('/api/profile/stats')
 const stats = computed(() => (statsData.value as any)?.data)
+
+const refreshingProfile = ref(false)
+async function handleRefreshProfile() {
+  refreshingProfile.value = true
+  await Promise.all([refreshStats(), auth.fetchMe()])
+  refreshingProfile.value = false
+}
 
 // Avatar
 const avatarPreview = ref<string | null>(user.value?.avatar ? `/uploads/${user.value.avatar}` : null)

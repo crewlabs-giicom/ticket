@@ -5,7 +5,10 @@
       <div class="flex items-center gap-2">
         <input v-model="search" class="input w-64" placeholder="Cari notifikasi..." />
       </div>
-      <button @click="markAllRead" class="btn-secondary text-sm">Tandai semua dibaca</button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="loading" @click="fetchNotifs" />
+        <button @click="markAllRead" class="btn-secondary text-sm">Tandai semua dibaca</button>
+      </div>
     </div>
 
     <!-- List -->

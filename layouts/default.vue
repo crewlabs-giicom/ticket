@@ -129,7 +129,7 @@
         <span class="text-xs text-slate-400 mr-1 flex-shrink-0">Ticket</span>
         <div v-for="tab in tabs.tabs" :key="tab.id" :class="['tab-item group', tab.id === tabs.activeTabId && 'active']" @click="tabs.openTab(tab)">
           <span v-if="tab.hasUnread" class="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
-          <span class="max-w-[120px] truncate">{{ tab.ticket_number }}</span>
+          <span class="max-w-[120px] truncate">{{ tab.ticket_number || tab.title }}</span>
           <button v-if="!tab.pinned" @click.stop="tabs.closeTab(tab.id)" class="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-1 p-0.5 rounded hover:bg-slate-200 transition-all">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -155,12 +155,11 @@ const route = useRoute()
 const router = useRouter()
 
 const sidebarOpen = ref(false)
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(process.client ? localStorage.getItem('sidebar-collapsed') === 'true' : false)
 const notifOpen = ref(false)
 const notifRef = ref(null)
 
 if (process.client) {
-  sidebarCollapsed.value = localStorage.getItem('sidebar-collapsed') === 'true'
   watch(sidebarCollapsed, v => localStorage.setItem('sidebar-collapsed', String(v)))
 }
 

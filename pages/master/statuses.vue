@@ -2,7 +2,10 @@
   <div class="max-w-2xl space-y-4">
     <div class="flex items-center justify-between">
       <p class="text-sm text-slate-500">Atur status dan alur tiket</p>
-      <button @click="openForm()" class="btn-primary">+ Tambah Status</button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="pending" @click="refresh()" />
+        <button @click="openForm()" class="btn-primary">+ Tambah Status</button>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
@@ -61,7 +64,7 @@
 import draggable from 'vuedraggable'
 definePageMeta({ middleware: 'auth' })
 
-const { data, refresh } = await useFetch('/api/statuses')
+const { data, refresh, pending } = await useFetch('/api/statuses')
 const list = ref<any[]>([])
 watch(data, (v) => { list.value = [...((v as any)?.data || [])] }, { immediate: true })
 

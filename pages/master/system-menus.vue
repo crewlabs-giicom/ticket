@@ -2,7 +2,10 @@
   <div class="max-w-3xl space-y-4">
     <div class="flex items-center justify-between">
       <p class="text-sm text-slate-500">Daftar modul dan menu dalam sistem. Drag baris untuk mengubah urutan.</p>
-      <button @click="openForm()" class="btn-primary">+ Tambah Menu</button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="pending" @click="refresh()" />
+        <button @click="openForm()" class="btn-primary">+ Tambah Menu</button>
+      </div>
     </div>
 
     <div v-if="!list.length" class="card p-8 text-center text-sm text-slate-400">Belum ada data. Tambah modul atau menu sistem.</div>
@@ -108,7 +111,7 @@
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
 definePageMeta({ middleware: 'auth' })
 
-const { data, refresh } = await useFetch('/api/system-menus')
+const { data, refresh, pending } = await useFetch('/api/system-menus')
 const { data: prd } = await useFetch('/api/projects')
 const list = ref<any[]>([])
 const projects = computed(() => (prd.value as any)?.data?.filter((p: any) => p.is_active) || [])

@@ -59,9 +59,12 @@
     <!-- Calendar -->
     <div class="flex-1 card p-4 min-w-0">
       <!-- Legend -->
-      <div class="flex gap-4 mb-3 text-xs text-slate-500">
-        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-indigo-500"></span> Ticket</span>
-        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span> Task</span>
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex gap-4 text-xs text-slate-500">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-indigo-500"></span> Ticket</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span> Task</span>
+        </div>
+        <AppRefreshButton :loading="refreshingCal" @click="handleRefreshCal" />
       </div>
       <FullCalendar v-if="calendarReady" :options="calendarOptions" class="ticketing-calendar" />
     </div>
@@ -80,6 +83,7 @@ const search = ref('')
 const panelTab = ref<'ticket' | 'task'>('ticket')
 const calendarReady = ref(false)
 const dragging = ref<{ item: any; type: 'ticket' | 'task' } | null>(null)
+const refreshingCal = ref(false)
 
 const { data: tr, refresh: refreshTickets } = await useFetch('/api/tickets')
 const allTickets = computed(() => (tr.value as any)?.data || [])
@@ -183,6 +187,12 @@ const calendarOptions = computed(() => ({
     dragging.value = null
   },
 }))
+
+async function handleRefreshCal() {
+  refreshingCal.value = true
+  await Promise.all([refreshTickets(), refreshTasks()])
+  refreshingCal.value = false
+}
 
 onMounted(() => { calendarReady.value = true })
 </script>

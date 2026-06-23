@@ -10,7 +10,10 @@
           class="w-36"
         />
       </div>
-      <button @click="openForm()" class="btn-primary">+ Tambah User</button>
+      <div class="flex items-center gap-2">
+        <AppRefreshButton :loading="loading" @click="fetchUsers" />
+        <button @click="openForm()" class="btn-primary">+ Tambah User</button>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
