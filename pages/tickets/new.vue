@@ -17,6 +17,6 @@ const taskId = route.query.task_id
 const task = ref<any>(null)
 if (taskId) {
   const res = await $fetch<any>(`/api/tasks/${taskId}`).catch(() => null)
-  task.value = res?.data || null
+  task.value = res || null
 }
 </script>
