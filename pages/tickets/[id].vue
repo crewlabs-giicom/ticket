@@ -104,11 +104,15 @@
         </div>
 
         <!-- Task link -->
-        <div v-if="ticket.task_id" class="mt-4 pt-4 border-t border-slate-100">
-          <NuxtLink :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
+          <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             Task: {{ ticket.task_title || ticket.task_id }}
           </NuxtLink>
+          <button v-else-if="auth.isStaffOrAdmin" @click="showCreateTaskModal = true" class="inline-flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg text-xs transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Buat Task
+          </button>
         </div>
 
         <!-- Ticket-level Attachments -->
@@ -339,6 +343,33 @@
         </div>
         <div class="flex justify-end mt-4">
           <button @click="closeInviteModal" class="text-sm text-slate-600 btn-ghost">Tutup</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Task Modal -->
+    <div v-if="showCreateTaskModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showCreateTaskModal = false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <h3 class="font-semibold mb-4">Buat Task dari Ticket</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-slate-500 mb-1 block">Judul Task <span class="text-red-500">*</span></label>
+            <input v-model="createTaskForm.title" type="text" class="input text-sm w-full" placeholder="Judul task..." />
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 mb-1 block">Deskripsi</label>
+            <textarea v-model="createTaskForm.description" class="input text-sm w-full min-h-[72px] resize-none" placeholder="Deskripsi task..." />
+          </div>
+          <div>
+            <label class="text-xs text-slate-500 mb-1 block">Assign ke</label>
+            <AppSelect v-model="createTaskForm.assigned_to" :options="[{ value: '', label: 'Unassigned' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Unassigned" class="w-full" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 mt-5">
+          <button @click="showCreateTaskModal = false" class="text-sm text-slate-600">Batal</button>
+          <button @click="submitCreateTask" :disabled="!createTaskForm.title.trim() || creatingTask" class="btn-primary text-sm">
+            {{ creatingTask ? 'Membuat...' : 'Buat Task' }}
+          </button>
         </div>
       </div>
     </div>
@@ -685,5 +716,40 @@ async function addParticipant(u: any) {
 async function removeParticipant(userId: number) {
   await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { _action: 'participant_remove', user_id: userId } })
   await refresh()
+}
+
+// Create Task from Ticket
+const showCreateTaskModal = ref(false)
+const creatingTask = ref(false)
+const createTaskForm = ref({ title: '', description: '', assigned_to: '' as string | number })
+
+watch(showCreateTaskModal, (v) => {
+  if (v && ticket.value) {
+    createTaskForm.value.title = ticket.value.title || ''
+    createTaskForm.value.description = ticket.value.description || ''
+    createTaskForm.value.assigned_to = ticket.value.assigned_to || ''
+  }
+})
+
+async function submitCreateTask() {
+  if (!createTaskForm.value.title.trim() || !ticket.value) return
+  creatingTask.value = true
+  try {
+    const task = await $fetch<any>('/api/tasks', {
+      method: 'POST',
+      body: {
+        project_id: ticket.value.project_id,
+        title: createTaskForm.value.title,
+        description: createTaskForm.value.description || null,
+        assigned_to: createTaskForm.value.assigned_to || null,
+        status: 'todo',
+      },
+    })
+    await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { task_id: task.id } })
+    showCreateTaskModal.value = false
+    await refresh()
+  } finally {
+    creatingTask.value = false
+  }
 }
 </script>

@@ -153,6 +153,7 @@ export default defineEventHandler(async (event) => {
 
     const { title, description, project_id, status_id, assigned_to } = body
     const priority_id = user.role === 'customer' ? undefined : body.priority_id
+    const task_id = user.role !== 'customer' ? body.task_id : undefined
 
     // Customer hanya boleh mengubah ke status is_resolved=1, dan hanya jika ticket belum resolved
     if (user.role === 'customer' && status_id && status_id !== old.status_id) {
@@ -163,7 +164,17 @@ export default defineEventHandler(async (event) => {
     }
     const due_date = body.due_date ? String(body.due_date).slice(0, 10) : body.due_date
 
-    const dueCheck = due_date || old.due_date
+    // Recalculate due_date based on new priority's SLA hours when priority changes and no explicit due_date given
+    let computedDueDate = due_date || old.due_date
+    if (priority_id && priority_id !== old.priority_id && !body.due_date) {
+      const [[priRow]] = await db.execute(
+        'SELECT DATE_FORMAT(DATE_ADD(?, INTERVAL sla_hours HOUR), \'%Y-%m-%d %H:%i:%s\') as new_due FROM priorities WHERE id = ?',
+        [old.created_at, priority_id]
+      ) as any[]
+      if (priRow?.new_due) computedDueDate = priRow.new_due
+    }
+
+    const dueCheck = computedDueDate
     // Use DB NOW() for SLA breach check to avoid JS UTC vs WIB mismatch
     const [[{ is_breached }]] = await db.execute(
       'SELECT CASE WHEN ? IS NOT NULL AND ? < NOW() THEN 1 ELSE 0 END AS is_breached',
@@ -198,13 +209,14 @@ export default defineEventHandler(async (event) => {
 
     await db.execute(`
       UPDATE tickets SET title=?, description=?, project_id=?, priority_id=?, status_id=?,
-      assigned_to=?, due_date=?, sla_breached=?, resolved_at=?, updated_at=NOW()
+      assigned_to=?, due_date=?, sla_breached=?, resolved_at=?, task_id=?, updated_at=NOW()
       WHERE id=?
     `, [
       title || old.title, description ?? old.description, project_id || old.project_id,
       priority_id || old.priority_id, status_id || old.status_id,
       assigned_to !== undefined ? assigned_to : old.assigned_to,
-      due_date || old.due_date, sla_breached, resolved_at, id
+      computedDueDate, sla_breached, resolved_at,
+      task_id !== undefined ? (task_id || null) : old.task_id, id
     ])
 
     if (status_id && status_id !== old.status_id) {
@@ -254,6 +266,15 @@ export default defineEventHandler(async (event) => {
         label: `${user?.name ?? 'System'} mengubah prioritas dari "${oldPriName}" ke "${newPriName}"`,
         user_id: user?.id,
       })
+      if (!body.due_date && computedDueDate !== old.due_date) {
+        await logActivity(db, {
+          entity_type: 'ticket', entity_id: Number(id), action: 'due_date_changed',
+          from_value: old.due_date ? String(old.due_date).slice(0, 19) : null,
+          to_value: computedDueDate ? String(computedDueDate).slice(0, 19) : null,
+          label: `Due date diperbarui otomatis ke ${computedDueDate ? String(computedDueDate).slice(0, 16) : '—'} (SLA ${newPriName})`,
+          user_id: user?.id,
+        })
+      }
     }
 
     broadcastToAll('ticket_updated', { id: Number(id), ticket_number: old.ticket_number })
