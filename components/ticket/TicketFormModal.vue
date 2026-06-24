@@ -92,6 +92,8 @@ const props = defineProps<{
   taskTitle?: string
   projectId?: number | string
   prefillTitle?: string
+  prefillDescription?: string
+  prefillSystemMenuId?: number | string
 }>()
 
 const auth = useAuthStore()
@@ -127,12 +129,12 @@ const selectedMenu = computed(() => systemMenus.value.find((m: any) => String(m.
 
 const form = reactive({
   title: props.prefillTitle || '',
-  description: '',
+  description: props.prefillDescription || '',
   project_id: props.projectId ? String(props.projectId) : '',
   priority_id: priorities.value[0]?.id || '',
   status_id: statuses.value[0]?.id || '',
   subsystem: '',
-  system_menu_id: '',
+  system_menu_id: props.prefillSystemMenuId ? String(props.prefillSystemMenuId) : '',
 })
 const taskId = computed(() => props.taskId)
 
@@ -152,6 +154,7 @@ if (props.projectId && !form.system_menu_id) {
 }
 
 watch(() => form.description, (val) => {
+  if (props.prefillTitle) return
   const first = val.trim().split('\n')[0].slice(0, 80).trim()
   form.title = first || 'Tanpa judul'
 })
