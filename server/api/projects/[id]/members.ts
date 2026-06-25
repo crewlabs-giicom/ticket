@@ -6,14 +6,30 @@ export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id')
 
   if (event.method === 'GET') {
-    const [rows] = await db.execute(`
-      SELECT u.id, u.name, u.email, u.role, u.avatar
-      FROM project_members pm
-      JOIN users u ON u.id = pm.user_id
-      WHERE pm.project_id = ?
-      ORDER BY u.name ASC
-    `, [projectId])
-    return { success: true, data: rows }
+    const query = getQuery(event)
+    const search = (query.search as string || '').trim()
+    const page = Math.max(1, parseInt(query.page as string) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit as string) || 20))
+    const offset = (page - 1) * limit
+    const like = `%${search}%`
+
+    const [countRows] = await db.execute(
+      `SELECT COUNT(*) as total FROM project_members pm
+       JOIN users u ON u.id = pm.user_id
+       WHERE pm.project_id = ? AND (u.name LIKE ? OR u.email LIKE ?)`,
+      [projectId, like, like]
+    )
+    const total = (countRows as any[])[0].total as number
+
+    const [rows] = await db.execute(
+      `SELECT u.id, u.name, u.email, u.role, u.avatar
+       FROM project_members pm
+       JOIN users u ON u.id = pm.user_id
+       WHERE pm.project_id = ? AND (u.name LIKE ? OR u.email LIKE ?)
+       ORDER BY u.name ASC LIMIT ? OFFSET ?`,
+      [projectId, like, like, limit, offset]
+    )
+    return { success: true, data: rows, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
   if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })

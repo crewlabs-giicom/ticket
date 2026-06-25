@@ -236,7 +236,14 @@
       />
 
       <!-- ─ TICKETS ─ -->
-      <div v-else-if="activeTab === 'tickets'">
+      <div v-else-if="activeTab === 'tickets'" class="space-y-3">
+        <!-- Filter bar -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <select v-model="ticketStatusFilter" @change="loadTickets()" class="input text-sm w-44 py-2">
+            <option value="">Semua Status</option>
+            <option v-for="s in statuses" :key="s.id" :value="s.id">{{ s.name }}</option>
+          </select>
+        </div>
         <div v-if="ticketsLoading" class="flex items-center justify-center py-12 text-slate-400">
           <svg class="w-5 h-5 animate-spin mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Memuat tiket…
@@ -300,9 +307,17 @@
           >{{ memberSaving ? 'Menambah…' : 'Tambah' }}</button>
         </div>
 
+        <!-- Search member -->
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1 max-w-xs">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input v-model="memberSearch" @input="onMemberSearch" type="text" placeholder="Cari nama atau email..." class="input pl-9 text-sm" />
+          </div>
+        </div>
+
         <!-- Member list -->
         <div class="card overflow-hidden">
-          <div v-if="!members.length" class="p-6 text-center text-slate-400 text-sm">Belum ada member.</div>
+          <div v-if="!members.length" class="p-6 text-center text-slate-400 text-sm">{{ memberSearch ? 'Tidak ada member yang cocok.' : 'Belum ada member.' }}</div>
           <div v-else class="divide-y divide-slate-100">
             <div v-for="m in members" :key="m.id" class="flex items-center gap-3 px-5 py-3.5">
               <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -321,6 +336,13 @@
             </div>
           </div>
         </div>
+
+        <AppPagination
+          :page="memberPage" :total-pages="memberTotalPages"
+          :total="memberTotal" :limit="memberLimit"
+          @page-change="memberPage = $event; loadMembers()"
+          @limit-change="memberLimit = $event; memberPage = 1; loadMembers()"
+        />
       </div>
 
       <!-- ─ SYSTEM MENUS ─ -->
@@ -528,13 +550,28 @@ onMounted(async () => {
 const members = ref<any[]>([])
 const addMemberId = ref<number | ''>('')
 const memberSaving = ref(false)
+const memberSearch = ref('')
+const memberPage = ref(1)
+const memberLimit = ref(20)
+const memberTotal = ref(0)
+const memberTotalPages = ref(1)
 
 const memberIds = computed(() => new Set(members.value.map(m => m.id)))
 const availableUsers = computed(() => allUsers.value.filter(u => !memberIds.value.has(u.id)))
 
+let memberSearchTimer: ReturnType<typeof setTimeout>
+function onMemberSearch() {
+  clearTimeout(memberSearchTimer)
+  memberSearchTimer = setTimeout(() => { memberPage.value = 1; loadMembers() }, 300)
+}
+
 async function loadMembers() {
-  const res = await $fetch<any>(`/api/projects/${projectId}/members`)
+  const res = await $fetch<any>(`/api/projects/${projectId}/members`, {
+    query: { search: memberSearch.value, page: memberPage.value, limit: memberLimit.value }
+  })
   members.value = res?.data ?? []
+  memberTotal.value = res?.total ?? 0
+  memberTotalPages.value = res?.totalPages ?? 1
 }
 
 async function addMember() {
@@ -563,11 +600,16 @@ watch(() => activeTab.value, (tab) => {
 // ── Tickets tab ───────────────────────────────────────────────────────────────
 const tickets = ref<any[]>([])
 const ticketsLoading = ref(false)
+const ticketStatusFilter = ref<number | ''>('')
+const { data: statusData } = await useFetch('/api/statuses')
+const statuses = computed(() => (statusData.value as any)?.data || [])
 
 async function loadTickets() {
   ticketsLoading.value = true
   try {
-    const ticketRes = await $fetch<any>(`/api/tickets?project_id=${projectId}`)
+    const ticketRes = await $fetch<any>('/api/tickets', {
+      query: { project_id: projectId, ...(ticketStatusFilter.value ? { status_id: ticketStatusFilter.value } : {}) }
+    })
     tickets.value = ticketRes?.data || []
   } finally {
     ticketsLoading.value = false
