@@ -33,7 +33,7 @@
           <label class="label">Priority</label>
           <AppSelect
             v-model="form.priority_id"
-            :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
+            :options="priorities.map((p: any) => ({ value: p.id, label: `${p.name}  —  SLA ${formatSla(p.sla_hours)}` }))"
             placeholder="Priority"
           />
         </div>
@@ -95,6 +95,12 @@ const props = defineProps<{
   prefillDescription?: string
   prefillSystemMenuId?: number | string
 }>()
+
+function formatSla(hours: number) {
+  if (hours < 24) return `${hours} jam`
+  const days = hours / 24
+  return days === 1 ? '1 hari' : `${days} hari`
+}
 
 const auth = useAuthStore()
 const emit = defineEmits(['close', 'created'])

@@ -48,9 +48,9 @@
           <button
             @click="chatWidget.toggleExpand(ticket.ticketId)"
             class="w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:bg-indigo-700 transition text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2"
-            :title="ticket.title"
+            :title="`${ticket.ticketNumber} — ${ticket.title}`"
           >
-            {{ initials(ticket.title) }}
+            <span class="text-[10px] font-bold leading-none">{{ ticket.ticketNumber.replace(/^[A-Z]+-/, '') }}</span>
           </button>
           <!-- Unread badge -->
           <span

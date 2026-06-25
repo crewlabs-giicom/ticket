@@ -98,6 +98,38 @@ const customerSections = [
     ],
   },
   {
+    icon: '🚦',
+    title: 'Priority & SLA',
+    items: [
+      {
+        q: 'Apa itu Priority tiket?',
+        a: 'Priority menentukan tingkat urgensi tiket Anda dan batas waktu penanganan (SLA) yang diberikan kepada tim support. Semakin tinggi priority, semakin cepat tiket harus ditangani.',
+      },
+      {
+        q: 'Apa bedanya Critical, High, Medium, dan Low?',
+        a: `<ul class="space-y-2">
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 font-semibold">🔴 Critical</span> — Masalah sangat mendesak, sistem tidak bisa digunakan. <strong>SLA: 4 jam.</strong></li>
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 font-semibold">🟠 High</span> — Masalah serius yang mempengaruhi pekerjaan utama. <strong>SLA: 1 hari (24 jam).</strong></li>
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">🟡 Medium</span> — Masalah yang mengganggu namun masih bisa ditunda sebentar. <strong>SLA: 3 hari (72 jam).</strong></li>
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 font-semibold">🟢 Low</span> — Permintaan atau saran yang tidak mendesak. <strong>SLA: 7 hari (168 jam).</strong></li>
+        </ul>`,
+      },
+      {
+        q: 'Apa yang terjadi jika SLA terlewat?',
+        a: 'Jika tiket belum diselesaikan dalam batas waktu SLA, tiket akan ditandai <strong>⚠ SLA Breach</strong> (tanda merah). Hal ini menjadi prioritas utama tim support untuk segera ditangani. Anda tidak perlu melakukan apa-apa — tim kami akan langsung merespons.',
+      },
+      {
+        q: 'Bagaimana cara memilih priority yang tepat?',
+        a: `<ul class="space-y-1">
+          <li>Pilih <strong>Critical</strong> jika sistem mati total / tidak bisa diakses sama sekali</li>
+          <li>Pilih <strong>High</strong> jika fitur utama tidak berfungsi dan menghambat operasional</li>
+          <li>Pilih <strong>Medium</strong> jika ada error tapi masih bisa dikerjakan dengan cara lain</li>
+          <li>Pilih <strong>Low</strong> untuk pertanyaan, saran, atau permintaan fitur baru</li>
+        </ul>`,
+      },
+    ],
+  },
+  {
     icon: '📁',
     title: 'Proyek',
     items: [
@@ -187,6 +219,30 @@ const staffSections = [
           <li>Tekan <strong>Enter</strong> atau klik kirim</li>
           <li>Customer akan menerima notifikasi otomatis</li>
         </ol>`,
+      },
+    ],
+  },
+  {
+    icon: '🚦',
+    title: 'Priority & SLA',
+    adminOnly: false,
+    items: [
+      {
+        q: 'Tabel SLA per priority',
+        a: `<ul class="space-y-2">
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-red-100 text-red-700 font-semibold">🔴 Critical</span> — SLA <strong>4 jam</strong>. Tangani segera, eskalasi ke lead jika perlu.</li>
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700 font-semibold">🟠 High</span> — SLA <strong>24 jam</strong>. Tangani di hari yang sama.</li>
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700 font-semibold">🟡 Medium</span> — SLA <strong>72 jam (3 hari)</strong>. Selesaikan dalam minggu berjalan.</li>
+          <li><span class="inline-block px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 font-semibold">🟢 Low</span> — SLA <strong>168 jam (7 hari)</strong>. Jadwalkan sesuai kapasitas tim.</li>
+        </ul>`,
+      },
+      {
+        q: 'Cara mengubah priority tiket',
+        a: 'Di halaman detail tiket, gunakan dropdown <strong>Priority</strong> di action bar atas. Perubahan priority akan mengubah batas waktu SLA dan dicatat di Activity.',
+      },
+      {
+        q: 'Bagaimana SLA dihitung?',
+        a: 'SLA dihitung dari waktu tiket dibuat hingga diselesaikan. Jika tiket melewati batas waktu SLA-nya, status berubah menjadi <strong>SLA Breach</strong> dan ditandai ⚠ merah di daftar tiket.',
       },
     ],
   },

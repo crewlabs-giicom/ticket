@@ -56,8 +56,18 @@
       <div class="p-5">
         <!-- Title & meta -->
         <h2 class="text-lg font-semibold text-slate-900 leading-snug">{{ ticket.title }}</h2>
-        <p class="text-xs text-slate-400 mt-1">
-          {{ ticket.project_name }} · Dibuat oleh <span class="text-slate-500 font-medium">{{ ticket.created_by_name }}</span> · {{ timeAgo(ticket.created_at) }}
+        <p class="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-1.5">
+          <span>{{ ticket.project_name }}</span>
+          <template v-if="ticket.system_menu_name">
+            <span>·</span>
+            <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-md text-[11px] font-medium">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
+              {{ ticket.system_menu_name }}
+            </span>
+          </template>
+          <span>· Dibuat oleh</span>
+          <span class="text-slate-500 font-medium">{{ ticket.created_by_name }}</span>
+          <span>· {{ timeAgo(ticket.created_at) }}</span>
         </p>
 
         <!-- Description -->

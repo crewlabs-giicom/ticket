@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
         s.name as status_name, s.color as status_color, s.is_resolved as status_is_resolved,
         u1.name as created_by_name,
         u2.name as assigned_to_name, u2.email as assigned_to_email,
-        tk.title as task_title
+        tk.title as task_title,
+        sm.name as system_menu_name
       FROM tickets t
       LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN priorities pr ON pr.id = t.priority_id
@@ -23,6 +24,7 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN users u1 ON u1.id = t.created_by
       LEFT JOIN users u2 ON u2.id = t.assigned_to
       LEFT JOIN tasks tk ON tk.id = t.task_id
+      LEFT JOIN system_menus sm ON sm.id = t.system_menu_id
       WHERE t.id = ?
     `, [id])
     const ticket = (ticketRows as any[])[0]
