@@ -1,4 +1,4 @@
-import { db } from '../../database'
+import { getDb } from '../../database'
 import { hashPassword, signToken, setAuthCookie } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const hash = hashPassword(password)
-  const conn = await db()
+  const conn = getDb()
 
   // Cek user sudah ada atau belum
   const [rows] = await conn.execute<any[]>('SELECT id, role FROM users WHERE email = ? LIMIT 1', [hrisUser.email])
