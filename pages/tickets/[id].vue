@@ -1,9 +1,15 @@
 <template>
-  <div v-if="ticket" class="max-w-7xl mx-auto space-y-4">
-    <!-- Header Card -->
-    <div class="card overflow-hidden">
-      <!-- Top bar: actions -->
-      <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex-wrap">
+  <div v-if="ticket" class="max-w-7xl mx-auto">
+    <!-- Two-column layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+
+      <!-- LEFT: Header + Diskusi (3/4) -->
+      <div class="lg:col-span-3 sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto space-y-4 pr-1">
+
+        <!-- Header Card -->
+        <div class="card overflow-hidden">
+          <!-- Top bar: actions -->
+          <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex-wrap">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="font-mono text-xs font-semibold text-slate-400 tracking-wide">{{ ticket.ticket_number }}</span>
           <span class="w-1 h-1 rounded-full bg-slate-300"></span>
@@ -87,14 +93,8 @@
             </template>
           </div>
         </div>
-      </div><!-- end body -->
-    </div><!-- end header card -->
-
-    <!-- Two-column layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
-
-      <!-- LEFT: Ticket Info + Diskusi (3/4) -->
-      <div class="lg:col-span-3 space-y-4">
+        </div><!-- end body -->
+        </div><!-- end header card -->
 
         <!-- Chat Responses -->
         <div class="card p-5">
@@ -208,29 +208,29 @@
       </div><!-- end left -->
 
       <!-- RIGHT: Sidebar (1/4) -->
-      <div class="lg:col-span-1 space-y-3 lg:sticky lg:top-4">
+      <div class="lg:col-span-1 sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto space-y-3 pl-0.5">
 
         <!-- Card 1: Assignee & Dates -->
         <div class="card p-4">
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Detail</h3>
-          <div class="space-y-2.5">
-            <div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-slate-50 rounded-xl px-3 py-2.5">
               <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Assigned</p>
               <p class="text-xs font-semibold text-slate-700 truncate">{{ ticket.assigned_to_name || '—' }}</p>
             </div>
-            <div>
+            <div class="bg-slate-50 rounded-xl px-3 py-2.5">
               <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Dibuat</p>
               <p class="text-xs font-semibold text-slate-700">{{ fmtDateTime(ticket.created_at) }}</p>
             </div>
-            <div>
+            <div class="bg-slate-50 rounded-xl px-3 py-2.5">
               <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Due Date</p>
               <p class="text-xs font-semibold" :class="ticket.sla_breached ? 'text-red-600' : 'text-slate-700'">{{ fmtDateTime(ticket.due_date) || '—' }}</p>
             </div>
-            <div v-if="ticket.resolved_at || ticket.closed_at">
+            <div v-if="ticket.resolved_at || ticket.closed_at" class="bg-emerald-50 rounded-xl px-3 py-2.5">
               <p class="text-[10px] text-emerald-500 uppercase tracking-wide font-medium mb-0.5">Resolved · {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}</p>
               <p class="text-xs font-semibold text-emerald-700">{{ fmtDateTime(ticket.resolved_at || ticket.closed_at) }}</p>
             </div>
-            <div v-else>
+            <div v-else class="bg-slate-50 rounded-xl px-3 py-2.5">
               <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Resolved</p>
               <p class="text-xs text-slate-400">Ongoing</p>
             </div>
