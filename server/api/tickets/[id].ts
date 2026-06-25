@@ -282,14 +282,14 @@ export default defineEventHandler(async (event) => {
 
     // Extend due date: activity + diskusi bubble + notifikasi
     if (extend_reason && due_date) {
+      const toMs = (d: string) => new Date(d.replace(' ', 'T')).getTime()
       const diffLabel = (oldDate: string, newDate: string) => {
-        const diffMs = new Date(newDate).getTime() - new Date(oldDate).getTime()
-        const hours = Math.round(diffMs / 3600000)
+        const hours = Math.round((toMs(newDate) - toMs(oldDate)) / 3600000)
         if (hours < 24) return `${hours} jam`
         return `${Math.round(hours / 24)} hari`
       }
       const durasi = old.due_date ? `+${diffLabel(String(old.due_date), due_date)}` : ''
-      const newDueFmt = due_date.slice(0, 16).replace('T', ' ')
+      const newDueFmt = due_date.slice(0, 16)
       const label = `${user.name} memperpanjang due date${durasi ? ` ${durasi}` : ''} → ${newDueFmt}. Alasan: ${extend_reason}`
 
       await logActivity(db, {
