@@ -11,10 +11,16 @@
         >
           <!-- Header -->
           <div class="bg-indigo-600 px-3 py-2 flex items-center gap-2 shrink-0">
-            <div class="flex-1 min-w-0">
-              <div class="text-white text-xs font-medium truncate">{{ expandedTicket.title }}</div>
+            <div class="flex-1 min-w-0 cursor-pointer" @click="openTicketTab(expandedTicket)" title="Buka ticket">
+              <div class="text-white text-xs font-medium truncate hover:underline">{{ expandedTicket.title }}</div>
               <div class="text-indigo-200 text-[11px]">{{ expandedTicket.ticketNumber }}</div>
             </div>
+            <button @click="openTicketTab(expandedTicket)" class="text-indigo-200 hover:text-white p-1 rounded transition" title="Buka ticket">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                <path d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h4a.75.75 0 010 1.5h-4z"/>
+                <path d="M11.75 2a.75.75 0 000 1.5h3.19L9.47 8.97a.75.75 0 101.06 1.06l5.47-5.47v3.19a.75.75 0 001.5 0V2.75A.75.75 0 0016.75 2h-5z"/>
+              </svg>
+            </button>
             <button @click="chatWidget.toggleExpand(expandedTicket.ticketId)" class="text-indigo-200 hover:text-white p-1 rounded transition">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
                 <path d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z"/>
@@ -74,11 +80,16 @@
 
 <script setup lang="ts">
 const chatWidget = useChatWidgetStore()
+const tabStore = useTabStore()
 const threadRef = ref<any>(null)
 
 const expandedTicket = computed(() =>
   chatWidget.openTickets.find(t => t.mode === 'expanded') || null
 )
+
+function openTicketTab(ticket: { ticketId: number; ticketNumber: string; title: string }) {
+  tabStore.openTab({ id: ticket.ticketId, ticket_number: ticket.ticketNumber, title: ticket.title })
+}
 
 function initials(title: string) {
   return title?.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
