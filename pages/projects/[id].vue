@@ -574,8 +574,9 @@ const memberLimit = ref(20)
 const memberTotal = ref(0)
 const memberTotalPages = ref(1)
 
+const allMemberIds = ref<Set<number>>(new Set())
 const memberIds = computed(() => new Set(members.value.map(m => m.id)))
-const availableUsers = computed(() => allUsers.value.filter((u: any) => !memberIds.value.has(u.id)))
+const availableUsers = computed(() => allUsers.value.filter((u: any) => !allMemberIds.value.has(u.id)))
 const filteredAvailableUsers = computed(() => {
   const q = addMemberSearch.value.toLowerCase()
   if (!q) return availableUsers.value
@@ -589,12 +590,16 @@ function onMemberSearch() {
 }
 
 async function loadMembers() {
-  const res = await $fetch<any>(`/api/projects/${projectId}/members`, {
-    query: { search: memberSearch.value, page: memberPage.value, limit: memberLimit.value }
-  })
+  const [res, allRes] = await Promise.all([
+    $fetch<any>(`/api/projects/${projectId}/members`, {
+      query: { search: memberSearch.value, page: memberPage.value, limit: memberLimit.value }
+    }),
+    $fetch<any>(`/api/projects/${projectId}/members`, { query: { limit: 1000 } })
+  ])
   members.value = res?.data ?? []
   memberTotal.value = res?.total ?? 0
   memberTotalPages.value = res?.totalPages ?? 1
+  allMemberIds.value = new Set((allRes?.data ?? []).map((m: any) => m.id))
 }
 
 async function addMember() {
