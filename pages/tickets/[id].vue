@@ -1,5 +1,5 @@
 <template>
-  <div v-if="ticket" class="max-w-4xl mx-auto space-y-4">
+  <div v-if="ticket" class="max-w-7xl mx-auto space-y-4">
     <!-- Header Card -->
     <div class="card overflow-hidden">
       <!-- Top bar: actions -->
@@ -57,52 +57,6 @@
         <!-- Description -->
         <p v-if="ticket.description" class="mt-4 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{{ ticket.description }}</p>
 
-        <!-- Meta grid -->
-        <div class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="bg-slate-50 rounded-xl px-3 py-2.5">
-            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Assigned</p>
-            <p class="text-xs font-semibold text-slate-700 truncate">{{ ticket.assigned_to_name || '—' }}</p>
-          </div>
-          <div class="bg-slate-50 rounded-xl px-3 py-2.5">
-            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Due Date</p>
-            <p class="text-xs font-semibold truncate" :class="ticket.sla_breached ? 'text-red-600' : 'text-slate-700'">{{ fmtDateTime(ticket.due_date) }}</p>
-          </div>
-          <div class="bg-slate-50 rounded-xl px-3 py-2.5">
-            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Dibuat</p>
-            <p class="text-xs font-semibold text-slate-700 truncate">{{ fmtDateTime(ticket.created_at) }}</p>
-          </div>
-          <div v-if="ticket.resolved_at || ticket.closed_at" class="bg-emerald-50 rounded-xl px-3 py-2.5">
-            <p class="text-[10px] text-emerald-500 uppercase tracking-wide font-medium mb-0.5">Resolved · {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}</p>
-            <p class="text-xs font-semibold text-emerald-700 truncate">{{ fmtDateTime(ticket.resolved_at || ticket.closed_at) }}</p>
-          </div>
-          <div v-else class="bg-slate-50 rounded-xl px-3 py-2.5">
-            <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Resolved</p>
-            <p class="text-xs font-semibold text-slate-400">Ongoing</p>
-          </div>
-        </div>
-
-        <!-- Participants -->
-        <div class="mt-4 pt-4 border-t border-slate-100">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Peserta <span class="font-normal text-slate-400">({{ ticket.participants?.length || 0 }})</span></span>
-            <button v-if="canManageParticipants" @click="showInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Undang
-            </button>
-          </div>
-          <div v-if="ticket.participants?.length" class="flex flex-wrap gap-2">
-            <div v-for="p in ticket.participants" :key="p.user_id" class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-full pl-1 pr-2.5 py-1 text-xs text-slate-700 shadow-sm">
-              <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600 overflow-hidden flex-shrink-0">
-                <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-full h-full object-cover" />
-                <span v-else>{{ p.name?.charAt(0) }}</span>
-              </div>
-              <span class="font-medium">{{ p.name }}</span>
-              <button v-if="canManageParticipants" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-400 ml-0.5 transition-colors leading-none">✕</button>
-            </div>
-          </div>
-          <p v-else class="text-xs text-slate-400 italic">Belum ada peserta yang diundang.</p>
-        </div>
-
         <!-- Task link -->
         <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
           <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
@@ -136,153 +90,216 @@
       </div><!-- end body -->
     </div><!-- end header card -->
 
-    <!-- Chat Responses -->
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-semibold text-slate-900">Diskusi ({{ ticket.responses?.filter((r:any) => !r.is_internal || auth.isStaffOrAdmin).length || 0 }})</h3>
-        <button
-          v-if="ticket.status_is_resolved && transcriptData"
-          @click="showTranscriptModal = true"
-          class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
-            <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z" clip-rule="evenodd"/>
-            <path d="M15 7h1a2 2 0 012 2v5.5a1.5 1.5 0 01-3 0V7z"/>
-          </svg>
-          Transcript Chat ({{ transcriptData.message_count }} pesan)
-        </button>
-      </div>
+    <!-- Two-column layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
 
-      <div class="space-y-3">
-        <div v-for="r in ticket.responses" :key="r.id" :class="['flex gap-2', r.user_id === auth.user?.id ? 'flex-row-reverse' : 'flex-row']">
-          <!-- Avatar -->
-          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-1 overflow-hidden"
-            :class="r.user_id === auth.user?.id ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-600'">
-            <img v-if="r.user_avatar" :src="`/uploads/${r.user_avatar}`" class="w-full h-full object-cover" />
-            <span v-else>{{ r.user_name?.charAt(0) }}</span>
+      <!-- LEFT: Ticket Info + Diskusi (3/4) -->
+      <div class="lg:col-span-3 space-y-4">
+
+        <!-- Chat Responses -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-slate-900">Diskusi ({{ ticket.responses?.filter((r:any) => !r.is_internal || auth.isStaffOrAdmin).length || 0 }})</h3>
+            <button
+              v-if="ticket.status_is_resolved && transcriptData"
+              @click="showTranscriptModal = true"
+              class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
+                <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 002 2H4a2 2 0 01-2-2V5zm3 1h6v4H5V6zm6 6H5v2h6v-2z" clip-rule="evenodd"/>
+                <path d="M15 7h1a2 2 0 012 2v5.5a1.5 1.5 0 01-3 0V7z"/>
+              </svg>
+              Transcript Chat ({{ transcriptData.message_count }} pesan)
+            </button>
           </div>
 
-          <!-- Bubble -->
-          <div :class="['max-w-[72%] min-w-0 overflow-hidden', r.user_id === auth.user?.id ? 'items-end' : 'items-start', 'flex flex-col gap-1']">
-            <!-- Name + timestamp -->
-            <div :class="['flex items-center gap-1.5 text-[11px]', r.user_id === auth.user?.id ? 'flex-row-reverse' : 'flex-row']">
-              <span class="font-semibold text-slate-700">{{ r.user_name }}</span>
-              <span v-if="r.is_internal" class="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">Internal</span>
-              <span class="text-slate-400">{{ timeAgo(r.created_at) }}</span>
+          <div class="space-y-3">
+            <div v-for="r in ticket.responses" :key="r.id" :class="['flex gap-2', r.user_id === auth.user?.id ? 'flex-row-reverse' : 'flex-row']">
+              <!-- Avatar -->
+              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-1 overflow-hidden"
+                :class="r.user_id === auth.user?.id ? 'bg-primary-600 text-white' : 'bg-slate-200 text-slate-600'">
+                <img v-if="r.user_avatar" :src="`/uploads/${r.user_avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ r.user_name?.charAt(0) }}</span>
+              </div>
+
+              <!-- Bubble -->
+              <div :class="['max-w-[72%] min-w-0 overflow-hidden', r.user_id === auth.user?.id ? 'items-end' : 'items-start', 'flex flex-col gap-1']">
+                <!-- Name + timestamp -->
+                <div :class="['flex items-center gap-1.5 text-[11px]', r.user_id === auth.user?.id ? 'flex-row-reverse' : 'flex-row']">
+                  <span class="font-semibold text-slate-700">{{ r.user_name }}</span>
+                  <span v-if="r.is_internal" class="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">Internal</span>
+                  <span class="text-slate-400">{{ timeAgo(r.created_at) }}</span>
+                </div>
+
+                <!-- Message bubble -->
+                <div :class="[
+                  'px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
+                  r.user_id === auth.user?.id
+                    ? 'bg-primary-600 text-white rounded-tr-sm'
+                    : r.is_internal
+                      ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-tl-sm'
+                      : 'bg-slate-100 text-slate-800 rounded-tl-sm'
+                ]">
+                  <p class="whitespace-pre-wrap break-words" style="overflow-wrap: anywhere; word-break: break-word;" v-html="linkify(r.message)"></p>
+
+                  <!-- Response attachments -->
+                  <div v-if="r.attachments?.length" :class="['mt-2 flex flex-wrap gap-1.5', r.user_id === auth.user?.id ? 'justify-end' : '']">
+                    <template v-for="a in r.attachments" :key="a.id">
+                      <button v-if="isImage(a.mime_type)" @click="openLightbox(allResponseImages, allResponseImageIndex(a.id))" class="group relative w-14 h-14 rounded-lg overflow-hidden border border-white/30 hover:border-white/60 transition-colors shrink-0">
+                        <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                      </button>
+                      <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank"
+                        :class="['flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-colors',
+                          r.user_id === auth.user?.id
+                            ? 'bg-white/20 hover:bg-white/30 text-white'
+                            : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-700']">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        <span class="max-w-[120px] truncate">{{ a.original_name }}</span>
+                      </a>
+                    </template>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Message bubble -->
-            <div :class="[
-              'px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed',
-              r.user_id === auth.user?.id
-                ? 'bg-primary-600 text-white rounded-tr-sm'
-                : r.is_internal
-                  ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-tl-sm'
-                  : 'bg-slate-100 text-slate-800 rounded-tl-sm'
-            ]">
-              <p class="whitespace-pre-wrap break-words" style="overflow-wrap: anywhere; word-break: break-word;" v-html="linkify(r.message)"></p>
+          <!-- Reply form -->
+          <div class="mt-5 border-t border-slate-200 pt-5">
+            <div v-if="auth.isStaffOrAdmin" class="flex items-center gap-3 mb-3">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" v-model="isInternal" class="w-3.5 h-3.5 rounded" />
+                <span class="text-xs text-slate-600">Internal Note (hanya staff)</span>
+              </label>
+            </div>
+            <textarea v-model="reply" :class="['input min-h-[80px] resize-none', isInternal && 'border-amber-300 bg-amber-50/50']" :placeholder="isInternal ? 'Tulis catatan internal... (Ctrl+V untuk paste gambar)' : 'Tulis balasan... (Ctrl+V untuk paste gambar)'" @paste="handleReplyPaste" />
 
-              <!-- Response attachments -->
-              <div v-if="r.attachments?.length" :class="['mt-2 flex flex-wrap gap-1.5', r.user_id === auth.user?.id ? 'justify-end' : '']">
-                <template v-for="a in r.attachments" :key="a.id">
-                  <button v-if="isImage(a.mime_type)" @click="openLightbox(allResponseImages, allResponseImageIndex(a.id))" class="group relative w-14 h-14 rounded-lg overflow-hidden border border-white/30 hover:border-white/60 transition-colors shrink-0">
-                    <img :src="`/uploads/${a.filename}`" :alt="a.original_name" class="w-full h-full object-cover" />
-                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                  </button>
-                  <a v-else :href="`/uploads/${a.filename}`" :download="a.original_name" target="_blank"
-                    :class="['flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition-colors',
-                      r.user_id === auth.user?.id
-                        ? 'bg-white/20 hover:bg-white/30 text-white'
-                        : 'bg-white border border-slate-200 hover:bg-slate-50 text-slate-700']">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                    <span class="max-w-[120px] truncate">{{ a.original_name }}</span>
-                  </a>
+            <!-- Reply attachments preview -->
+            <div v-if="replyFiles.length" class="flex flex-wrap gap-2 mt-2">
+              <div v-for="(f, i) in replyFiles" :key="i">
+                <template v-if="f.mime_type?.startsWith('image/')">
+                  <div class="flex flex-col items-center gap-0.5">
+                    <img :src="`/uploads/${f.filename}`" class="w-10 h-10 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" @click="openReplyImageLightbox(i)" />
+                    <button type="button" @click="replyFiles.splice(i, 1)" class="text-[10px] text-slate-400 hover:text-red-500 leading-none">✕</button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
+                    <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span class="max-w-[120px] truncate">{{ f.original_name }}</span>
+                    <button type="button" @click="replyFiles.splice(i, 1)" class="text-slate-400 hover:text-red-500 ml-0.5">✕</button>
+                  </div>
                 </template>
               </div>
             </div>
+            <p v-if="uploadError" class="text-xs text-red-600 mt-1">{{ uploadError }}</p>
+
+            <div class="flex items-center justify-between mt-2">
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-500 hover:text-primary-600 transition-colors" :class="uploading && 'opacity-50 pointer-events-none'">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                {{ uploading ? 'Mengupload...' : 'Lampirkan file' }}
+                <input ref="fileInput" type="file" multiple class="hidden" :disabled="uploading" @change="handleReplyFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
+              </label>
+              <button @click="submitReply" :disabled="!reply.trim() || sending || uploading" class="btn-primary">{{ sending ? 'Mengirim...' : 'Kirim' }}</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Reply form -->
-      <div class="mt-5 border-t border-slate-200 pt-5">
-        <div v-if="auth.isStaffOrAdmin" class="flex items-center gap-3 mb-3">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" v-model="isInternal" class="w-3.5 h-3.5 rounded" />
-            <span class="text-xs text-slate-600">Internal Note (hanya staff)</span>
-          </label>
+      </div><!-- end left -->
+
+      <!-- RIGHT: Sidebar (1/4) -->
+      <div class="lg:col-span-1 space-y-3 lg:sticky lg:top-4">
+
+        <!-- Card 1: Assignee & Dates -->
+        <div class="card p-4">
+          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Detail</h3>
+          <div class="space-y-2.5">
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Assigned</p>
+              <p class="text-xs font-semibold text-slate-700 truncate">{{ ticket.assigned_to_name || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Dibuat</p>
+              <p class="text-xs font-semibold text-slate-700">{{ fmtDateTime(ticket.created_at) }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Due Date</p>
+              <p class="text-xs font-semibold" :class="ticket.sla_breached ? 'text-red-600' : 'text-slate-700'">{{ fmtDateTime(ticket.due_date) || '—' }}</p>
+            </div>
+            <div v-if="ticket.resolved_at || ticket.closed_at">
+              <p class="text-[10px] text-emerald-500 uppercase tracking-wide font-medium mb-0.5">Resolved · {{ formatDuration(ticket.created_at, ticket.resolved_at || ticket.closed_at) }}</p>
+              <p class="text-xs font-semibold text-emerald-700">{{ fmtDateTime(ticket.resolved_at || ticket.closed_at) }}</p>
+            </div>
+            <div v-else>
+              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Resolved</p>
+              <p class="text-xs text-slate-400">Ongoing</p>
+            </div>
+          </div>
         </div>
-        <textarea v-model="reply" :class="['input min-h-[80px] resize-none', isInternal && 'border-amber-300 bg-amber-50/50']" :placeholder="isInternal ? 'Tulis catatan internal... (Ctrl+V untuk paste gambar)' : 'Tulis balasan... (Ctrl+V untuk paste gambar)'" @paste="handleReplyPaste" />
 
-        <!-- Reply attachments preview -->
-        <div v-if="replyFiles.length" class="flex flex-wrap gap-2 mt-2">
-          <div v-for="(f, i) in replyFiles" :key="i">
-            <template v-if="f.mime_type?.startsWith('image/')">
-              <div class="flex flex-col items-center gap-0.5">
-                <img :src="`/uploads/${f.filename}`" class="w-10 h-10 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity" @click="openReplyImageLightbox(i)" />
-                <button type="button" @click="replyFiles.splice(i, 1)" class="text-[10px] text-slate-400 hover:text-red-500 leading-none">✕</button>
+        <!-- Card 2: Participants -->
+        <div class="card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Peserta <span class="font-normal text-slate-400">({{ ticket.participants?.length || 0 }})</span></h3>
+            <button v-if="canManageParticipants" @click="showInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Undang
+            </button>
+          </div>
+          <div v-if="ticket.participants?.length" class="flex flex-wrap gap-1.5">
+            <div v-for="p in ticket.participants" :key="p.user_id" class="flex items-center gap-1 bg-white border border-slate-200 rounded-full pl-0.5 pr-2 py-0.5 text-xs text-slate-700 shadow-sm">
+              <div class="w-4.5 h-4.5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600 overflow-hidden flex-shrink-0">
+                <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ p.name?.charAt(0) }}</span>
               </div>
-            </template>
-            <template v-else>
-              <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700">
-                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                <span class="max-w-[120px] truncate">{{ f.original_name }}</span>
-                <button type="button" @click="replyFiles.splice(i, 1)" class="text-slate-400 hover:text-red-500 ml-0.5">✕</button>
+              <span class="font-medium truncate max-w-[80px]">{{ p.name }}</span>
+              <button v-if="canManageParticipants" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-400 ml-0.5 transition-colors leading-none text-[10px]">✕</button>
+            </div>
+          </div>
+          <p v-else class="text-xs text-slate-400 italic">Belum ada peserta.</p>
+        </div>
+
+        <!-- Card 3: References -->
+        <div class="card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Referensi</h3>
+            <button @click="showLinkModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              Link
+            </button>
+          </div>
+          <div v-if="ticket.links?.length || ticket.backLinks?.length" class="space-y-1.5">
+            <div v-for="lnk in ticket.links" :key="lnk.id" class="flex flex-col gap-0.5">
+              <span class="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full w-fit">{{ lnk.relation_type }}</span>
+              <NuxtLink :to="`/tickets/${lnk.referenced_ticket_id}`" class="text-indigo-600 hover:underline font-mono text-xs">{{ lnk.ref_ticket_number }}</NuxtLink>
+              <span class="text-slate-500 text-[11px] truncate">{{ lnk.ref_ticket_title }}</span>
+            </div>
+            <div v-for="bl in ticket.backLinks" :key="bl.id" class="flex flex-col gap-0.5">
+              <span class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full w-fit">direferensi oleh</span>
+              <NuxtLink :to="`/tickets/${bl.ticket_id}`" class="text-indigo-600 hover:underline font-mono text-xs">{{ bl.new_ticket_number }}</NuxtLink>
+              <span class="text-slate-500 text-[11px] truncate">{{ bl.new_ticket_title }}</span>
+            </div>
+          </div>
+          <p v-else class="text-xs text-slate-400">Belum ada referensi.</p>
+        </div>
+
+        <!-- Card 4: Activity -->
+        <div v-if="ticket.history?.length" class="card p-4">
+          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Activity</h3>
+          <div class="space-y-2">
+            <div v-for="h in ticket.history" :key="h.id" class="flex gap-2 items-start">
+              <div class="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 flex-shrink-0"></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] text-slate-700 leading-snug">{{ h.label }}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">{{ timeAgo(h.created_at) }}</p>
               </div>
-            </template>
+            </div>
           </div>
         </div>
-        <p v-if="uploadError" class="text-xs text-red-600 mt-1">{{ uploadError }}</p>
 
-        <div class="flex items-center justify-between mt-2">
-          <!-- Attach button -->
-          <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-500 hover:text-primary-600 transition-colors" :class="uploading && 'opacity-50 pointer-events-none'">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-            {{ uploading ? 'Mengupload...' : 'Lampirkan file' }}
-            <input ref="fileInput" type="file" multiple class="hidden" :disabled="uploading" @change="handleReplyFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
-          </label>
-          <button @click="submitReply" :disabled="!reply.trim() || sending || uploading" class="btn-primary">{{ sending ? 'Mengirim...' : 'Kirim' }}</button>
-        </div>
-      </div>
-    </div>
-    <!-- Ticket references -->
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-semibold text-slate-900">Referensi Ticket</h3>
-        <button @click="showLinkModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Link referensi
-        </button>
-      </div>
+      </div><!-- end right sidebar -->
 
-      <div v-if="ticket.links?.length || ticket.backLinks?.length" class="space-y-2">
-        <div v-for="lnk in ticket.links" :key="lnk.id" class="flex items-center gap-2 text-sm">
-          <span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{{ lnk.relation_type }}</span>
-          <NuxtLink :to="`/tickets/${lnk.referenced_ticket_id}`" class="text-indigo-600 hover:underline font-mono text-xs">{{ lnk.ref_ticket_number }}</NuxtLink>
-          <span class="text-slate-500 text-xs truncate">{{ lnk.ref_ticket_title }}</span>
-        </div>
-        <div v-for="bl in ticket.backLinks" :key="bl.id" class="flex items-center gap-2 text-sm">
-          <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">direferensi oleh</span>
-          <NuxtLink :to="`/tickets/${bl.ticket_id}`" class="text-indigo-600 hover:underline font-mono text-xs">{{ bl.new_ticket_number }}</NuxtLink>
-          <span class="text-slate-500 text-xs truncate">{{ bl.new_ticket_title }}</span>
-        </div>
-      </div>
-      <p v-else class="text-xs text-slate-400">Belum ada referensi ticket terkait.</p>
-    </div>
-
-    <!-- Activity History -->
-    <div v-if="ticket.history?.length" class="card p-5">
-      <h3 class="text-sm font-semibold text-slate-900 mb-3">Activity</h3>
-      <div class="space-y-3">
-        <div v-for="h in ticket.history" :key="h.id" class="flex gap-3 items-start">
-          <div class="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 flex-shrink-0 ring-4 ring-white"></div>
-          <div class="flex-1 pb-3 border-b border-slate-50 last:border-0 last:pb-0">
-            <p class="text-xs text-slate-700">{{ h.label }}</p>
-            <p class="text-[10px] text-slate-400 mt-0.5">{{ timeAgo(h.created_at) }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    </div><!-- end two-column -->
 
     <!-- Link modal -->
     <div v-if="showLinkModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showLinkModal = false">
