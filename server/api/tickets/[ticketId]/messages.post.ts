@@ -18,7 +18,10 @@ export default defineEventHandler(async (event) => {
   const [tickets] = await db.execute('SELECT id, ticket_number, title, created_by, assigned_to FROM tickets WHERE id = ?', [ticketId])
   const ticket = (tickets as any[])[0]
   if (!ticket) throw createError({ statusCode: 404 })
-  if (user.role === 'customer' && ticket.created_by !== user.id) throw createError({ statusCode: 403 })
+  if (user.role === 'customer' && ticket.created_by !== user.id) {
+    const [ptRows] = await db.execute('SELECT user_id FROM ticket_participants WHERE ticket_id = ? AND user_id = ?', [ticketId, user.id])
+    if (!(ptRows as any[]).length) throw createError({ statusCode: 403 })
+  }
 
   const [result] = await db.execute(
     'INSERT INTO ticket_messages (ticket_id, sender_id, message) VALUES (?, ?, ?)',
