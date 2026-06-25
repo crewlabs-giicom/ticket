@@ -291,20 +291,37 @@
       <!-- ─ MEMBERS ─ -->
       <div v-else-if="activeTab === 'members'" class="space-y-4">
         <!-- Add member (admin only) -->
-        <div v-if="auth.isAdmin" class="card p-4 flex items-end gap-3">
-          <div class="flex-1">
-            <label class="block text-xs font-medium text-slate-600 mb-1">Tambah Member</label>
-            <AppSelect
-              v-model="addMemberId"
-              :options="[{ value: '', label: 'Pilih user…' }, ...availableUsers.map((u: any) => ({ value: u.id, label: `${u.name} (${u.role})` }))]"
-              placeholder="Pilih user…"
-            />
+        <div v-if="auth.isAdmin" class="card p-4 space-y-3">
+          <label class="block text-xs font-medium text-slate-600">Tambah Member</label>
+          <!-- Search input -->
+          <input v-model="addMemberSearch" type="text" class="input text-sm" placeholder="Cari nama atau email user…" />
+          <!-- Checkbox list -->
+          <div v-if="filteredAvailableUsers.length" class="max-h-48 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+            <label
+              v-for="u in filteredAvailableUsers" :key="u.id"
+              class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer"
+            >
+              <input type="checkbox" :value="u.id" v-model="addMemberIds" class="w-4 h-4 rounded text-indigo-600" />
+              <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img v-if="u.avatar" :src="`/uploads/${u.avatar}`" class="w-full h-full object-cover" />
+                <span v-else>{{ u.name?.charAt(0) }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-800 truncate">{{ u.name }}</p>
+                <p class="text-xs text-slate-400 truncate">{{ u.email }} · <span class="capitalize">{{ u.role }}</span></p>
+              </div>
+            </label>
           </div>
-          <button
-            @click="addMember"
-            :disabled="!addMemberId || memberSaving"
-            class="btn-primary text-sm disabled:opacity-50 flex-shrink-0"
-          >{{ memberSaving ? 'Menambah…' : 'Tambah' }}</button>
+          <p v-else-if="addMemberSearch" class="text-xs text-slate-400 text-center py-2">Tidak ada user yang cocok.</p>
+          <p v-else class="text-xs text-slate-400 text-center py-2">Semua user sudah menjadi member.</p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-500">{{ addMemberIds.length }} user dipilih</span>
+            <button
+              @click="addMember"
+              :disabled="!addMemberIds.length || memberSaving"
+              class="btn-primary text-sm disabled:opacity-50"
+            >{{ memberSaving ? 'Menambah…' : `Tambah ${addMemberIds.length ? `(${addMemberIds.length})` : ''}` }}</button>
+          </div>
         </div>
 
         <!-- Search member -->
@@ -548,7 +565,8 @@ onMounted(async () => {
 
 // ── Members tab ──────────────────────────────────────────────────────────────
 const members = ref<any[]>([])
-const addMemberId = ref<number | ''>('')
+const addMemberIds = ref<number[]>([])
+const addMemberSearch = ref('')
 const memberSaving = ref(false)
 const memberSearch = ref('')
 const memberPage = ref(1)
@@ -557,7 +575,12 @@ const memberTotal = ref(0)
 const memberTotalPages = ref(1)
 
 const memberIds = computed(() => new Set(members.value.map(m => m.id)))
-const availableUsers = computed(() => allUsers.value.filter(u => !memberIds.value.has(u.id)))
+const availableUsers = computed(() => allUsers.value.filter((u: any) => !memberIds.value.has(u.id)))
+const filteredAvailableUsers = computed(() => {
+  const q = addMemberSearch.value.toLowerCase()
+  if (!q) return availableUsers.value
+  return availableUsers.value.filter((u: any) => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+})
 
 let memberSearchTimer: ReturnType<typeof setTimeout>
 function onMemberSearch() {
@@ -575,11 +598,16 @@ async function loadMembers() {
 }
 
 async function addMember() {
-  if (!addMemberId.value) return
+  if (!addMemberIds.value.length) return
   memberSaving.value = true
   try {
-    await $fetch(`/api/projects/${projectId}/members`, { method: 'POST', body: { user_id: addMemberId.value } })
-    addMemberId.value = ''
+    await Promise.all(
+      addMemberIds.value.map(uid =>
+        $fetch(`/api/projects/${projectId}/members`, { method: 'POST', body: { user_id: uid } })
+      )
+    )
+    addMemberIds.value = []
+    addMemberSearch.value = ''
     await Promise.all([loadMembers(), refreshProject()])
   } finally {
     memberSaving.value = false
