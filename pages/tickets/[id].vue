@@ -208,7 +208,7 @@
       </div><!-- end left -->
 
       <!-- RIGHT: Sidebar (1/4) -->
-      <div class="lg:col-span-1 sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto space-y-3 pl-0.5">
+      <div class="lg:col-span-1 sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden space-y-3 pl-0.5">
 
         <!-- Card 1: Assignee & Dates -->
         <div class="card p-4">
@@ -248,8 +248,8 @@
           </div>
           <div v-if="ticket.participants?.length" class="flex flex-wrap gap-1.5">
             <div v-for="p in ticket.participants" :key="p.user_id" class="flex items-center gap-1 bg-white border border-slate-200 rounded-full pl-0.5 pr-2 py-0.5 text-xs text-slate-700 shadow-sm">
-              <div class="w-4.5 h-4.5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600 overflow-hidden flex-shrink-0">
-                <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-full h-full object-cover" />
+              <div class="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600 overflow-hidden flex-shrink-0" style="min-width:1.25rem;min-height:1.25rem;">
+                <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-5 h-5 object-cover rounded-full" style="min-width:1.25rem;min-height:1.25rem;" />
                 <span v-else>{{ p.name?.charAt(0) }}</span>
               </div>
               <span class="font-medium truncate max-w-[80px]">{{ p.name }}</span>
