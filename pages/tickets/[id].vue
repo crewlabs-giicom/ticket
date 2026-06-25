@@ -163,7 +163,7 @@
           </div>
 
           <!-- Bubble -->
-          <div :class="['max-w-[72%]', r.user_id === auth.user?.id ? 'items-end' : 'items-start', 'flex flex-col gap-1']">
+          <div :class="['max-w-[72%] min-w-0 overflow-hidden', r.user_id === auth.user?.id ? 'items-end' : 'items-start', 'flex flex-col gap-1']">
             <!-- Name + timestamp -->
             <div :class="['flex items-center gap-1.5 text-[11px]', r.user_id === auth.user?.id ? 'flex-row-reverse' : 'flex-row']">
               <span class="font-semibold text-slate-700">{{ r.user_name }}</span>
@@ -180,7 +180,7 @@
                   ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-tl-sm'
                   : 'bg-slate-100 text-slate-800 rounded-tl-sm'
             ]">
-              <p class="whitespace-pre-wrap break-words" v-html="linkify(r.message)"></p>
+              <p class="whitespace-pre-wrap break-words" style="overflow-wrap: anywhere; word-break: break-word;" v-html="linkify(r.message)"></p>
 
               <!-- Response attachments -->
               <div v-if="r.attachments?.length" :class="['mt-2 flex flex-wrap gap-1.5', r.user_id === auth.user?.id ? 'justify-end' : '']">
