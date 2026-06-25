@@ -282,7 +282,7 @@ export default defineEventHandler(async (event) => {
 
     // Extend due date: activity + diskusi bubble + notifikasi
     if (extend_reason && due_date) {
-      function diffLabel(oldDate: string, newDate: string) {
+      const diffLabel = (oldDate: string, newDate: string) => {
         const diffMs = new Date(newDate).getTime() - new Date(oldDate).getTime()
         const hours = Math.round(diffMs / 3600000)
         if (hours < 24) return `${hours} jam`
