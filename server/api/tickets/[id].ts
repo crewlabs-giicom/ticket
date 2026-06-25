@@ -291,7 +291,7 @@ export default defineEventHandler(async (event) => {
         }
         const durasi = old.due_date ? `+${diffLabel(String(old.due_date), due_date)}` : ''
         const newDueFmt = due_date.slice(0, 16)
-        const label = `${user.name} memperpanjang due date${durasi ? ` ${durasi}` : ''} → ${newDueFmt}. Alasan: ${extend_reason}`
+        const label = `${user.name} memperpanjang due date${durasi ? ` ${durasi}` : ''} -> ${newDueFmt}. Alasan: ${extend_reason}`
 
         await logActivity(db, {
           entity_type: 'ticket', entity_id: Number(id),
