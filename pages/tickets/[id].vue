@@ -233,7 +233,14 @@
               <p class="text-xs font-semibold text-slate-700">{{ fmtDateTime(ticket.created_at) }}</p>
             </div>
             <div class="bg-slate-50 rounded-xl px-3 py-2.5">
-              <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Due Date</p>
+              <div class="flex items-center justify-between mb-0.5">
+                <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Due Date</p>
+                <button
+                  v-if="auth.isStaffOrAdmin && !ticket.status_is_resolved"
+                  @click="showExtendModal = true"
+                  class="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium"
+                >Perpanjang</button>
+              </div>
               <p class="text-xs font-semibold" :class="ticket.sla_breached ? 'text-red-600' : 'text-slate-700'">{{ fmtDateTime(ticket.due_date) || '—' }}</p>
             </div>
             <div v-if="ticket.resolved_at || ticket.closed_at" class="bg-emerald-50 rounded-xl px-3 py-2.5">
@@ -445,6 +452,29 @@
     </div>
   </div>
   <div v-else class="flex items-center justify-center h-48 text-slate-400">Ticket tidak ditemukan</div>
+
+  <!-- Extend Due Date Modal -->
+  <div v-if="showExtendModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showExtendModal = false">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+      <h3 class="font-semibold text-slate-800 mb-4">Perpanjang Due Date</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-500 mb-1 block">Due Date Baru <span class="text-red-500">*</span></label>
+          <input v-model="extendDate" type="datetime-local" class="input w-full text-sm" :min="todayMin" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 mb-1 block">Alasan Perpanjangan <span class="text-red-500">*</span></label>
+          <textarea v-model="extendReason" rows="3" class="input w-full resize-none text-sm" placeholder="Jelaskan alasan perpanjangan due date..." />
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-5">
+        <button @click="showExtendModal = false" class="text-sm text-slate-600 hover:text-slate-800">Batal</button>
+        <button @click="submitExtend" :disabled="!extendDate || !extendReason.trim() || extendSaving" class="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ extendSaving ? 'Menyimpan…' : 'Simpan' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -777,6 +807,30 @@ async function submitCreateTask() {
     await refresh()
   } finally {
     creatingTask.value = false
+  }
+}
+
+// Extend Due Date
+const showExtendModal = ref(false)
+const extendDate = ref('')
+const extendReason = ref('')
+const extendSaving = ref(false)
+const todayMin = computed(() => new Date().toISOString().slice(0, 16))
+
+async function submitExtend() {
+  if (!extendDate.value || !extendReason.value.trim()) return
+  extendSaving.value = true
+  try {
+    await $fetch(`/api/tickets/${id}`, {
+      method: 'PUT',
+      body: { due_date: extendDate.value, extend_reason: extendReason.value.trim() }
+    })
+    showExtendModal.value = false
+    extendDate.value = ''
+    extendReason.value = ''
+    await refresh()
+  } finally {
+    extendSaving.value = false
   }
 }
 </script>

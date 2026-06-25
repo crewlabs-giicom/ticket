@@ -164,7 +164,8 @@ export default defineEventHandler(async (event) => {
       const [[targetStatus]] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id=?', [status_id]) as any[]
       if (!targetStatus?.is_resolved) throw createError({ statusCode: 403, statusMessage: 'Customer hanya bisa menutup atau menyelesaikan ticket' })
     }
-    const due_date = body.due_date ? String(body.due_date).slice(0, 10) : body.due_date
+    const extend_reason: string | null = body.extend_reason ? String(body.extend_reason).trim() : null
+    const due_date = body.due_date ? String(body.due_date).slice(0, 19).replace('T', ' ') : body.due_date
 
     // Recalculate due_date based on new priority's SLA hours when priority changes and no explicit due_date given
     let computedDueDate = due_date || old.due_date
@@ -276,6 +277,44 @@ export default defineEventHandler(async (event) => {
           label: `Due date diperbarui otomatis ke ${computedDueDate ? String(computedDueDate).slice(0, 16) : '—'} (SLA ${newPriName})`,
           user_id: user?.id,
         })
+      }
+    }
+
+    // Extend due date: activity + diskusi bubble + notifikasi
+    if (extend_reason && due_date) {
+      function diffLabel(oldDate: string, newDate: string) {
+        const diffMs = new Date(newDate).getTime() - new Date(oldDate).getTime()
+        const hours = Math.round(diffMs / 3600000)
+        if (hours < 24) return `${hours} jam`
+        return `${Math.round(hours / 24)} hari`
+      }
+      const durasi = old.due_date ? `+${diffLabel(String(old.due_date), due_date)}` : ''
+      const newDueFmt = due_date.slice(0, 16).replace('T', ' ')
+      const label = `${user.name} memperpanjang due date${durasi ? ` ${durasi}` : ''} → ${newDueFmt}. Alasan: ${extend_reason}`
+
+      await logActivity(db, {
+        entity_type: 'ticket', entity_id: Number(id),
+        action: 'due_date_extended',
+        from_value: old.due_date ? String(old.due_date).slice(0, 19) : null,
+        to_value: due_date,
+        label,
+        user_id: user.id,
+      })
+
+      await db.execute(
+        'INSERT INTO ticket_responses (ticket_id, user_id, message, is_internal) VALUES (?, ?, ?, 1)',
+        [id, user.id, label]
+      )
+
+      const notifyIds = new Set<number>()
+      if (old.assigned_to && old.assigned_to !== user.id) notifyIds.add(old.assigned_to)
+      if (old.created_by && old.created_by !== user.id) notifyIds.add(old.created_by)
+      for (const uid of notifyIds) {
+        await db.execute(
+          'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
+          [uid, 'Due Date Diperpanjang', label, 'ticket_extended', id]
+        )
+        broadcastToUser(uid, 'notification', { title: 'Due Date Diperpanjang', message: label, type: 'ticket_extended', ticket_id: Number(id) })
       }
     }
 
