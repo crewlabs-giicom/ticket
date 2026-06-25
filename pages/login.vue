@@ -30,7 +30,34 @@
         </button>
       </form>
 
-<p class="text-center text-sm text-slate-500 mt-4">
+      <div class="relative my-4">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+        <div class="relative flex justify-center"><span class="bg-white px-2 text-xs text-slate-400">atau</span></div>
+      </div>
+
+      <button type="button" @click="showHrisForm = !showHrisForm" class="w-full flex items-center justify-center gap-2 border border-slate-300 rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 8v-3a1 1 0 011-1h2a1 1 0 011 1v3m-4 0h4" /></svg>
+        Login via HRIS giisystem
+      </button>
+
+      <div v-if="showHrisForm" class="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
+        <p class="text-xs text-blue-700 font-medium">Masuk menggunakan akun HRIS giisystem</p>
+        <div>
+          <label class="label">Email HRIS</label>
+          <input v-model="hrisForm.email" type="email" class="input" placeholder="email@giisystem.com" />
+        </div>
+        <div>
+          <label class="label">Password HRIS</label>
+          <input v-model="hrisForm.password" type="password" class="input" placeholder="••••••••" />
+        </div>
+        <p v-if="hrisError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{{ hrisError }}</p>
+        <button type="button" @click="handleHrisLogin" class="btn-primary w-full justify-center py-2.5" :disabled="hrisLoading">
+          <svg v-if="hrisLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          {{ hrisLoading ? 'Verifikasi...' : 'Masuk via HRIS' }}
+        </button>
+      </div>
+
+      <p class="text-center text-sm text-slate-500 mt-4">
         Belum punya akun?
         <NuxtLink to="/register" class="text-primary-600 hover:underline font-medium">Daftar</NuxtLink>
       </p>
@@ -49,6 +76,10 @@ const form = reactive({ email: '', password: '' })
 const showPass = ref(false)
 const error = ref('')
 
+const showHrisForm = ref(false)
+const hrisForm = reactive({ email: '', password: '' })
+const hrisError = ref('')
+const hrisLoading = ref(false)
 
 async function handleLogin() {
   error.value = ''
@@ -57,6 +88,27 @@ async function handleLogin() {
     await router.push('/')
   } catch (e: any) {
     error.value = e.message
+  }
+}
+
+async function handleHrisLogin() {
+  hrisError.value = ''
+  if (!hrisForm.email || !hrisForm.password) {
+    hrisError.value = 'Email dan password wajib diisi'
+    return
+  }
+  hrisLoading.value = true
+  try {
+    const data = await $fetch<any>('/api/auth/hris-login', {
+      method: 'POST',
+      body: { email: hrisForm.email, password: hrisForm.password },
+    })
+    auth.user = data.user
+    await router.push('/')
+  } catch (e: any) {
+    hrisError.value = e?.data?.statusMessage || 'Akun HRIS tidak ditemukan atau password salah'
+  } finally {
+    hrisLoading.value = false
   }
 }
 </script>
