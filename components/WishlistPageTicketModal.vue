@@ -27,6 +27,17 @@
           </div>
         </div>
 
+        <!-- Description editable -->
+        <div>
+          <label class="label text-sm mb-1.5">Deskripsi</label>
+          <textarea
+            v-model="form.description"
+            rows="5"
+            class="input w-full text-sm resize-none leading-relaxed"
+            placeholder="Tambahkan keterangan..."
+          />
+        </div>
+
         <!-- System Menu -->
         <div>
           <label class="label text-sm mb-1.5">Modul / Menu Sistem <span class="text-red-400">*</span></label>
@@ -94,6 +105,7 @@ const submitting = ref(false)
 const error = ref('')
 
 const form = reactive({
+  description: '',
   system_menu_id: '' as string | number,
   priority_id: '' as string | number,
   project_id: '' as string | number,
@@ -152,8 +164,7 @@ async function submit() {
   if (!projectId) { error.value = 'Project wajib diisi'; return }
 
   const noteTitle = sourceNote.value?.title || 'Catatan'
-  const description = `Dari catatan: "${noteTitle}"\n\n` +
-    selectedItems.value.map((item, idx) => `${idx + 1}. ${item.content}`).join('\n')
+  const description = form.description
 
   submitting.value = true
   try {
@@ -178,6 +189,9 @@ async function submit() {
 }
 
 onMounted(async () => {
+  form.description = selectedItems.value
+    .map((item, idx) => `${idx + 1}. ${item.content}`)
+    .join('\n')
   const res = await $fetch<any>('/api/system-menus').catch(() => null)
   systemMenus.value = res?.data || []
   if (priorities.value.length) form.priority_id = priorities.value[0].id

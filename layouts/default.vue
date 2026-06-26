@@ -256,15 +256,21 @@ watch(() => auth.user?.role, () => {
   loadMenus()
 }, { immediate: true })
 
+const dynamicTitle = useState<string | null>('page-title', () => null)
+watch(() => route.path, () => { dynamicTitle.value = null })
+
 const pageTitle = computed(() => {
+  if (dynamicTitle.value) return dynamicTitle.value
   const titles: Record<string, string> = {
     '/': 'Dashboard', '/tickets': 'Tickets', '/tasks': 'Tasks', '/projects': 'Projects',
     '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Reports',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
     '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
-    '/notifications': 'Notifikasi', '/profile': 'Profil Saya'
+    '/notifications': 'Notifikasi', '/profile': 'Profil Saya', '/wishlist': 'Catatan',
   }
-  return titles[route.path] || 'Shadow Care'
+  if (titles[route.path]) return titles[route.path]
+  const parts = route.path.split('/').filter(Boolean)
+  return parts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' › ')
 })
 
 const initials = computed(() => auth.user?.name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U')

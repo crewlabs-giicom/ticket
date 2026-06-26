@@ -132,7 +132,15 @@
     </div>
 
     <!-- Footer: create ticket CTA -->
-    <div v-if="isThisSelectMode" class="px-3 py-2 border-t border-yellow-300/50">
+    <div v-if="isThisSelectMode" class="px-3 py-2 border-t border-yellow-300/50 space-y-1.5">
+      <div class="flex items-center justify-between">
+        <button @click="selectAll" class="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors">
+          Pilih Semua ({{ note.items.length }})
+        </button>
+        <button v-if="store.selectedItemIds.size > 0" @click="store.deselectAll()" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          Batalkan
+        </button>
+      </div>
       <button
         v-if="store.selectedItemIds.size > 0"
         @click="store.openTicketModal(note.id)"
@@ -186,6 +194,10 @@ function toggleSelect() {
   store.toggleSelectMode(props.note.id)
 }
 
+function selectAll() {
+  store.selectAll(props.note.id)
+}
+
 function onTitleBlur(e: Event) {
   const val = (e.target as HTMLInputElement).value.trim()
   if (val !== props.note.title) {
@@ -228,10 +240,13 @@ async function addNewItem() {
   pendingFocusId.value = newItem.id
 }
 
+const { confirmDelete } = useConfirm()
 async function onDelete() {
-  if (confirm(`Hapus catatan "${props.note.title}"?`)) {
-    await store.deleteNote(props.note.id)
-  }
+  const ok = await confirmDelete(
+    'Catatan dan semua itemnya akan dihapus permanen.',
+    `Hapus "${props.note.title}"?`
+  )
+  if (ok) await store.deleteNote(props.note.id)
 }
 
 watch(() => props.note.items.length, async () => {

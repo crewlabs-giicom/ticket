@@ -157,6 +157,16 @@ export const useWishlistStore = defineStore('wishlist', () => {
     selectedItemIds.value = new Set(selectedItemIds.value)
   }
 
+  function selectAll(noteId: number) {
+    const note = notes.value.find(n => n.id === noteId)
+    if (!note) return
+    selectedItemIds.value = new Set(note.items.map(i => i.id))
+  }
+
+  function deselectAll() {
+    selectedItemIds.value = new Set()
+  }
+
   return {
     notes, loading, focusedNoteId,
     pinnedNotes, totalUnchecked,
@@ -165,6 +175,7 @@ export const useWishlistStore = defineStore('wishlist', () => {
     pinNote, unpinNote, savePinPosition, toggleMinimize,
     addItem, updateItem, deleteItem, toggleCheck,
     openTicketModal, closeTicketModal, toggleSelectMode, toggleItemSelect,
+    selectAll, deselectAll,
   }
 }, {
   persist: {

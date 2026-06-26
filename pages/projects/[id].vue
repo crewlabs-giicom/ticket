@@ -548,6 +548,9 @@ function setTab(key: TabKey) {
 const { data: projectRes, refresh: refreshProject, pending: projectPending } = await useFetch(`/api/projects/${projectId}`)
 const project = computed(() => (projectRes.value as any)?.data ?? null)
 
+const dynamicTitle = useState<string | null>('page-title')
+watch(project, (p) => { if (p?.name) dynamicTitle.value = p.name }, { immediate: true })
+
 const taskProgress = computed(() => {
   const total = project.value?.task_count ?? 0
   const done = project.value?.task_done ?? 0
