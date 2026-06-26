@@ -5,6 +5,7 @@
   <ClientOnly><ToastContainer /></ClientOnly>
   <ClientOnly><TicketChatWidget /></ClientOnly>
   <ClientOnly><TimerWidget /></ClientOnly>
+  <ClientOnly><WishlistPinnedNotes /></ClientOnly>
 </template>
 
 <script setup lang="ts">

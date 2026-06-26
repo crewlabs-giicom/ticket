@@ -76,6 +76,23 @@
           <span class="text-amber-300">·</span>
           <button @click="clearQueue" class="underline hover:no-underline text-amber-500">Clear</button>
         </div>
+        <!-- Wishlist shortcut in header -->
+        <NuxtLink
+          to="/wishlist"
+          class="relative p-2 text-slate-500 hover:bg-yellow-50 hover:text-yellow-600 rounded-lg transition-colors"
+          title="Catatan"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
+                 M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2
+                 M9 12h6M9 16h4" />
+          </svg>
+          <span
+            v-if="wishlist.totalUnchecked > 0"
+            class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-yellow-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold"
+          >{{ wishlist.totalUnchecked > 9 ? '9+' : wishlist.totalUnchecked }}</span>
+        </NuxtLink>
         <div class="relative" ref="notifRef">
           <button @click="notifOpen = !notifOpen" class="relative p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -151,6 +168,7 @@ import { resolveComponent, computed } from 'vue'
 const auth = useAuthStore()
 const notif = useNotifStore()
 const tabs = useTabStore()
+const wishlist = useWishlistStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -206,6 +224,7 @@ function fallbackMenus(role?: string) {
     { id: 'f4', name: 'Tickets', path: '/tickets', icon: 'ticket' },
     { id: 'f4n', name: 'Notifikasi', path: '/notifications', icon: 'bell' },
     { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar' },
+    { id: 'f-wishlist', name: 'Catatan', path: '/wishlist', icon: 'clipboard' },
   ]
   if (role === 'admin') {
     return [
@@ -279,6 +298,7 @@ function getIcon(name: string) {
     menu: resolveComponent('IconMenu'),
     bell: resolveComponent('IconBell'),
     'check-square': resolveComponent('IconTicket'), // reuse ticket icon for tasks
+    clipboard: resolveComponent('IconClipboard'),
   }
   return icons[name] || resolveComponent('IconDashboard')
 }
@@ -307,6 +327,7 @@ onMounted(async () => {
   if (auth.user) {
     await tabs.loadPinnedTabs()
     await tabs.loadPinnedPageTabs()
+    wishlist.fetchNotes()
   }
 })
 onUnmounted(() => notif.disconnectSSE())

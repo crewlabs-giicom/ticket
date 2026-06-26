@@ -419,6 +419,36 @@ async function migrate(db: mysql.Pool) {
       FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
     )
   `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS wishlists (
+      id         INT AUTO_INCREMENT PRIMARY KEY,
+      user_id    INT NOT NULL,
+      title      VARCHAR(255) NOT NULL DEFAULT 'Catatan',
+      color      VARCHAR(20)  NOT NULL DEFAULT '#fef08a',
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_wl_user (user_id)
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS wishlist_items (
+      id          INT AUTO_INCREMENT PRIMARY KEY,
+      wishlist_id INT NOT NULL,
+      content     TEXT NOT NULL,
+      is_checked  TINYINT(1) NOT NULL DEFAULT 0,
+      order_index INT NOT NULL DEFAULT 0,
+      created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (wishlist_id) REFERENCES wishlists(id) ON DELETE CASCADE,
+      INDEX idx_wli_wishlist (wishlist_id)
+    )
+  `)
+  // Add pin columns to wishlists (safe to run multiple times)
+  await db.execute(`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS is_pinned TINYINT(1) NOT NULL DEFAULT 0`).catch(() => {})
+  await db.execute(`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS pin_x INT DEFAULT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS pin_y INT DEFAULT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS is_minimized TINYINT(1) NOT NULL DEFAULT 0`).catch(() => {})
 }
 
 async function seed(db: mysql.Pool) {
