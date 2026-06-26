@@ -49,5 +49,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 const store = useWishlistStore()
-if (!store.notes.length) await store.fetchNotes()
+onMounted(async () => {
+  if (!store.notes.length) await store.fetchNotes()
+})
 </script>

@@ -47,6 +47,8 @@ export const useWishlistStore = defineStore('wishlist', () => {
     try {
       const res = await $fetch<{ success: boolean; data: Wishlist[] }>('/api/wishlists')
       notes.value = res.data
+    } catch {
+      // silently ignore (e.g. 401 on first load before auth ready)
     } finally {
       loading.value = false
     }
