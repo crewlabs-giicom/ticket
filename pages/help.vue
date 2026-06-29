@@ -186,6 +186,28 @@ const customerSections = [
       },
     ],
   },
+  {
+    icon: '📝',
+    title: 'Catatan & Wishlist',
+    items: [
+      {
+        q: 'Apa itu fitur Catatan?',
+        a: 'Catatan adalah ruang pribadi untuk menyimpan ide, daftar tugas, atau wishlist fitur. Setiap catatan bisa diisi item checklist, diberi warna berbeda, dan tetap tersimpan sampai Anda hapus sendiri.',
+      },
+      {
+        q: 'Bagaimana cara membuat catatan baru?',
+        a: 'Buka menu <strong>Catatan</strong> di sidebar, lalu klik tombol <strong>+ Catatan Baru</strong>. Anda bisa langsung menulis judul dan menambahkan item-item di dalamnya.',
+      },
+      {
+        q: 'Apa itu pin catatan?',
+        a: 'Pin catatan menampilkan catatan sebagai widget mengambang di layar. Di desktop bisa di-drag ke mana saja; di mobile tampil sebagai bar di bawah layar yang bisa diketuk untuk membuka.',
+      },
+      {
+        q: 'Bisakah membuat tiket langsung dari catatan?',
+        a: 'Bisa! Klik ikon pilih item di catatan, centang item yang ingin dijadikan tiket, lalu klik <strong>Buat Tiket</strong>. Anda bisa edit deskripsi, pilih modul, dan priority sebelum submit.',
+      },
+    ],
+  },
 ]
 
 const staffSections = [
@@ -346,6 +368,29 @@ const staffSections = [
       {
         q: 'Cara mengubah due date lewat kalender',
         a: 'Seret event di kalender ke tanggal baru. Perubahan due date tersimpan otomatis.',
+      },
+    ],
+  },
+  {
+    icon: '📝',
+    title: 'Catatan & Wishlist',
+    adminOnly: false,
+    items: [
+      {
+        q: 'Apa itu fitur Catatan?',
+        a: 'Catatan adalah ruang pribadi untuk menyimpan ide, daftar tugas, atau wishlist fitur. Setiap catatan bisa diisi item checklist, diberi warna berbeda, dan tetap tersimpan sampai kamu hapus sendiri.',
+      },
+      {
+        q: 'Bagaimana cara membuat catatan baru?',
+        a: 'Buka menu <strong>Catatan</strong> di sidebar, lalu klik tombol <strong>+ Catatan Baru</strong>. Kamu bisa langsung menulis judul dan menambahkan item-item di dalamnya.',
+      },
+      {
+        q: 'Apa itu pin catatan?',
+        a: 'Pin catatan menampilkan catatan sebagai widget mengambang di layar. Di desktop bisa di-drag ke mana saja; di mobile tampil sebagai bar di bawah layar yang bisa diketuk untuk membuka.',
+      },
+      {
+        q: 'Bisakah membuat tiket langsung dari catatan?',
+        a: 'Bisa! Klik ikon pilih item di catatan, centang item yang ingin dijadikan tiket, lalu klik <strong>Buat Tiket</strong>. Kamu bisa edit deskripsi, pilih modul, dan priority sebelum submit.',
       },
     ],
   },

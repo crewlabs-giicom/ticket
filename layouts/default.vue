@@ -321,6 +321,7 @@ function navLinkId(path: string) {
     '/calendar': 'nav-link-calendar',
     '/reports': 'nav-link-reports',
     '/workload': 'nav-link-workload',
+    '/wishlist': 'sidebar-catatan',
   }
   return map[path] || undefined
 }

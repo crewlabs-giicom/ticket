@@ -74,11 +74,17 @@
         <p v-if="ticket.description" class="mt-4 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{{ ticket.description }}</p>
 
         <!-- Task link -->
-        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3">
-          <NuxtLink v-if="ticket.task_id" :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            Task: {{ ticket.task_title || ticket.task_id }}
-          </NuxtLink>
+        <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 flex-wrap">
+          <template v-if="ticket.task_id">
+            <NuxtLink :to="`/tasks`" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded-lg text-xs transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              Task: {{ ticket.task_title || ticket.task_id }}
+            </NuxtLink>
+            <button @click="openTaskPanel" :disabled="taskPanelLoading" class="inline-flex items-center gap-1 text-slate-500 hover:text-violet-600 border border-slate-200 hover:border-violet-300 px-2.5 py-1 rounded-lg text-xs transition-colors disabled:opacity-50">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10h3m-3 4h3m-6 0h.01M10 10h.01"/></svg>
+              {{ taskPanelLoading ? 'Memuat...' : 'Buka Detail' }}
+            </button>
+          </template>
           <button v-else-if="auth.isStaffOrAdmin" @click="showCreateTaskModal = true" class="inline-flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg text-xs transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Buat Task
@@ -451,7 +457,10 @@
       </div>
     </div>
   </div>
-  <div v-else class="flex items-center justify-center h-48 text-slate-400">Ticket tidak ditemukan</div>
+  <!-- Task Detail Panel -->
+  <TaskDetailPanel v-if="showTaskPanel && taskPanelData" :task="taskPanelData" @close="showTaskPanel = false" />
+
+  <div v-if="!ticket" class="flex items-center justify-center h-48 text-slate-400">Ticket tidak ditemukan</div>
 
   <!-- Extend Due Date Modal -->
   <div v-if="showExtendModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showExtendModal = false">
@@ -773,6 +782,23 @@ async function addParticipant(u: any) {
 async function removeParticipant(userId: number) {
   await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { _action: 'participant_remove', user_id: userId } })
   await refresh()
+}
+
+// Task Detail Panel
+const showTaskPanel = ref(false)
+const taskPanelData = ref<any>(null)
+const taskPanelLoading = ref(false)
+
+async function openTaskPanel() {
+  if (!ticket.value?.task_id) return
+  taskPanelLoading.value = true
+  try {
+    const res = await $fetch<any>(`/api/tasks/${ticket.value.task_id}`)
+    taskPanelData.value = res
+    showTaskPanel.value = true
+  } finally {
+    taskPanelLoading.value = false
+  }
 }
 
 // Create Task from Ticket

@@ -69,6 +69,16 @@ export function useTour() {
       },
     },
     {
+      element: '#sidebar-catatan',
+      popover: {
+        title: '📝 Catatan Pribadi',
+        description:
+          'Simpan ide atau daftar permintaan fitur di <b>Catatan</b>. Setiap catatan bisa diisi checklist item dan di-<b>pin</b> sebagai widget di layar. Item catatan juga bisa langsung dijadikan tiket baru.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
       element: '#sidebar-user-profile',
       popover: {
         title: '👤 Profil Anda',
@@ -176,6 +186,16 @@ export function useTour() {
         title: '📅 Kalender',
         description:
           'Tampilan kalender menggabungkan semua task & tiket berdasarkan <b>due date</b>. Anda bisa drag event untuk mengubah jadwal.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
+      element: '#sidebar-catatan',
+      popover: {
+        title: '📝 Catatan Pribadi',
+        description:
+          'Buat catatan atau wishlist fitur yang perlu kamu ingat. Setiap catatan bisa diisi checklist item, diberi warna, dan di-<b>pin</b> sebagai widget mengambang di layar. Item catatan juga bisa langsung dijadikan tiket baru.',
         side: 'right' as const,
         align: 'center' as const,
       },

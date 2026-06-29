@@ -1,47 +1,57 @@
 <template>
-  <div class="space-y-4">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex flex-wrap items-center gap-2">
-        <input v-model="filters.search" class="input w-48" placeholder="Cari ticket..." />
-        <AppMultiSelect
-          v-model="filters.status_ids"
-          :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
-          placeholder="Semua Status"
-          class="w-44"
-        />
-        <AppMultiSelect
-          v-model="filters.priority_ids"
-          :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
-          placeholder="Semua Priority"
-          class="w-44"
-        />
-        <AppSelect
-          v-model="filters.project_id"
-          :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-          placeholder="Semua Project"
-          class="w-52"
-        />
-        <AppSelect
-          v-if="auth.isStaffOrAdmin"
-          v-model="filters.assigned_to"
-          :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-          placeholder="Semua Assignee"
-          class="w-44"
-        />
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs text-slate-500">Dari</span>
-          <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 w-36" />
-          <span class="text-xs text-slate-500">s/d</span>
-          <input v-model="filters.date_to" type="date" class="input text-xs py-1.5 w-36" />
-        </div>
-      </div>
+  <div class="space-y-3">
+    <!-- Top bar -->
+    <div class="flex items-center justify-between gap-2">
+      <button @click="showFilters = !showFilters" class="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 bg-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+        Filter
+        <span v-if="activeFilterCount" class="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-indigo-600 text-white rounded-full">{{ activeFilterCount }}</span>
+        <svg class="w-3 h-3 transition-transform" :class="showFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="refreshing" @click="handleRefresh" />
         <button @click="showForm = true" class="btn-primary">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
           Ticket Baru
         </button>
+      </div>
+    </div>
+
+    <!-- Filter Card (collapsible) -->
+    <div v-if="showFilters" class="card p-3">
+      <div class="flex flex-wrap gap-2">
+        <input v-model="filters.search" class="input w-full sm:w-48" placeholder="Cari ticket..." />
+        <AppMultiSelect
+          v-model="filters.status_ids"
+          :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
+          placeholder="Semua Status"
+          class="w-full sm:w-44"
+        />
+        <AppMultiSelect
+          v-model="filters.priority_ids"
+          :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
+          placeholder="Semua Priority"
+          class="w-full sm:w-44"
+        />
+        <AppSelect
+          v-model="filters.project_id"
+          :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+          placeholder="Semua Project"
+          class="w-full sm:w-52"
+        />
+        <AppSelect
+          v-if="auth.isStaffOrAdmin"
+          v-model="filters.assigned_to"
+          :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+          placeholder="Semua Assignee"
+          class="w-full sm:w-44"
+        />
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs text-slate-500">Dari</span>
+          <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 w-36" />
+          <span class="text-xs text-slate-500">s/d</span>
+          <input v-model="filters.date_to" type="date" class="input text-xs py-1.5 w-36" />
+        </div>
       </div>
     </div>
 
@@ -68,7 +78,13 @@
                 <div class="flex items-start gap-2">
                   <span v-if="t.sla_breached" class="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0 animate-pulse" />
                   <div>
+                    <div class="flex items-center gap-1.5">
                     <p class="font-medium text-slate-900 text-xs">{{ t.ticket_number }}</p>
+                    <span v-if="t.task_id" class="inline-flex items-center gap-0.5 text-[9px] font-medium bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                      <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                      Task
+                    </span>
+                  </div>
                     <p class="text-slate-600 text-xs mt-0.5 line-clamp-1 max-w-xs">{{ t.title }}</p>
                     <div class="flex items-center gap-2 mt-1 md:hidden">
                       <span class="badge text-white text-[10px]" :style="{ background: t.status_color }">{{ t.status_name }}</span>
@@ -117,8 +133,19 @@ const { fmtDate } = useDate()
 const tabs = useTabStore()
 const auth = useAuthStore()
 const showForm = ref(false)
+const showFilters = ref(true)
 const loading = ref(false)
 const tickets = ref<any[]>([])
+
+const activeFilterCount = computed(() => {
+  let n = 0
+  if (filters.search) n++
+  if (filters.status_ids.length) n++
+  if (filters.priority_ids.length) n++
+  if (filters.project_id) n++
+  if (filters.assigned_to) n++
+  return n
+})
 
 const today = new Date()
 const oneMonthAgo = new Date(today)
