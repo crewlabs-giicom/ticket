@@ -33,16 +33,25 @@ export default defineEventHandler(async (event) => {
     timelogParams
   ) as any[]
 
-  // Tickets handled today — unique per ticket, from responses, chat messages, or resolved today
-  const taParams: any[] = [date]
-  let respExistsCond = 'DATE(tr.created_at) = ?'
-  if (effectiveUserId) { respExistsCond += ' AND tr.user_id = ?'; taParams.push(effectiveUserId) }
+  // Tickets handled today — unique per ticket
+  // Sources: ticket_responses, ticket_messages, or resolved today (filtered per user if set)
+  const taParams: any[] = []
 
+  // 1. Responses today
+  let respSub = 'SELECT ticket_id FROM ticket_responses WHERE DATE(created_at) = ?'
   taParams.push(date)
-  let chatExistsCond = 'DATE(tm.created_at) = ?'
-  if (effectiveUserId) { chatExistsCond += ' AND tm.sender_id = ?'; taParams.push(effectiveUserId) }
+  if (effectiveUserId) { respSub += ' AND user_id = ?'; taParams.push(effectiveUserId) }
 
+  // 2. Chat messages today
+  let chatSub = 'SELECT ticket_id FROM ticket_messages WHERE DATE(created_at) = ?'
   taParams.push(date)
+  if (effectiveUserId) { chatSub += ' AND sender_id = ?'; taParams.push(effectiveUserId) }
+
+  // 3. Resolved today (if user selected: only if they are the assignee)
+  let resolvedSub = 'SELECT id FROM tickets WHERE DATE(resolved_at) = ?'
+  taParams.push(date)
+  if (effectiveUserId) { resolvedSub += ' AND assigned_to = ?'; taParams.push(effectiveUserId) }
+
   let staffProjectFilter = ''
   if (user.role === 'staff') {
     staffProjectFilter = ' AND tk.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
@@ -55,10 +64,12 @@ export default defineEventHandler(async (event) => {
      FROM tickets tk
      LEFT JOIN projects p ON p.id = tk.project_id
      LEFT JOIN users u ON u.id = tk.assigned_to
-     WHERE (
-       EXISTS (SELECT 1 FROM ticket_responses tr WHERE tr.ticket_id = tk.id AND ${respExistsCond})
-       OR EXISTS (SELECT 1 FROM ticket_messages tm WHERE tm.ticket_id = tk.id AND ${chatExistsCond})
-       OR DATE(tk.resolved_at) = ?
+     WHERE tk.id IN (
+       ${respSub}
+       UNION
+       ${chatSub}
+       UNION
+       ${resolvedSub}
      )${staffProjectFilter}
      ORDER BY tk.resolved_at IS NULL ASC, tk.resolved_at DESC, tk.id DESC`,
     taParams
