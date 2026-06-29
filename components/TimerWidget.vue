@@ -169,4 +169,15 @@ async function stop() {
   }
 }
 </script>
+
+<style scoped>
+.timer-widget-enter-active,
+.timer-widget-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.timer-widget-enter-from,
+.timer-widget-leave-to {
+  opacity: 0;
+  transform: translateY(12px) scale(0.95);
+}
 </style>
