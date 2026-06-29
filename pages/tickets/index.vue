@@ -18,39 +18,62 @@
     </div>
 
     <!-- Filter Card (collapsible) -->
-    <div v-if="showFilters" class="card p-3">
-      <div class="flex flex-wrap gap-2">
-        <input v-model="filters.search" class="input w-full sm:w-48" placeholder="Cari ticket..." />
-        <AppMultiSelect
-          v-model="filters.status_ids"
-          :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
-          placeholder="Semua Status"
-          class="w-full sm:w-44"
-        />
-        <AppMultiSelect
-          v-model="filters.priority_ids"
-          :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
-          placeholder="Semua Priority"
-          class="w-full sm:w-44"
-        />
-        <AppSelect
-          v-model="filters.project_id"
-          :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-          placeholder="Semua Project"
-          class="w-full sm:w-52"
-        />
-        <AppSelect
-          v-if="auth.isStaffOrAdmin"
-          v-model="filters.assigned_to"
-          :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-          placeholder="Semua Assignee"
-          class="w-full sm:w-44"
-        />
-        <div class="flex items-center gap-1.5 flex-wrap">
-          <span class="text-xs text-slate-500">Dari</span>
-          <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 w-36" />
-          <span class="text-xs text-slate-500">s/d</span>
-          <input v-model="filters.date_to" type="date" class="input text-xs py-1.5 w-36" />
+    <div v-if="showFilters" class="card p-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-3">
+        <!-- Pencarian -->
+        <div class="flex flex-col gap-1">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Pencarian</label>
+          <input v-model="filters.search" class="input text-sm" placeholder="Cari judul / nomor..." />
+        </div>
+
+        <!-- Status -->
+        <div class="flex flex-col gap-1">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Status</label>
+          <AppMultiSelect
+            v-model="filters.status_ids"
+            :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
+            placeholder="Semua Status"
+          />
+        </div>
+
+        <!-- Priority -->
+        <div class="flex flex-col gap-1">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Priority</label>
+          <AppMultiSelect
+            v-model="filters.priority_ids"
+            :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
+            placeholder="Semua Priority"
+          />
+        </div>
+
+        <!-- Project -->
+        <div class="flex flex-col gap-1">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Project</label>
+          <AppSelect
+            v-model="filters.project_id"
+            :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+            placeholder="Semua Project"
+          />
+        </div>
+
+        <!-- Assignee (staff only) -->
+        <div v-if="auth.isStaffOrAdmin" class="flex flex-col gap-1">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Assignee</label>
+          <AppSelect
+            v-model="filters.assigned_to"
+            :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            placeholder="Semua Assignee"
+          />
+        </div>
+
+        <!-- Tanggal -->
+        <div class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Tanggal Dibuat</label>
+          <div class="flex items-center gap-1.5">
+            <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
+            <span class="text-xs text-slate-400 flex-shrink-0">—</span>
+            <input v-model="filters.date_to" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
+          </div>
         </div>
       </div>
     </div>
