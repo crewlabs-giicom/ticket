@@ -291,6 +291,8 @@ watch(() => route.path, (path) => {
 
 function isActive(path: string) {
   if (path === '/') return route.path === '/'
+  // Exact match untuk path yang punya sub-routes di nav (agar tidak double-active)
+  if (path === '/reports') return route.path === '/reports'
   return route.path.startsWith(path)
 }
 
