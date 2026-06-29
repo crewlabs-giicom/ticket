@@ -305,12 +305,7 @@ const reportText = computed(() => {
 
   if (ticketActivities.value.length) {
     lines.push('Ticket yang ditangani:')
-    const byTicket = new Map<number, any>()
-    for (const ta of ticketActivities.value) {
-      if (!byTicket.has(ta.ticket_id)) byTicket.set(ta.ticket_id, { ...ta, types: [] as string[] })
-      byTicket.get(ta.ticket_id)!.types.push(ta.is_internal ? 'Internal note' : 'Replied')
-    }
-    for (const [, tk] of byTicket) {
+    for (const tk of ticketActivities.value) {
       const who = filters.user_id === '' ? ` (${tk.user_name})` : ''
       lines.push(`• ${tk.ticket_number} ${tk.ticket_title}${who}`)
     }

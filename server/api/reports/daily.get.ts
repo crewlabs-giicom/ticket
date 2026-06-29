@@ -33,34 +33,42 @@ export default defineEventHandler(async (event) => {
     timelogParams
   ) as any[]
 
-  // Ticket responses for the day
-  const respParams: any[] = [date]
-  let respWhere = 'DATE(tr.created_at) = ?'
-  if (effectiveUserId) { respWhere += ' AND tr.user_id = ?'; respParams.push(effectiveUserId) }
+  // Tickets handled today — unique per ticket, from responses, chat messages, or resolved today
+  const taParams: any[] = [date]
+  let respExistsCond = 'DATE(tr.created_at) = ?'
+  if (effectiveUserId) { respExistsCond += ' AND tr.user_id = ?'; taParams.push(effectiveUserId) }
 
+  taParams.push(date)
+  let chatExistsCond = 'DATE(tm.created_at) = ?'
+  if (effectiveUserId) { chatExistsCond += ' AND tm.sender_id = ?'; taParams.push(effectiveUserId) }
+
+  taParams.push(date)
+  let staffProjectFilter = ''
   if (user.role === 'staff') {
-    respWhere += ' AND tk.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
-    respParams.push(user.id)
+    staffProjectFilter = ' AND tk.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
+    taParams.push(user.id)
   }
 
   const [ticketActivities] = await db.execute(
-    `SELECT tr.id, tr.ticket_id, tr.created_at,
-            tk.ticket_number, tk.title as ticket_title, tk.resolved_at,
-            p.name as project_name, u.name as user_name
-     FROM ticket_responses tr
-     LEFT JOIN tickets tk ON tk.id = tr.ticket_id
+    `SELECT tk.id as ticket_id, tk.ticket_number, tk.title as ticket_title,
+            tk.resolved_at, p.name as project_name, u.name as user_name
+     FROM tickets tk
      LEFT JOIN projects p ON p.id = tk.project_id
-     LEFT JOIN users u ON u.id = tr.user_id
-     WHERE ${respWhere}
-     ORDER BY tr.created_at ASC`,
-    respParams
+     LEFT JOIN users u ON u.id = tk.assigned_to
+     WHERE (
+       EXISTS (SELECT 1 FROM ticket_responses tr WHERE tr.ticket_id = tk.id AND ${respExistsCond})
+       OR EXISTS (SELECT 1 FROM ticket_messages tm WHERE tm.ticket_id = tk.id AND ${chatExistsCond})
+       OR DATE(tk.resolved_at) = ?
+     )${staffProjectFilter}
+     ORDER BY tk.resolved_at IS NULL ASC, tk.resolved_at DESC, tk.id DESC`,
+    taParams
   ) as any[]
 
   const tlArr = timelogs as any[]
   const taArr = ticketActivities as any[]
   const totalTaskSeconds = tlArr.reduce((s: number, r: any) => s + Number(r.duration_seconds || 0), 0)
   const uniqueTasks = new Set(tlArr.map((r: any) => r.task_id)).size
-  const uniqueTickets = new Set(taArr.map((r: any) => r.ticket_id)).size
+  const uniqueTickets = taArr.length
 
   let selectedUser: any = null
   if (userId) {
