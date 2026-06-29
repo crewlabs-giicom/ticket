@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <Transition name="timer-widget">
     <div
       v-if="store.hasTimer"
@@ -100,67 +100,73 @@ function formatSeconds(s: number) {
   return `${sec}s`
 }
 
+const apiBase = computed(() =>
+  store.timerType === 'ticket'
+    ? `/api/tickets/${store.ticketId}/timelogs`
+    : `/api/tasks/${store.taskId}/timelogs`
+)
+
+const storageKey = computed(() =>
+  store.timerType === 'ticket'
+    ? `ticket_timer_${store.ticketId}`
+    : `task_timer_${store.taskId}`
+)
+
 async function pause() {
-  if (!store.taskId || !store.logId) return
+  if (!store.logId) return
   busy.value = true
   try {
     const currentElapsed = store.elapsed
-    await $fetch(`/api/tasks/${store.taskId}/timelogs?log_id=${store.logId}`, { method: 'PUT' })
-    // Update localStorage paused state
-    localStorage.setItem(`task_timer_${store.taskId}`, JSON.stringify({
+    await $fetch(`${apiBase.value}?log_id=${store.logId}`, { method: 'PUT' })
+    localStorage.setItem(storageKey.value, JSON.stringify({
       paused: true,
       taskName: store.taskName,
       ticketTitle: store.ticketTitle,
       pausedElapsed: currentElapsed,
     }))
-    store.setPaused(store.taskId, store.taskName, store.ticketTitle, currentElapsed)
+    if (store.timerType === 'ticket') {
+      store.setPausedTicket(store.ticketId!, store.taskName, store.ticketTitle, currentElapsed)
+    } else {
+      store.setPaused(store.taskId!, store.taskName, store.ticketTitle, currentElapsed)
+    }
   } finally {
     busy.value = false
   }
 }
 
 async function resume() {
-  if (!store.taskId) return
   busy.value = true
   try {
-    const taskId = store.taskId
+    const entityId = store.timerType === 'ticket' ? store.ticketId! : store.taskId!
     const taskName = store.taskName
     const ticketTitle = store.ticketTitle
-    localStorage.removeItem(`task_timer_${taskId}`)
-    const res = await $fetch<any>(`/api/tasks/${taskId}/timelogs`, { method: 'POST' })
+    localStorage.removeItem(storageKey.value)
+    const res = await $fetch<any>(apiBase.value, { method: 'POST' })
     const startedAt = new Date(res.data.started_at)
-    localStorage.setItem(`task_timer_${taskId}`, JSON.stringify({ logId: res.data.id, start: res.data.started_at }))
-    store.setActive(taskId, taskName, ticketTitle, res.data.id, startedAt)
+    localStorage.setItem(storageKey.value, JSON.stringify({ logId: res.data.id, start: res.data.started_at }))
+    if (store.timerType === 'ticket') {
+      store.setActiveTicket(entityId, taskName, ticketTitle, res.data.id, startedAt)
+    } else {
+      store.setActive(entityId, taskName, ticketTitle, res.data.id, startedAt)
+    }
   } finally {
     busy.value = false
   }
 }
 
 async function stop() {
-  if (!store.taskId) return
   busy.value = true
   try {
-    const taskId = store.taskId
     const logId = store.logId
-    localStorage.removeItem(`task_timer_${taskId}`)
+    const url = apiBase.value  // save before clearActive wipes timerType/ticketId
+    localStorage.removeItem(storageKey.value)
     store.clearActive()
     if (logId) {
-      await $fetch(`/api/tasks/${taskId}/timelogs?log_id=${logId}`, { method: 'PUT' })
+      await $fetch(`${url}?log_id=${logId}`, { method: 'PUT' })
     }
   } finally {
     busy.value = false
   }
 }
 </script>
-
-<style scoped>
-.timer-widget-enter-active,
-.timer-widget-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.timer-widget-enter-from,
-.timer-widget-leave-to {
-  opacity: 0;
-  transform: translateY(12px) scale(0.95);
-}
 </style>

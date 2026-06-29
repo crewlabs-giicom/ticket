@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="ticket" class="max-w-7xl mx-auto">
     <!-- Two-column layout -->
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
@@ -266,6 +266,43 @@
             <div v-else class="bg-slate-50 rounded-xl px-3 py-2.5">
               <p class="text-[10px] text-slate-400 uppercase tracking-wide font-medium mb-0.5">Resolved</p>
               <p class="text-xs text-slate-400">Ongoing</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Tracker — staff only, hidden when resolved -->
+        <div v-if="auth.isStaffOrAdmin && !ticket.status_is_resolved" class="card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Time Tracker</h3>
+              <p class="text-[10px] text-slate-400 mt-0.5">Total: {{ timer.totalFormatted.value }}</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button
+                v-if="!timer.isRunning.value && !timer.isPaused.value"
+                @click="startTimer"
+                :disabled="timer.loading.value"
+                class="text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium transition-colors disabled:opacity-40"
+              >▶ Mulai</button>
+              <template v-if="timer.isRunning.value">
+                <button @click="timer.pause()" class="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">⏸ Jeda</button>
+                <button @click="timer.stop()" class="text-xs px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">■ Stop</button>
+              </template>
+              <template v-if="timer.isPaused.value">
+                <button @click="timer.resume()" class="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">▶ Lanjut</button>
+                <button @click="timer.stop()" class="text-xs px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">■ Stop</button>
+              </template>
+            </div>
+          </div>
+          <div
+            v-if="timer.isRunning.value || timer.isPaused.value"
+            class="text-center py-1.5 font-mono text-xl font-bold tabular-nums"
+            :class="timer.isRunning.value ? 'text-emerald-600' : 'text-amber-500'"
+          >{{ timer.isPaused.value ? timer.formatSeconds(timer.elapsed.value) : timer.elapsedFormatted.value }}</div>
+          <div v-if="(timer.timelogs.value as any[]).length" class="space-y-1 max-h-28 overflow-y-auto">
+            <div v-for="log in (timer.timelogs.value as any[]).slice(0, 5)" :key="log.id" class="flex items-center justify-between text-[11px] text-slate-500">
+              <span class="truncate max-w-[100px]">{{ log.user_name }}</span>
+              <span class="font-mono text-slate-600">{{ timer.formatSeconds(log.duration_seconds) }}</span>
             </div>
           </div>
         </div>
@@ -601,9 +638,9 @@ const replyStatusOptions = computed(() => {
     // Staff: active statuses (is_resolved=0) selain yang sedang aktif
     return statuses.value.filter((s: any) => !s.is_resolved && s.id !== currentId)
   } else {
-    // Customer: semua selain status saat ini, kecuali status Open (order_position terkecil)
-    const minOrder = Math.min(...statuses.value.map((s: any) => s.order_position))
-    return statuses.value.filter((s: any) => s.id !== currentId && s.order_position !== minOrder)
+    // Customer: semua selain status saat ini, kecuali status Open (order_index terkecil)
+    const minOrder = Math.min(...statuses.value.map((s: any) => s.order_index))
+    return statuses.value.filter((s: any) => s.id !== currentId && s.order_index !== minOrder)
   }
 })
 const uploading = ref(false)
@@ -654,6 +691,7 @@ async function handleReplyPaste(e: ClipboardEvent) {
 onMounted(() => {
   tabs.clearUnread(Number(id))
   if (ticket.value) tabs.openTab({ id: ticket.value.id, ticket_number: ticket.value.ticket_number, title: ticket.value.title })
+  timer.fetchLogs()
 })
 
 async function updateField(field: string, value: any) {
@@ -718,6 +756,33 @@ async function submitReply() {
     replyFiles.value = []
     await refresh()
   } finally { sending.value = false }
+}
+
+// Time Tracker
+const ticketIdRef = computed(() => Number(id))
+const timer = useTicketTimer(ticketIdRef, (statusId: number) => {
+  const found = statuses.value.find((s: any) => s.id === statusId)
+  if (found && ticket.value) {
+    ticket.value.status_id = found.id
+    ticket.value.status_name = found.name
+    ticket.value.status_color = found.color
+    ticket.value.status_is_resolved = found.is_resolved
+    editStatus.value = found.id
+  }
+})
+
+const inProgressStatus = computed(() => {
+  const active = (statuses.value as any[]).filter((s: any) => !s.is_resolved)
+  active.sort((a: any, b: any) => a.order_index - b.order_index)
+  return active[1] || null
+})
+
+async function startTimer() {
+  const sorted = (statuses.value as any[]).filter((s: any) => !s.is_resolved).sort((a: any, b: any) => a.order_index - b.order_index)
+  const openStatusId = sorted[0]?.id
+  const currentIsOpen = !ticket.value?.status_is_resolved && ticket.value?.status_id === openStatusId
+  const autoId = (currentIsOpen && inProgressStatus.value) ? inProgressStatus.value.id : undefined
+  await timer.start(autoId)
 }
 
 const { timeAgo } = useTimeAgo()

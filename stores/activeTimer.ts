@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 
 interface ActiveTimerState {
+  timerType: 'task' | 'ticket'
   taskId: number | null
+  ticketId: number | null
   taskName: string
   ticketTitle: string
   logId: number | null
@@ -13,7 +15,9 @@ interface ActiveTimerState {
 
 export const useActiveTimerStore = defineStore('activeTimer', {
   state: (): ActiveTimerState => ({
+    timerType: 'task',
     taskId: null,
+    ticketId: null,
     taskName: '',
     ticketTitle: '',
     logId: null,
@@ -24,14 +28,17 @@ export const useActiveTimerStore = defineStore('activeTimer', {
   }),
 
   getters: {
-    isRunning: (state) => state.taskId !== null && !state.isPaused && state.logId !== null,
-    hasTimer: (state) => state.taskId !== null,
+    isRunning: (state) => (state.taskId !== null || state.ticketId !== null) && !state.isPaused && state.logId !== null,
+    hasTimer: (state) => state.taskId !== null || state.ticketId !== null,
     displayElapsed: (state) => state.isPaused ? state.pausedElapsed : state.elapsed,
+    entityId: (state) => state.timerType === 'ticket' ? state.ticketId : state.taskId,
   },
 
   actions: {
     setActive(taskId: number, taskName: string, ticketTitle: string, logId: number, startedAt: Date) {
+      this.timerType = 'task'
       this.taskId = taskId
+      this.ticketId = null
       this.taskName = taskName
       this.ticketTitle = ticketTitle
       this.logId = logId
@@ -41,9 +48,37 @@ export const useActiveTimerStore = defineStore('activeTimer', {
       this.elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000)
     },
 
+    setActiveTicket(ticketId: number, ticketNumber: string, ticketTitle: string, logId: number, startedAt: Date) {
+      this.timerType = 'ticket'
+      this.ticketId = ticketId
+      this.taskId = null
+      this.taskName = ticketNumber
+      this.ticketTitle = ticketTitle
+      this.logId = logId
+      this.startedAt = startedAt
+      this.isPaused = false
+      this.pausedElapsed = 0
+      this.elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000)
+    },
+
     setPaused(taskId: number, taskName: string, ticketTitle: string, pausedElapsed: number) {
+      this.timerType = 'task'
       this.taskId = taskId
+      this.ticketId = null
       this.taskName = taskName
+      this.ticketTitle = ticketTitle
+      this.logId = null
+      this.startedAt = null
+      this.isPaused = true
+      this.pausedElapsed = pausedElapsed
+      this.elapsed = 0
+    },
+
+    setPausedTicket(ticketId: number, ticketNumber: string, ticketTitle: string, pausedElapsed: number) {
+      this.timerType = 'ticket'
+      this.ticketId = ticketId
+      this.taskId = null
+      this.taskName = ticketNumber
       this.ticketTitle = ticketTitle
       this.logId = null
       this.startedAt = null
@@ -57,7 +92,9 @@ export const useActiveTimerStore = defineStore('activeTimer', {
     },
 
     clearActive() {
+      this.timerType = 'task'
       this.taskId = null
+      this.ticketId = null
       this.taskName = ''
       this.ticketTitle = ''
       this.logId = null

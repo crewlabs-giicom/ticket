@@ -305,6 +305,30 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  // Ticket time tracking
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ticket_timelogs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ticket_id INT NOT NULL,
+      user_id INT NOT NULL,
+      started_at DATETIME NOT NULL,
+      stopped_at DATETIME,
+      duration_seconds INT,
+      note VARCHAR(500),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_ttl_ticket (ticket_id)
+    )
+  `)
+
+  // Close zombie ticket timelogs (> 12 hours open)
+  try {
+    await db.execute(
+      `UPDATE ticket_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE stopped_at IS NULL AND started_at < DATE_SUB(NOW(), INTERVAL 12 HOUR)`
+    )
+  } catch {}
+
   // Add completed_at to tasks (for lifecycle SLA)
   try { await db.execute(`ALTER TABLE tasks ADD COLUMN completed_at DATETIME NULL`) } catch {}
   // Add is_archived for auto-archive feature
