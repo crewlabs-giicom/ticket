@@ -38,8 +38,11 @@ export default defineEventHandler(async (event) => {
     if (query.date_to) { where += ' AND DATE(t.created_at) <= ?'; params.push(query.date_to) }
     if (query.task_id) { where += ' AND t.task_id = ?'; params.push(query.task_id) }
     if (query.subsystem) { where += ' AND t.subsystem = ?'; params.push(query.subsystem) }
+    if (query.created_by && user.role !== 'customer') { where += ' AND t.created_by = ?'; params.push(query.created_by) }
+    if (query.sla_breach === '1') { where += ' AND t.sla_breached = 1' }
 
-    const limit = Math.min(Number(query.limit) || 50, 200)
+    const maxLimit = query.export === '1' ? 9999 : 200
+    const limit = Math.min(Number(query.limit) || 50, maxLimit)
     const page = Math.max(Number(query.page) || 1, 1)
     const offset = (page - 1) * limit
 

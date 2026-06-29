@@ -198,7 +198,7 @@ const menus = ref<any[]>([])
 
 function menuSection(path: string): string {
   if (path.startsWith('/master/')) return 'Master Data'
-  if (path === '/workload' || path === '/reports') return 'Management'
+  if (path === '/workload' || path.startsWith('/reports')) return 'Management'
   return 'Menu'
 }
 
@@ -231,6 +231,7 @@ function fallbackMenus(role?: string) {
       ...base,
       { id: 'f6', name: 'Workload', path: '/workload', icon: 'users' },
       { id: 'f7', name: 'Reports', path: '/reports', icon: 'chart-bar' },
+      { id: 'f7b', name: 'Report Ticket', path: '/reports/tickets', icon: 'chart-bar' },
       { id: 'f8', name: 'Users', path: '/master/users', icon: 'users' },
       { id: 'f9', name: 'Master Projects', path: '/master/projects', icon: 'folder' },
       { id: 'f10', name: 'Priority', path: '/master/priorities', icon: 'flag' },
@@ -263,7 +264,7 @@ const pageTitle = computed(() => {
   if (dynamicTitle.value) return dynamicTitle.value
   const titles: Record<string, string> = {
     '/': 'Dashboard', '/tickets': 'Tickets', '/tasks': 'Tasks', '/projects': 'Projects',
-    '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Reports',
+    '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Reports', '/reports/tickets': 'Report Ticket',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
     '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
     '/notifications': 'Notifikasi', '/profile': 'Profil Saya', '/wishlist': 'Catatan',
