@@ -7,7 +7,6 @@ export function useTaskTimer(taskId: Ref<number>) {
   const startedAt = ref<Date | null>(null)
   const elapsed = ref(0)
   const timelogs = ref<any[]>([])
-  const totalSeconds = ref(0)
   const loading = ref(false)
   let interval: ReturnType<typeof setInterval> | null = null
 
@@ -16,6 +15,10 @@ export function useTaskTimer(taskId: Ref<number>) {
   const isPaused = ref(false)
 
   const elapsedFormatted = computed(() => formatSeconds(elapsed.value))
+  // Hitung dari timelogs yg tampil agar konsisten dengan history
+  const totalSeconds = computed(() =>
+    timelogs.value.reduce((s: number, l: any) => s + (l.duration_seconds || 0), 0)
+  )
   const totalFormatted = computed(() => formatSeconds(totalSeconds.value + (activeLogId.value ? elapsed.value : 0)))
   const isRunning = computed(() => activeLogId.value !== null)
 
@@ -52,7 +55,7 @@ export function useTaskTimer(taskId: Ref<number>) {
     try {
       const res = await $fetch<any>(`/api/tasks/${taskId.value}/timelogs`)
       timelogs.value = res.data || []
-      totalSeconds.value = res.total_seconds || 0
+      // totalSeconds dihitung dari timelogs (computed), tidak dari API
       const active = res.active_log
       if (active) {
         activeLogId.value = active.id
@@ -80,13 +83,13 @@ export function useTaskTimer(taskId: Ref<number>) {
             } else {
               isPaused.value = false
               clearTimer()
-              if (store.taskId === taskId.value) store.clearActive()
+              if (store.timerType === 'task' && store.taskId === taskId.value) store.clearActive()
             }
           } catch { isPaused.value = false; clearTimer() }
         } else {
           isPaused.value = false
           clearTimer()
-          if (store.taskId === taskId.value) store.clearActive()
+          if (store.timerType === 'task' && store.taskId === taskId.value) store.clearActive()
         }
       }
     } finally {
@@ -109,8 +112,8 @@ export function useTaskTimer(taskId: Ref<number>) {
     const logId = activeLogId.value
     const currentElapsed = elapsed.value
     // Get task/ticket info from store before clearing
-    const taskName = store.taskId === taskId.value ? store.taskName : ''
-    const ticketTitle = store.taskId === taskId.value ? store.ticketTitle : ''
+    const taskName = store.timerType === 'task' && store.taskId === taskId.value ? store.taskName : ''
+    const ticketTitle = store.timerType === 'task' && store.taskId === taskId.value ? store.ticketTitle : ''
     // Stop interval
     if (interval) { clearInterval(interval); interval = null }
     activeLogId.value = null
@@ -140,15 +143,45 @@ export function useTaskTimer(taskId: Ref<number>) {
     if (!activeLogId.value) {
       // If paused, just clear state
       clearTimer()
-      if (store.taskId === taskId.value) store.clearActive()
+      if (store.timerType === 'task' && store.taskId === taskId.value) store.clearActive()
       return
     }
     const logId = activeLogId.value
     clearTimer()
-    if (store.taskId === taskId.value) store.clearActive()
+    if (store.timerType === 'task' && store.taskId === taskId.value) store.clearActive()
     await $fetch(`/api/tasks/${taskId.value}/timelogs?log_id=${logId}`, { method: 'PUT' })
     await fetchLogs()
   }
+
+  // Sync local state when widget stops/pauses this timer externally
+  watch(
+    () => [
+      store.timerType === 'task' && store.taskId === taskId.value,
+      store.logId,
+      store.isPaused,
+    ] as const,
+    ([isOurs, _logId, paused]) => {
+      if (!isOurs) {
+        // Widget switched to another timer or stopped ours
+        if (activeLogId.value !== null || isPaused.value) {
+          if (interval) { clearInterval(interval); interval = null }
+          activeLogId.value = null
+          startedAt.value = null
+          elapsed.value = 0
+          isPaused.value = false
+          fetchLogs()
+        }
+        return
+      }
+      // Widget paused our timer
+      if (paused && activeLogId.value !== null) {
+        if (interval) { clearInterval(interval); interval = null }
+        activeLogId.value = null
+        startedAt.value = null
+        isPaused.value = true
+      }
+    }
+  )
 
   onUnmounted(() => { if (interval) clearInterval(interval) })
 

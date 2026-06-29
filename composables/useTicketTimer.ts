@@ -7,7 +7,6 @@ export function useTicketTimer(ticketId: Ref<number>, onStatusChange?: (statusId
   const startedAt = ref<Date | null>(null)
   const elapsed = ref(0)
   const timelogs = ref<any[]>([])
-  const totalSeconds = ref(0)
   const loading = ref(false)
   let interval: ReturnType<typeof setInterval> | null = null
 
@@ -15,6 +14,10 @@ export function useTicketTimer(ticketId: Ref<number>, onStatusChange?: (statusId
   const isPaused = ref(false)
 
   const elapsedFormatted = computed(() => formatSeconds(elapsed.value))
+  // Hitung dari timelogs yg tampil agar konsisten dengan history
+  const totalSeconds = computed(() =>
+    timelogs.value.reduce((s: number, l: any) => s + (l.duration_seconds || 0), 0)
+  )
   const totalFormatted = computed(() => formatSeconds(totalSeconds.value + (activeLogId.value ? elapsed.value : 0)))
   const isRunning = computed(() => activeLogId.value !== null)
 
@@ -51,7 +54,7 @@ export function useTicketTimer(ticketId: Ref<number>, onStatusChange?: (statusId
     try {
       const res = await $fetch<any>(`/api/tickets/${ticketId.value}/timelogs`)
       timelogs.value = res.data || []
-      totalSeconds.value = res.total_seconds || 0
+      // totalSeconds dihitung dari timelogs (computed), tidak dari API
       const active = res.active_log
       if (active) {
         activeLogId.value = active.id
@@ -148,6 +151,36 @@ export function useTicketTimer(ticketId: Ref<number>, onStatusChange?: (statusId
       await fetchLogs()
     }
   }
+
+  // Sync local state when widget stops/pauses this timer externally
+  watch(
+    () => [
+      store.timerType === 'ticket' && store.ticketId === ticketId.value,
+      store.logId,
+      store.isPaused,
+    ] as const,
+    ([isOurs, _logId, paused]) => {
+      if (!isOurs) {
+        // Widget switched to another timer or stopped ours
+        if (activeLogId.value !== null || isPaused.value) {
+          if (interval) { clearInterval(interval); interval = null }
+          activeLogId.value = null
+          startedAt.value = null
+          elapsed.value = 0
+          isPaused.value = false
+          fetchLogs()
+        }
+        return
+      }
+      // Widget paused our timer
+      if (paused && activeLogId.value !== null) {
+        if (interval) { clearInterval(interval); interval = null }
+        activeLogId.value = null
+        startedAt.value = null
+        isPaused.value = true
+      }
+    }
+  )
 
   onUnmounted(() => { if (interval) clearInterval(interval) })
 

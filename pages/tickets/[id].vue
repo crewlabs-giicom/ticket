@@ -299,10 +299,10 @@
             class="text-center py-1.5 font-mono text-xl font-bold tabular-nums"
             :class="timer.isRunning.value ? 'text-emerald-600' : 'text-amber-500'"
           >{{ timer.isPaused.value ? timer.formatSeconds(timer.elapsed.value) : timer.elapsedFormatted.value }}</div>
-          <div v-if="(timer.timelogs.value as any[]).length" class="space-y-1 max-h-28 overflow-y-auto">
-            <div v-for="log in (timer.timelogs.value as any[]).slice(0, 5)" :key="log.id" class="flex items-center justify-between text-[11px] text-slate-500">
+          <div v-if="(timer.timelogs.value as any[]).length" class="space-y-1 max-h-36 overflow-y-auto">
+            <div v-for="log in (timer.timelogs.value as any[])" :key="log.id" class="flex items-center justify-between text-[11px] text-slate-500">
               <span class="truncate max-w-[100px]">{{ log.user_name }}</span>
-              <span class="font-mono text-slate-600">{{ timer.formatSeconds(log.duration_seconds) }}</span>
+              <span class="font-mono text-slate-600">{{ timer.formatSeconds(log.duration_seconds || 0) }}</span>
             </div>
           </div>
         </div>

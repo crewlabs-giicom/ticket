@@ -314,8 +314,8 @@
               </template>
             </div>
           </div>
-          <div v-if="timer.timelogs.value.length" class="space-y-1.5 max-h-32 overflow-y-auto">
-            <div v-for="log in timer.timelogs.value.slice(0, 5)" :key="log.id" class="flex items-center justify-between text-xs">
+          <div v-if="timer.timelogs.value.length" class="space-y-1.5 max-h-40 overflow-y-auto">
+            <div v-for="log in timer.timelogs.value" :key="log.id" class="flex items-center justify-between text-xs">
               <span class="text-slate-600">{{ log.user_name }}</span>
               <span class="text-slate-400">{{ log.duration_seconds ? timer.formatSeconds(log.duration_seconds) : '...' }}</span>
               <span class="text-slate-300">{{ timeAgo(log.started_at) }}</span>
