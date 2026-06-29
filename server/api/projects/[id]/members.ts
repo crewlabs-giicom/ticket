@@ -1,4 +1,5 @@
 import { getDb } from '../../../database/index'
+import { isProjectAdmin } from '../../../utils/rbac'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -22,7 +23,7 @@ export default defineEventHandler(async (event) => {
     const total = (countRows as any[])[0].total as number
 
     const [rows] = await db.execute(
-      `SELECT u.id, u.name, u.email, u.role, u.avatar
+      `SELECT u.id, u.name, u.email, u.role, u.avatar, pm.project_role
        FROM project_members pm
        JOIN users u ON u.id = pm.user_id
        WHERE pm.project_id = ? AND (u.name LIKE ? OR u.email LIKE ?)
@@ -32,14 +33,20 @@ export default defineEventHandler(async (event) => {
     return { success: true, data: rows, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
-  if (user.role !== 'admin') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  // Write operations: global admin OR project admin of this project
+  if (user.role !== 'admin') {
+    const isPA = await isProjectAdmin(db, user.id, Number(projectId))
+    if (!isPA) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
   if (event.method === 'POST') {
     const body = await readBody(event)
     if (!body.user_id) throw createError({ statusCode: 400, statusMessage: 'user_id required' })
+    // Only global admin can assign project_role = 'admin'
+    const projectRole = body.project_role === 'admin' && user.role === 'admin' ? 'admin' : 'member'
     await db.execute(
-      'INSERT IGNORE INTO project_members (project_id, user_id) VALUES (?, ?)',
-      [projectId, body.user_id]
+      'INSERT INTO project_members (project_id, user_id, project_role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE project_role = VALUES(project_role)',
+      [projectId, body.user_id, projectRole]
     )
     return { success: true }
   }

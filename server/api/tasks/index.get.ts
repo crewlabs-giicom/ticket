@@ -6,7 +6,11 @@ export default defineEventHandler(async (event) => {
   const db = getDb()
   const q = getQuery(event)
 
-  if (user.role === 'customer') return { success: true, data: [] }
+  if (user.role === 'customer') {
+    // Customer hanya bisa lihat tasks di project yang mereka jadi project admin
+    conditions.push(`t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ? AND project_role = 'admin')`)
+    params.push(user.id)
+  }
 
   const conditions: string[] = []
   const params: any[] = []

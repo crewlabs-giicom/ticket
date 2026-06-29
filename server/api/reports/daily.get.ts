@@ -44,8 +44,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const [ticketActivities] = await db.execute(
-    `SELECT tr.id, tr.ticket_id, tr.is_internal, tr.created_at,
-            tk.ticket_number, tk.title as ticket_title,
+    `SELECT tr.id, tr.ticket_id, tr.created_at,
+            tk.ticket_number, tk.title as ticket_title, tk.resolved_at,
             p.name as project_name, u.name as user_name
      FROM ticket_responses tr
      LEFT JOIN tickets tk ON tk.id = tr.ticket_id

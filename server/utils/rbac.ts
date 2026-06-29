@@ -18,3 +18,11 @@ export function requireRole(event: H3Event, roles: string[]) {
 export function isAdmin(user: any) {
   return user?.role === 'admin'
 }
+
+export async function isProjectAdmin(db: any, userId: number, projectId: number): Promise<boolean> {
+  const [rows] = await db.execute(
+    "SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ? AND project_role = 'admin' LIMIT 1",
+    [projectId, userId]
+  ) as any[]
+  return (rows as any[]).length > 0
+}

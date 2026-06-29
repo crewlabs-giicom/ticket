@@ -204,11 +204,13 @@ async function migrate(db: mysql.Pool) {
     CREATE TABLE IF NOT EXISTS project_members (
       project_id INT NOT NULL,
       user_id INT NOT NULL,
+      project_role ENUM('admin','member') NOT NULL DEFAULT 'member',
       PRIMARY KEY (project_id, user_id),
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `)
+  await db.execute(`ALTER TABLE project_members ADD COLUMN IF NOT EXISTS project_role ENUM('admin','member') NOT NULL DEFAULT 'member'`).catch(() => {})
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS tasks (

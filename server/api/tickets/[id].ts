@@ -36,7 +36,10 @@ export default defineEventHandler(async (event) => {
         const [partRows] = await db.execute('SELECT 1 FROM ticket_participants WHERE ticket_id=? AND user_id=?', [id, user.id])
         isParticipant = (partRows as any[]).length > 0
       } catch {}
-      if (!isParticipant) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      if (!isParticipant) {
+        const [paRows] = await db.execute("SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ? AND project_role = 'admin' LIMIT 1", [ticket.project_id, user.id])
+        if (!(paRows as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
     }
     if (user.role === 'staff') {
       const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [ticket.project_id, user.id])
@@ -147,18 +150,26 @@ export default defineEventHandler(async (event) => {
     const old = (oldRows as any[])[0]
     if (!old) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
 
-    if (user.role === 'customer' && old.created_by !== user.id) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     if (user.role === 'staff') {
       const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [old.project_id, user.id])
       if (!(mem as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     }
 
-    const { title, description, project_id, status_id, assigned_to } = body
-    const priority_id = user.role === 'customer' ? undefined : body.priority_id
-    const task_id = user.role !== 'customer' ? body.task_id : undefined
+    // Cek apakah customer adalah project admin dari project ini
+    let customerIsPA = false
+    if (user.role === 'customer') {
+      const [paRows] = await db.execute("SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ? AND project_role = 'admin' LIMIT 1", [old.project_id, user.id])
+      customerIsPA = (paRows as any[]).length > 0
+      if (!customerIsPA && old.created_by !== user.id) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
 
-    // Customer hanya boleh mengubah ke status is_resolved=1, dan hanya jika ticket belum resolved
-    if (user.role === 'customer' && status_id && status_id !== old.status_id) {
+    const { title, description, project_id, status_id, assigned_to } = body
+    // Project admin customer boleh set priority dan task_id
+    const priority_id = (user.role !== 'customer' || customerIsPA) ? body.priority_id : undefined
+    const task_id = (user.role !== 'customer' || customerIsPA) ? body.task_id : undefined
+
+    // Customer biasa (bukan project admin) hanya boleh mengubah ke status is_resolved=1
+    if (user.role === 'customer' && !customerIsPA && status_id && status_id !== old.status_id) {
       const [[curStatus]] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id=?', [old.status_id]) as any[]
       if (curStatus?.is_resolved) throw createError({ statusCode: 403, statusMessage: 'Ticket sudah selesai' })
       const [[targetStatus]] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id=?', [status_id]) as any[]

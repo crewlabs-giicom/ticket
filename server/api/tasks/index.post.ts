@@ -1,5 +1,5 @@
 import { getDb } from '../../database/index'
-import { requireAuth } from '../../utils/rbac'
+import { requireAuth, isProjectAdmin } from '../../utils/rbac'
 import { logActivity } from '../../utils/activity'
 import { broadcastToUser } from '../../utils/sse'
 
@@ -11,6 +11,11 @@ export default defineEventHandler(async (event) => {
   const { project_id, title, description, assigned_to, status = 'backlog', system_menu_id } = body
   const due_date = body.due_date ? String(body.due_date).slice(0, 10) : null
   if (!project_id || !title) throw createError({ statusCode: 400, message: 'project_id and title required' })
+
+  if (user.role === 'customer') {
+    const isPA = await isProjectAdmin(db, user.id, Number(project_id))
+    if (!isPA) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
   // Get max position in this column
   const [posRows] = await db.execute(

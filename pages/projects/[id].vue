@@ -290,8 +290,8 @@
 
       <!-- ─ MEMBERS ─ -->
       <div v-else-if="activeTab === 'members'" class="space-y-4">
-        <!-- Add member (admin only) -->
-        <div v-if="auth.isAdmin" class="card p-4 space-y-3">
+        <!-- Add member (admin or project admin) -->
+        <div v-if="auth.isAdmin || canManageProject(projectId)" class="card p-4 space-y-3">
           <label class="block text-xs font-medium text-slate-600">Tambah Member</label>
           <!-- Search input -->
           <input v-model="addMemberSearch" type="text" class="input text-sm" placeholder="Cari nama atau email user…" />
@@ -314,8 +314,14 @@
           </div>
           <p v-else-if="addMemberSearch" class="text-xs text-slate-400 text-center py-2">Tidak ada user yang cocok.</p>
           <p v-else class="text-xs text-slate-400 text-center py-2">Semua user sudah menjadi member.</p>
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-slate-500">{{ addMemberIds.length }} user dipilih</span>
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-500">{{ addMemberIds.length }} user dipilih</span>
+              <label v-if="auth.isAdmin" class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" v-model="addMemberAsAdmin" class="w-3.5 h-3.5 rounded text-indigo-600" />
+                Jadikan Project Admin
+              </label>
+            </div>
             <button
               @click="addMember"
               :disabled="!addMemberIds.length || memberSaving"
@@ -342,11 +348,14 @@
                 <span v-else>{{ initials(m.name) }}</span>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-slate-800">{{ m.name }}</p>
+                <div class="flex items-center gap-1.5">
+                  <p class="text-sm font-medium text-slate-800">{{ m.name }}</p>
+                  <span v-if="m.project_role === 'admin'" class="text-[10px] font-semibold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">Project Admin</span>
+                </div>
                 <p class="text-xs text-slate-400">{{ m.email }} · <span class="capitalize">{{ m.role }}</span></p>
               </div>
               <button
-                v-if="auth.isAdmin"
+                v-if="auth.isAdmin || canManageProject(projectId)"
                 @click="removeMember(m.id)"
                 class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors"
               >Hapus</button>
@@ -530,6 +539,7 @@ const route = useRoute()
 const router = useRouter()
 const projectId = Number(route.params.id)
 const { pendingCount } = useSync()
+const { fetchRole, canManageProject } = useProjectRole()
 
 // ── Tab state (URL-driven) ──────────────────────────────────────────────────
 const activeTab = computed<TabKey>({
@@ -570,6 +580,7 @@ onMounted(async () => {
 const members = ref<any[]>([])
 const addMemberIds = ref<number[]>([])
 const addMemberSearch = ref('')
+const addMemberAsAdmin = ref(false)
 const memberSaving = ref(false)
 const memberSearch = ref('')
 const memberPage = ref(1)
@@ -609,13 +620,15 @@ async function addMember() {
   if (!addMemberIds.value.length) return
   memberSaving.value = true
   try {
+    const projectRole = addMemberAsAdmin.value && auth.isAdmin ? 'admin' : 'member'
     await Promise.all(
       addMemberIds.value.map(uid =>
-        $fetch(`/api/projects/${projectId}/members`, { method: 'POST', body: { user_id: uid } })
+        $fetch(`/api/projects/${projectId}/members`, { method: 'POST', body: { user_id: uid, project_role: projectRole } })
       )
     )
     addMemberIds.value = []
     addMemberSearch.value = ''
+    addMemberAsAdmin.value = false
     await Promise.all([loadMembers(), refreshProject()])
   } finally {
     memberSaving.value = false
@@ -787,7 +800,7 @@ watch(() => activeTab.value, (tab) => {
   if (tab === 'system-menus') loadSystemMenus()
 })
 
-onMounted(() => { loadSystemMenus() })
+onMounted(() => { loadSystemMenus(); fetchRole(projectId) })
 
 // ── Edit project ──────────────────────────────────────────────────────────────
 const showEditModal = ref(false)

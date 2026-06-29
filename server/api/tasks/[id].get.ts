@@ -1,20 +1,23 @@
 import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
 
+
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)
   const db = getDb()
   const id = getRouterParam(event, 'id')
 
   if (user.role === 'customer') {
-    const [access] = await db.execute(
-      `SELECT 1 FROM tickets
-       WHERE task_id = ?
-         AND (created_by = ? OR id IN (SELECT ticket_id FROM ticket_participants WHERE user_id = ?))
-       LIMIT 1`,
+    const [ticketAccess] = await db.execute(
+      `SELECT 1 FROM tickets WHERE task_id = ? AND (created_by = ? OR id IN (SELECT ticket_id FROM ticket_participants WHERE user_id = ?)) LIMIT 1`,
       [id, user.id, user.id]
     )
-    if (!(access as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    const [paAccess] = await db.execute(
+      `SELECT 1 FROM project_members pm JOIN tasks t ON t.project_id = pm.project_id WHERE t.id = ? AND pm.user_id = ? AND pm.project_role = 'admin' LIMIT 1`,
+      [id, user.id]
+    )
+    if (!(ticketAccess as any[]).length && !(paAccess as any[]).length)
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
   const [rows] = await db.execute(

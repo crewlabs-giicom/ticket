@@ -117,34 +117,39 @@
               <tr>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Ticket</th>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Judul</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden sm:table-cell">Tipe</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Waktu</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Resolved</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-if="!ticketActivities.length">
-                <td colspan="4" class="text-center py-8 text-slate-400 text-xs">Tidak ada aktivitas ticket pada tanggal ini</td>
+                <td colspan="3" class="text-center py-8 text-slate-400 text-xs">Tidak ada aktivitas ticket pada tanggal ini</td>
               </tr>
-              <tr v-for="ta in ticketActivities" :key="ta.id" class="hover:bg-slate-50/50">
+              <tr v-for="ta in pagedTickets" :key="ta.id" class="hover:bg-slate-50/50">
                 <td class="px-3 py-2 whitespace-nowrap">
                   <button @click="openTicket(ta)" class="text-xs font-mono font-semibold text-indigo-600 hover:underline">{{ ta.ticket_number }}</button>
                 </td>
                 <td class="px-3 py-2">
-                  <div class="text-xs text-slate-700 line-clamp-2 max-w-[180px]">{{ ta.ticket_title }}</div>
+                  <div class="text-xs text-slate-700 line-clamp-2 max-w-[200px]">{{ ta.ticket_title }}</div>
                   <div v-if="filters.user_id === ''" class="text-[10px] text-indigo-500 mt-0.5">{{ ta.user_name }}</div>
                   <div class="text-[10px] text-slate-400">{{ ta.project_name }}</div>
                 </td>
-                <td class="px-3 py-2 whitespace-nowrap hidden sm:table-cell">
-                  <span :class="['badge text-[10px]', ta.is_internal ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-green-50 text-green-700 border border-green-200']">
-                    {{ ta.is_internal ? 'Internal' : 'Replied' }}
-                  </span>
-                </td>
                 <td class="px-3 py-2 whitespace-nowrap">
-                  <span class="text-xs font-mono text-slate-600">{{ fmtTime(ta.created_at) }}</span>
+                  <span class="text-xs font-mono" :class="ta.resolved_at ? 'text-green-600' : 'text-slate-400'">{{ ta.resolved_at ? fmtTime(ta.resolved_at) : '—' }}</span>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+        <!-- Ticket pagination -->
+        <div v-if="ticketTotalPages > 1" class="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 text-xs text-slate-500">
+          <span>{{ (ticketPage - 1) * TICKET_PER_PAGE + 1 }}–{{ Math.min(ticketPage * TICKET_PER_PAGE, ticketActivities.length) }} dari {{ ticketActivities.length }}</span>
+          <div class="flex items-center gap-1">
+            <button :disabled="ticketPage <= 1" @click="ticketPage--"
+              class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">‹</button>
+            <span class="px-1 font-medium text-slate-700">{{ ticketPage }} / {{ ticketTotalPages }}</span>
+            <button :disabled="ticketPage >= ticketTotalPages" @click="ticketPage++"
+              class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">›</button>
+          </div>
         </div>
       </div>
     </div>
@@ -234,6 +239,13 @@ async function fetchReport() {
   } finally { loading.value = false }
 }
 
+// Ticket pagination
+const ticketPage = ref(1)
+const TICKET_PER_PAGE = 10
+const pagedTickets = computed(() => ticketActivities.value.slice((ticketPage.value - 1) * TICKET_PER_PAGE, ticketPage.value * TICKET_PER_PAGE))
+const ticketTotalPages = computed(() => Math.ceil(ticketActivities.value.length / TICKET_PER_PAGE))
+watch(ticketActivities, () => { ticketPage.value = 1 })
+
 // Per-task grouped summary
 const taskGroups = computed(() => {
   const map = new Map<number, { task_id: number; task_title: string; total_seconds: number }>()
@@ -300,8 +312,7 @@ const reportText = computed(() => {
     }
     for (const [, tk] of byTicket) {
       const who = filters.user_id === '' ? ` (${tk.user_name})` : ''
-      const types = [...new Set(tk.types)].join(', ')
-      lines.push(`• [${fmtTime(tk.created_at)}] ${tk.ticket_number} ${tk.ticket_title}${who} — ${types}`)
+      lines.push(`• ${tk.ticket_number} ${tk.ticket_title}${who}`)
     }
     lines.push('')
   } else {

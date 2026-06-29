@@ -1,5 +1,6 @@
 import { getDb } from '../../database/index'
 import { requireAuth } from '../../utils/rbac'
+
 import { logActivity } from '../../utils/activity'
 import { broadcastToUser } from '../../utils/sse'
 
@@ -9,11 +10,17 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)
 
-  if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-
   const [oldRows] = await db.execute('SELECT t.*, u.name as assigned_to_name FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to WHERE t.id = ?', [id]) as any[]
   const old = (oldRows as any[])[0]
   if (!old) throw createError({ statusCode: 404, message: 'Task not found' })
+
+  if (user.role === 'customer') {
+    const [paAccess] = await db.execute(
+      "SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ? AND project_role = 'admin' LIMIT 1",
+      [old.project_id, user.id]
+    )
+    if (!(paAccess as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
   if (user.role === 'staff') {
     const [mem] = await db.execute('SELECT 1 FROM project_members WHERE project_id=? AND user_id=?', [old.project_id, user.id])

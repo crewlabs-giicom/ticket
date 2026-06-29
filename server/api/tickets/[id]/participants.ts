@@ -1,4 +1,5 @@
 import { getDb } from '../../../database/index'
+import { isProjectAdmin } from '../../../utils/rbac'
 import { broadcastToUser } from '../../../utils/sse'
 
 export default defineEventHandler(async (event) => {
@@ -21,7 +22,11 @@ export default defineEventHandler(async (event) => {
   }
 
   if (event.method === 'POST') {
-    if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    if (user.role === 'customer') {
+      const [ticketInfo] = await db.execute('SELECT project_id FROM tickets WHERE id=?', [id]) as any[]
+      const projectId = (ticketInfo as any[])[0]?.project_id
+      if (!projectId || !(await isProjectAdmin(db, user.id, projectId))) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
     const body = await readBody(event)
     const { user_id } = body
     if (!user_id) throw createError({ statusCode: 400, statusMessage: 'user_id diperlukan' })
@@ -55,7 +60,11 @@ export default defineEventHandler(async (event) => {
   }
 
   if (event.method === 'DELETE') {
-    if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    if (user.role === 'customer') {
+      const [ticketInfo] = await db.execute('SELECT project_id FROM tickets WHERE id=?', [id]) as any[]
+      const projectId = (ticketInfo as any[])[0]?.project_id
+      if (!projectId || !(await isProjectAdmin(db, user.id, projectId))) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
     const body = await readBody(event)
     const { user_id } = body
     if (!user_id) throw createError({ statusCode: 400, statusMessage: 'user_id diperlukan' })

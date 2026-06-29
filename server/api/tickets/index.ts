@@ -13,8 +13,8 @@ export default defineEventHandler(async (event) => {
     const params: any[] = []
 
     if (user.role === 'customer') {
-      where += ' AND (t.created_by = ? OR t.id IN (SELECT ticket_id FROM ticket_participants WHERE user_id = ?))'
-      params.push(user.id, user.id)
+      where += ` AND (t.created_by = ? OR t.id IN (SELECT ticket_id FROM ticket_participants WHERE user_id = ?) OR t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ? AND project_role = 'admin'))`
+      params.push(user.id, user.id, user.id)
     } else if (user.role === 'staff') {
       where += ' AND t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
       params.push(user.id)
