@@ -233,6 +233,7 @@ function fallbackMenus(role?: string) {
       { id: 'f7', name: 'Recapitulation', path: '/reports', icon: 'chart-bar' },
       { id: 'f7b', name: 'Report Ticket', path: '/reports/tickets', icon: 'chart-bar' },
       { id: 'f7c', name: 'Report Task', path: '/reports/tasks', icon: 'chart-bar' },
+      { id: 'f7d', name: 'Daily Report', path: '/reports/daily', icon: 'chart-bar' },
       { id: 'f8', name: 'Users', path: '/master/users', icon: 'users' },
       { id: 'f9', name: 'Master Projects', path: '/master/projects', icon: 'folder' },
       { id: 'f10', name: 'Priority', path: '/master/priorities', icon: 'flag' },
@@ -265,7 +266,7 @@ const pageTitle = computed(() => {
   if (dynamicTitle.value) return dynamicTitle.value
   const titles: Record<string, string> = {
     '/': 'Dashboard', '/tickets': 'Tickets', '/tasks': 'Tasks', '/projects': 'Projects',
-    '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Recapitulation', '/reports/tickets': 'Report Ticket', '/reports/tasks': 'Report Task',
+    '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Recapitulation', '/reports/tickets': 'Report Ticket', '/reports/tasks': 'Report Task', '/reports/daily': 'Daily Report',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
     '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
     '/notifications': 'Notifikasi', '/profile': 'Profil Saya', '/wishlist': 'Catatan',
