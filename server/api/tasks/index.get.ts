@@ -29,6 +29,9 @@ export default defineEventHandler(async (event) => {
     conditions.push('t.status = ?')
     params.push(q.status)
   }
+  if (q.date_from) { conditions.push('DATE(t.created_at) >= ?'); params.push(q.date_from) }
+  if (q.date_to)   { conditions.push('DATE(t.created_at) <= ?'); params.push(q.date_to) }
+  if (q.created_by) { conditions.push('t.created_by = ?'); params.push(Number(q.created_by)) }
 
   // Staff see only tasks in their member projects
   if (user.role === 'staff') {
@@ -38,16 +41,19 @@ export default defineEventHandler(async (event) => {
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const paginate = q.paginate !== 'false'
-  const limit = Math.min(Number(q.limit) || 50, 500)
+  const maxLimit = q.export === '1' ? 9999 : 500
+  const limit = Math.min(Number(q.limit) || 50, maxLimit)
   const page = Math.max(Number(q.page) || 1, 1)
   const offset = (page - 1) * limit
 
   const baseQuery = `SELECT t.*, p.name as project_name,
           u.name as assigned_to_name, u.avatar as assigned_to_avatar,
+          cb.name as created_by_name,
           (SELECT COUNT(*) FROM tickets tk WHERE tk.task_id = t.id) as ticket_count
    FROM tasks t
    LEFT JOIN projects p ON p.id = t.project_id
    LEFT JOIN users u ON u.id = t.assigned_to
+   LEFT JOIN users cb ON cb.id = t.created_by
    ${where}
    ORDER BY t.project_id ASC, t.position ASC, t.created_at DESC`
 
@@ -73,7 +79,25 @@ export default defineEventHandler(async (event) => {
     `SELECT COUNT(*) as total FROM tasks t ${where}`, params
   ) as any[]
 
+  const [[aggStats]] = await db.execute(
+    `SELECT
+      COUNT(*) as total_all,
+      SUM(CASE WHEN t.status != 'done' THEN 1 ELSE 0 END) as open_count,
+      SUM(CASE WHEN t.status = 'done' THEN 1 ELSE 0 END) as done_count,
+      SUM((SELECT COUNT(*) FROM tickets tk WHERE tk.task_id = t.id)) as total_tickets
+    FROM tasks t ${where}`,
+    params
+  ) as any[]
+
   const [rows] = await db.execute(`${baseQuery} LIMIT ? OFFSET ?`, [...params, limit, offset])
 
-  return { data: rows, total, page, limit, totalPages: Math.ceil(total / limit) }
+  return {
+    data: rows, total, page, limit, totalPages: Math.ceil(total / limit),
+    stats: {
+      total: Number(aggStats?.total_all ?? 0),
+      open: Number(aggStats?.open_count ?? 0),
+      done: Number(aggStats?.done_count ?? 0),
+      totalTickets: Number(aggStats?.total_tickets ?? 0),
+    }
+  }
 })
