@@ -6,6 +6,9 @@
         <div class="min-w-0">
           <span class="text-xs text-gray-400">{{ task.project_name }}</span>
           <h2 class="text-lg font-semibold text-gray-900 mt-0.5">{{ task.title }}</h2>
+          <span v-if="task.status === 'done'" class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 mt-1">
+            ✓ Selesai
+          </span>
         </div>
         <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-1">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -23,10 +26,17 @@
             class="w-36"
             @update:model-value="updateStatus"
           />
-          <span v-if="task.due_date" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
-            :class="isOverdue(task.due_date) ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'">
-            {{ fmtDate(task.due_date) }}
-          </span>
+          <button @click="showDueDateInput = !showDueDateInput"
+            class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
+            :class="isOverdue(task.due_date) && task.status !== 'done' ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            {{ task.due_date ? fmtDate(task.due_date) : 'Set due date' }}
+          </button>
+          <div v-if="showDueDateInput" class="flex items-center gap-1">
+            <input type="date" :value="dueDateInput" @change="updateDueDate"
+              class="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
+            <button v-if="task.due_date" @click="clearDueDate" class="text-xs text-slate-400 hover:text-red-500 px-1.5">✕</button>
+          </div>
         </div>
 
         <!-- Assign -->
@@ -350,6 +360,21 @@ watch(() => props.task, (val) => Object.assign(task, JSON.parse(JSON.stringify(v
 
 const editAssigned = ref(task.assigned_to || '')
 const assignableUsers = ref<any[]>([])
+
+// Due date edit
+const showDueDateInput = ref(false)
+const dueDateInput = computed(() => (task.due_date ? String(task.due_date).slice(0, 10) : ''))
+async function updateDueDate(e: Event) {
+  const val = (e.target as HTMLInputElement).value
+  await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { due_date: val || null } })
+  task.due_date = val || null
+  showDueDateInput.value = false
+}
+async function clearDueDate() {
+  await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { due_date: null } })
+  task.due_date = null
+  showDueDateInput.value = false
+}
 
 onMounted(async () => {
   const res = await $fetch<any>('/api/users', { query: { project_id: task.project_id, limit: 500 } }).catch(() => null)

@@ -48,17 +48,22 @@
               :list="buckets[proj.project_id]?.[col.status] ?? []"
               :group="`proj-${proj.project_id}`"
               item-key="id"
-              class="min-h-12 space-y-2"
+              class="min-h-12 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-0.5"
               ghost-class="opacity-40"
               chosen-class="ring-2 ring-indigo-400"
               @change="(evt) => onColChange(evt, proj, col.status)"
             >
               <template #item="{ element }">
                 <div
-                  class="bg-white rounded-xl border border-gray-200 p-3 cursor-pointer shadow-sm hover:shadow-md hover:border-indigo-200 transition-all select-none"
+                  :class="[
+                    'rounded-xl border p-3 cursor-pointer transition-all select-none',
+                    col.status === 'done'
+                      ? 'bg-slate-50 border-slate-200 hover:border-slate-300 opacity-75 shadow-none'
+                      : 'bg-white border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-200'
+                  ]"
                   @click="openTask(element)"
                 >
-                  <p class="text-sm font-medium text-gray-800 leading-snug line-clamp-2">{{ element.title }}</p>
+                  <p :class="['text-sm font-medium leading-snug line-clamp-2', col.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800']">{{ element.title }}</p>
 
                   <div class="flex items-center justify-between mt-2.5 gap-2">
                     <!-- Left: ticket badge + due date -->
@@ -69,7 +74,7 @@
                       >🎫 {{ element.ticket_count }}</span>
                       <span
                         v-if="element.due_date"
-                        :class="['text-xs', isOverdue(element.due_date) ? 'text-red-500 font-medium' : 'text-gray-400']"
+                        :class="['text-xs', isOverdue(element.due_date) && col.status !== 'done' ? 'text-red-500 font-medium' : 'text-gray-400']"
                       >{{ fmtDate(element.due_date) }}</span>
                     </div>
                     <!-- Right: assignee avatar -->

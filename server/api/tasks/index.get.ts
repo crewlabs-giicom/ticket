@@ -37,6 +37,9 @@ export default defineEventHandler(async (event) => {
   if (q.date_to)   { conditions.push('DATE(t.created_at) <= ?'); params.push(q.date_to) }
   if (q.created_by) { conditions.push('t.created_by = ?'); params.push(Number(q.created_by)) }
 
+  // Default: hide archived tasks, opt-in with show_archived=1
+  if (q.show_archived !== '1') conditions.push('t.is_archived = 0')
+
   // Staff see only tasks in their member projects
   if (user.role === 'staff') {
     conditions.push('t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)')

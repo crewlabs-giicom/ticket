@@ -25,6 +25,12 @@
           class="w-40"
         />
 
+        <!-- Archived toggle -->
+        <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none whitespace-nowrap">
+          <input type="checkbox" v-model="showArchived" class="rounded accent-indigo-600" />
+          Archived
+        </label>
+
         <!-- View toggle -->
         <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden">
           <button
@@ -349,6 +355,7 @@ function setViewMode(mode: 'list' | 'kanban') {
 const filterProjects = ref<string[]>([])
 const filterStatus = ref('')
 const filterAssignee = ref('')
+const showArchived = ref(false)
 
 function toggleProjectTab(id: string) {
   const idx = filterProjects.value.indexOf(id)
@@ -502,6 +509,7 @@ async function loadTasks() {
     const q: Record<string, any> = { paginate: 'false' }
     if (filterProjects.value.length === 1) q.project_id = filterProjects.value[0]
     else if (filterProjects.value.length > 1) q.project_ids = filterProjects.value.join(',')
+    if (showArchived.value) q.show_archived = '1'
     const res = await $fetch<any[]>('/api/tasks', { query: q })
     tasks.value = Array.isArray(res) ? res : (res as any)?.data || []
   } else {
@@ -511,6 +519,7 @@ async function loadTasks() {
     else if (filterProjects.value.length > 1) q.project_ids = filterProjects.value.join(',')
     if (filterStatus.value) q.status = filterStatus.value
     if (filterAssignee.value) q.assigned_to = filterAssignee.value
+    if (showArchived.value) q.show_archived = '1'
     const res = await $fetch<any>('/api/tasks', { query: q })
     tasks.value = res?.data || []
     taskPagination.total = res?.total ?? 0
@@ -539,7 +548,7 @@ async function loadSystemMenus(projectId?: string | number) {
 }
 
 watch(filterProjects, () => { taskPagination.page = 1; loadTasks() }, { deep: true })
-watch([filterStatus, filterAssignee], () => { taskPagination.page = 1; loadTasks() })
+watch([filterStatus, filterAssignee, showArchived], () => { taskPagination.page = 1; loadTasks() })
 
 watch(() => form.project_id, (val) => {
   form.system_menu_id = ''

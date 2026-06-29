@@ -307,6 +307,8 @@ async function migrate(db: mysql.Pool) {
 
   // Add completed_at to tasks (for lifecycle SLA)
   try { await db.execute(`ALTER TABLE tasks ADD COLUMN completed_at DATETIME NULL`) } catch {}
+  // Add is_archived for auto-archive feature
+  try { await db.execute(`ALTER TABLE tasks ADD COLUMN is_archived TINYINT(1) NOT NULL DEFAULT 0`) } catch {}
 
   // Close zombie timelogs (> 12 hours open = likely abandoned)
   try {
