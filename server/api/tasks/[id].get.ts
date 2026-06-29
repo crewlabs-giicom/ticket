@@ -6,7 +6,16 @@ export default defineEventHandler(async (event) => {
   const db = getDb()
   const id = getRouterParam(event, 'id')
 
-  if (user.role === 'customer') throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  if (user.role === 'customer') {
+    const [access] = await db.execute(
+      `SELECT 1 FROM tickets
+       WHERE task_id = ?
+         AND (created_by = ? OR id IN (SELECT ticket_id FROM ticket_participants WHERE user_id = ?))
+       LIMIT 1`,
+      [id, user.id, user.id]
+    )
+    if (!(access as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
 
   const [rows] = await db.execute(
     `SELECT t.*, p.name as project_name, u.name as assigned_to_name,
