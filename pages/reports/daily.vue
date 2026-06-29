@@ -204,7 +204,8 @@ const tabs = useTabStore()
 if (!auth.isStaffOrAdmin) await navigateTo('/')
 
 const todayWib = () => new Date().toLocaleDateString('sv', { timeZone: 'Asia/Jakarta' })
-const filters = reactive({ date: todayWib(), user_id: '' })
+// Staff selalu lihat data diri sendiri, admin bisa pilih user
+const filters = reactive({ date: todayWib(), user_id: auth.isAdmin ? '' : String(auth.user?.id ?? '') })
 const loading = ref(false)
 const loaded = ref(false)
 const copied = ref(false)
@@ -281,7 +282,7 @@ function fmtSecs(secs: number) {
 // Report text for copy-paste
 const reportText = computed(() => {
   const dateLabel = fmtDateLabel(filters.date)
-  const userName = reportUser.value?.name || (filters.user_id ? '—' : 'All Staff')
+  const userName = reportUser.value?.name || (auth.isAdmin && !filters.user_id ? 'All Staff' : (auth.user?.name || '—'))
   const lines: string[] = [`Daily Report - ${dateLabel} - ${userName}`, '']
 
   if (timelogs.value.length) {

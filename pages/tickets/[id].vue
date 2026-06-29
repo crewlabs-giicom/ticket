@@ -182,6 +182,22 @@
                 <span class="text-xs text-slate-600">Internal Note (hanya staff)</span>
               </label>
             </div>
+
+            <!-- Status change pills — opsional, hilang saat internal note atau ticket sudah resolved -->
+            <div v-if="!isInternal && !ticket.status_is_resolved && replyStatusOptions.length" class="flex items-center gap-2 mb-2 flex-wrap">
+              <span class="text-xs text-slate-400">Ubah status:</span>
+              <button
+                v-for="s in replyStatusOptions" :key="s.id"
+                type="button"
+                @click="replyStatusId = replyStatusId === s.id ? null : s.id"
+                :class="[
+                  'text-xs px-2.5 py-1 rounded-full border transition-all',
+                  replyStatusId === s.id ? 'text-white border-transparent' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                ]"
+                :style="replyStatusId === s.id ? { background: s.color, borderColor: s.color } : {}"
+              >{{ s.name }}</button>
+            </div>
+
             <textarea v-model="reply" :class="['input min-h-[80px] resize-none', isInternal && 'border-amber-300 bg-amber-50/50']" :placeholder="isInternal ? 'Tulis catatan internal... (Ctrl+V untuk paste gambar)' : 'Tulis balasan... (Ctrl+V untuk paste gambar)'" @paste="handleReplyPaste" />
 
             <!-- Reply attachments preview -->
@@ -576,6 +592,20 @@ watchEffect(async () => {
 const reply = ref('')
 const isInternal = ref(false)
 const sending = ref(false)
+const replyStatusId = ref<number | null>(null)
+
+const replyStatusOptions = computed(() => {
+  if (!ticket.value || !statuses.value?.length) return []
+  const currentId = ticket.value.status_id
+  if (auth.isStaffOrAdmin) {
+    // Staff: active statuses (is_resolved=0) selain yang sedang aktif
+    return statuses.value.filter((s: any) => !s.is_resolved && s.id !== currentId)
+  } else {
+    // Customer: semua selain status saat ini, kecuali status Open (order_position terkecil)
+    const minOrder = Math.min(...statuses.value.map((s: any) => s.order_position))
+    return statuses.value.filter((s: any) => s.id !== currentId && s.order_position !== minOrder)
+  }
+})
 const uploading = ref(false)
 const uploadError = ref('')
 const replyFiles = ref<Array<{ filename: string; original_name: string; mime_type: string; size: number }>>([])
@@ -665,10 +695,24 @@ async function submitReply() {
   if (!reply.value.trim()) return
   sending.value = true
   try {
-    await $fetch(`/api/tickets/${id}/responses`, {
-      method: 'POST',
-      body: { message: reply.value, is_internal: isInternal.value, attachments: replyFiles.value },
-    })
+    const body: any = { message: reply.value, is_internal: isInternal.value, attachments: replyFiles.value }
+    if (replyStatusId.value) body.status_id = replyStatusId.value
+
+    await $fetch(`/api/tickets/${id}/responses`, { method: 'POST', body })
+
+    // Update local ticket status jika dipilih
+    if (replyStatusId.value) {
+      const found = statuses.value.find((s: any) => s.id === replyStatusId.value)
+      if (found && ticket.value) {
+        ticket.value.status_id = found.id
+        ticket.value.status_name = found.name
+        ticket.value.status_color = found.color
+        ticket.value.status_is_resolved = found.is_resolved
+        editStatus.value = found.id
+      }
+      replyStatusId.value = null
+    }
+
     reply.value = ''
     isInternal.value = false
     replyFiles.value = []

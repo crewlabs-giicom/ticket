@@ -118,107 +118,13 @@
       </div>
     </div>
 
-    <!-- Task detail slide-over -->
-    <Transition
-      enter-active-class="transition-all duration-200"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition-all duration-150"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div v-if="selectedTask" class="fixed inset-0 bg-black/20 z-40" @click.self="selectedTask = null">
-        <Transition
-          enter-active-class="transition-transform duration-200"
-          enter-from-class="translate-x-full"
-          enter-to-class="translate-x-0"
-          leave-active-class="transition-transform duration-150"
-          leave-from-class="translate-x-0"
-          leave-to-class="translate-x-full"
-        >
-          <div v-if="selectedTask" class="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-white shadow-2xl overflow-y-auto flex flex-col">
-            <!-- Header -->
-            <div class="p-6 border-b border-gray-100 flex items-start justify-between gap-4 flex-shrink-0">
-              <div class="min-w-0">
-                <span class="text-xs text-gray-400">{{ selectedTask.project_name }}</span>
-                <h2 class="text-lg font-semibold text-gray-900 mt-0.5">{{ selectedTask.title }}</h2>
-              </div>
-              <button @click="selectedTask = null" class="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-            </div>
-
-            <!-- Body -->
-            <div class="p-6 space-y-5 flex-1">
-              <!-- Status + meta -->
-              <div class="flex flex-wrap gap-2 items-center">
-                <AppSelect
-                  :model-value="selectedTask.status"
-                  :options="COLUMNS.map(c => ({ value: c.status, label: c.label }))"
-                  placeholder="Status"
-                  class="w-36"
-                  @update:model-value="updateSelectedStatus"
-                />
-                <span v-if="selectedTask.assigned_to_name" class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                  <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold overflow-hidden">
-                    <img v-if="selectedTask.assigned_to_avatar" :src="`/uploads/${selectedTask.assigned_to_avatar}`" class="w-full h-full object-cover" />
-                    <span v-else>{{ initials(selectedTask.assigned_to_name) }}</span>
-                  </span>
-                  {{ selectedTask.assigned_to_name }}
-                </span>
-                <span v-if="selectedTask.due_date" class="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
-                  :class="isOverdue(selectedTask.due_date) ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500'">
-                  {{ fmtDate(selectedTask.due_date) }}
-                </span>
-              </div>
-
-              <!-- Description -->
-              <p v-if="selectedTask.description" class="text-sm text-gray-600 leading-relaxed">{{ selectedTask.description }}</p>
-              <p v-else class="text-sm text-gray-300 italic">No description</p>
-
-              <!-- Linked tickets -->
-              <div>
-                <div class="flex items-center justify-between mb-3">
-                  <h3 class="text-sm font-semibold text-gray-700">Linked Tickets <span class="text-gray-400 font-normal">({{ selectedTask.tickets?.length || 0 }})</span></h3>
-                  <button
-                    class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                    @click="createTicketFromTask(selectedTask)"
-                  >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Create Ticket
-                  </button>
-                </div>
-                <div v-if="selectedTask.tickets?.length" class="space-y-2">
-                  <NuxtLink
-                    v-for="tk in selectedTask.tickets" :key="tk.id"
-                    :to="`/tickets/${tk.id}`"
-                    class="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 hover:bg-indigo-50 text-sm transition-colors"
-                    @click="selectedTask = null"
-                  >
-                    <span class="text-indigo-600 font-mono text-xs flex-shrink-0">{{ tk.ticket_number }}</span>
-                    <span class="text-gray-700 truncate flex-1">{{ tk.title }}</span>
-                    <span class="text-xs px-2 py-0.5 rounded-full text-white flex-shrink-0" :style="{ background: tk.status_color }">{{ tk.status_name }}</span>
-                  </NuxtLink>
-                </div>
-                <p v-else class="text-xs text-gray-400">No tickets linked yet.</p>
-              </div>
-            </div>
-
-            <!-- Footer actions -->
-            <div class="p-6 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-              <button
-                class="text-xs text-red-500 hover:text-red-700 transition-colors"
-                @click="deleteTask(selectedTask.id)"
-              >Delete task</button>
-              <button
-                class="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg transition-colors"
-                @click="selectedTask = null"
-              >Close</button>
-            </div>
-          </div>
-        </Transition>
-      </div>
-    </Transition>
+    <!-- Task detail panel — full featured, same as tasks page -->
+    <TaskDetailPanel
+      v-if="selectedTask"
+      :task="selectedTask"
+      @close="selectedTask = null"
+      @deleted="(id) => { selectedTask = null; emit('taskDeleted', id); load() }"
+    />
   </div>
 </template>
 
@@ -372,19 +278,6 @@ async function updateSelectedStatus(status: string) {
 async function openTask(task: any) {
   const detail = await $fetch<any>(`/api/tasks/${task.id}`)
   selectedTask.value = detail
-}
-
-const { confirmDelete } = useConfirm()
-async function deleteTask(id: number) {
-  if (!await confirmDelete('Task ini akan dihapus permanen.', 'Hapus task?')) return
-  await $fetch(`/api/tasks/${id}`, { method: 'DELETE' })
-  selectedTask.value = null
-  emit('taskDeleted', id)
-  await load()
-}
-
-function createTicketFromTask(task: any) {
-  navigateTo(`/tickets/new?task_id=${task.id}&project_id=${task.project_id}&title=${encodeURIComponent(task.title)}`)
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

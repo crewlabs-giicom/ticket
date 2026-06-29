@@ -173,24 +173,29 @@
                 :list="tasksByProjectAndStatus[proj.id]?.[col.status] || []"
                 group="tasks"
                 item-key="id"
-                class="min-h-16 space-y-2"
+                class="min-h-16 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-0.5"
                 @end="onDragEnd($event, col.status)"
               >
                 <template #item="{ element }">
                   <div
-                    class="bg-white rounded-xl border border-gray-200 p-3 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
-                    :class="{ 'opacity-60': element._tempId }"
+                    :class="[
+                      'rounded-xl border p-3 cursor-pointer transition-all select-none',
+                      col.status === 'done'
+                        ? 'bg-slate-50 border-slate-200 hover:border-slate-300 opacity-75 shadow-none'
+                        : 'bg-white border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-200',
+                      element._tempId ? 'opacity-60' : ''
+                    ]"
                     @click="openTask(element)"
                   >
                     <div v-if="element._tempId" class="text-xs text-amber-500 mb-1 flex items-center gap-1">
                       <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
                       Pending sync
                     </div>
-                    <p class="text-sm font-medium text-gray-800 leading-snug">{{ element.title }}</p>
+                    <p :class="['text-sm font-medium leading-snug line-clamp-2', col.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800']">{{ element.title }}</p>
                     <div class="flex items-center justify-between mt-2">
                       <div class="flex items-center gap-1.5">
                         <span v-if="element.ticket_count > 0" class="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">🎫 {{ element.ticket_count }}</span>
-                        <span v-if="element.due_date" :class="['text-xs', isOverdue(element.due_date) ? 'text-red-500' : 'text-gray-400']">{{ formatDate(element.due_date) }}</span>
+                        <span v-if="element.due_date" :class="['text-xs', isOverdue(element.due_date) && col.status !== 'done' ? 'text-red-500 font-medium' : 'text-gray-400']">{{ formatDate(element.due_date) }}</span>
                       </div>
                       <span v-if="element.assigned_to_name" class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-semibold flex-shrink-0 overflow-hidden">
                         <img v-if="element.assigned_to_avatar" :src="`/uploads/${element.assigned_to_avatar}`" class="w-full h-full object-cover" />

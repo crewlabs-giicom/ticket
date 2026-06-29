@@ -10,13 +10,14 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'POST') {
     const body = await readBody(event)
-    const { message, is_internal, attachments } = body
+    const { message, is_internal, attachments, status_id } = body
     if (!message) throw createError({ statusCode: 400, statusMessage: 'Pesan tidak boleh kosong' })
 
     const isInternal = user.role !== 'customer' && is_internal ? 1 : 0
 
     const conn = await db.getConnection()
     let responseId: number
+    let statusChanged = false
     try {
       await conn.beginTransaction()
 
@@ -26,7 +27,29 @@ export default defineEventHandler(async (event) => {
       )
       responseId = (r as ResultSetHeader).insertId
 
-      await conn.execute('UPDATE tickets SET updated_at=NOW() WHERE id=?', [ticketId])
+      // Opsional: ubah status ticket bersamaan dengan pengiriman balasan
+      if (status_id && !isInternal) {
+        const [statusRows] = await conn.execute(
+          'SELECT id, is_resolved FROM ticket_statuses WHERE id = ?', [Number(status_id)]
+        ) as any[]
+        const targetStatus = (statusRows as any[])[0]
+        if (targetStatus) {
+          if (targetStatus.is_resolved) {
+            await conn.execute(
+              'UPDATE tickets SET status_id = ?, resolved_at = NOW(), updated_at = NOW() WHERE id = ?',
+              [status_id, ticketId]
+            )
+          } else {
+            await conn.execute(
+              'UPDATE tickets SET status_id = ?, resolved_at = NULL, updated_at = NOW() WHERE id = ?',
+              [status_id, ticketId]
+            )
+          }
+          statusChanged = true
+        }
+      } else {
+        await conn.execute('UPDATE tickets SET updated_at=NOW() WHERE id=?', [ticketId])
+      }
 
       if (attachments?.length) {
         for (const a of attachments) {
@@ -79,6 +102,14 @@ export default defineEventHandler(async (event) => {
       label: isInternal ? `${user.name} menambahkan catatan internal` : `${user.name} menambahkan balasan`,
       user_id: user.id,
     })
+
+    if (statusChanged) {
+      await logActivity(db, {
+        entity_type: 'ticket', entity_id: Number(ticketId), action: 'status_changed',
+        label: `${user.name} mengubah status via balasan`,
+        user_id: user.id,
+      })
+    }
 
     broadcastToAll('ticket_response', { ticket_id: Number(ticketId), ticket_number: ticket.ticket_number })
 
