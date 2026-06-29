@@ -5,7 +5,7 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <div class="stat-card">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Avg SLA</span>
-        <span class="text-2xl font-bold text-slate-900 mt-1">{{ stats.avgSla === '—' ? '—' : stats.avgSla + 'h' }}</span>
+        <span class="text-2xl font-bold text-slate-900 mt-1">{{ stats.avgSla ?? '—' }}</span>
         <span class="text-xs text-slate-400">Waktu rata-rata resolve</span>
       </div>
       <div class="stat-card border-l-4 border-l-blue-400">
@@ -216,6 +216,7 @@ const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 const loading = ref(false)
 const exporting = ref(false)
 const tickets = ref<any[]>([])
+const stats = ref({ open: 0, resolved: 0, breached: 0, avgSla: null as string | null })
 
 const { data: sd } = await useFetch('/api/statuses')
 const { data: prd } = await useFetch('/api/projects')
@@ -250,6 +251,7 @@ async function fetchTickets() {
     pagination.total = res.total ?? 0
     pagination.totalPages = res.totalPages ?? 1
     pagination.page = res.page ?? 1
+    if (res.stats) stats.value = res.stats
   } finally {
     loading.value = false
   }
@@ -281,24 +283,6 @@ function fmtDuration(from: string, to?: string | null): string {
   return `${m}m`
 }
 
-const stats = computed(() => {
-  const rows = tickets.value
-  const resolved = rows.filter((t: any) => t.resolved_at || t.closed_at)
-  const open = rows.filter((t: any) => !t.resolved_at && !t.closed_at)
-  const breached = rows.filter((t: any) => t.sla_breached)
-
-  let avgSla: string = '—'
-  if (resolved.length) {
-    const totalHrs = resolved.reduce((sum: number, t: any) => {
-      const from = new Date(t.created_at).getTime()
-      const to = new Date(t.resolved_at || t.closed_at).getTime()
-      return sum + (to - from) / 3600000
-    }, 0)
-    avgSla = (totalHrs / resolved.length).toFixed(1)
-  }
-
-  return { avgSla, open: open.length, resolved: resolved.length, breached: breached.length }
-})
 
 const pageButtons = computed(() => {
   const p = pagination.page

@@ -50,6 +50,19 @@ export default defineEventHandler(async (event) => {
       `SELECT COUNT(*) as total FROM tickets t WHERE ${where}`, params
     ) as any[]
 
+    const [[aggStats]] = await db.execute(
+      `SELECT
+        COUNT(*) as total_all,
+        SUM(CASE WHEN t.resolved_at IS NULL AND t.closed_at IS NULL THEN 1 ELSE 0 END) as open_count,
+        SUM(CASE WHEN t.resolved_at IS NOT NULL OR t.closed_at IS NOT NULL THEN 1 ELSE 0 END) as resolved_count,
+        SUM(CASE WHEN t.sla_breached = 1 THEN 1 ELSE 0 END) as breach_count,
+        AVG(CASE WHEN t.resolved_at IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, t.created_at, t.resolved_at)
+                 WHEN t.closed_at IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, t.created_at, t.closed_at)
+                 ELSE NULL END) as avg_resolution_minutes
+      FROM tickets t WHERE ${where}`,
+      params
+    ) as any[]
+
     const [tickets] = await db.execute(`
       SELECT t.*,
         p.name as project_name,
@@ -72,7 +85,25 @@ export default defineEventHandler(async (event) => {
       LIMIT ? OFFSET ?
     `, [...params, limit, offset])
 
-    return { success: true, data: tickets, total, page, limit, totalPages: Math.ceil(total / limit) }
+    const mins = Number(aggStats?.avg_resolution_minutes)
+    const avgSla = mins > 0
+      ? (() => {
+          const d = Math.floor(mins / 1440); const h = Math.floor((mins % 1440) / 60); const m = Math.floor(mins % 60)
+          if (d > 0) return `${d}d ${h}h ${m}m`
+          if (h > 0) return `${h}h ${m}m`
+          return `${m}m`
+        })()
+      : null
+
+    return {
+      success: true, data: tickets, total, page, limit, totalPages: Math.ceil(total / limit),
+      stats: {
+        open: Number(aggStats?.open_count ?? 0),
+        resolved: Number(aggStats?.resolved_count ?? 0),
+        breached: Number(aggStats?.breach_count ?? 0),
+        avgSla,
+      }
+    }
   }
 
   if (event.method === 'POST') {
