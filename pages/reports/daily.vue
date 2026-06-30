@@ -41,6 +41,11 @@
         <span class="text-sm font-semibold text-violet-700">{{ summary.tickets_count }}</span>
         <span class="text-xs text-violet-400">ticket ditangani</span>
       </div>
+      <div v-if="summary.total_ticket_seconds > 0" class="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2">
+        <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-sm font-semibold text-emerald-700">{{ fmtSecs(summary.total_ticket_seconds) }}</span>
+        <span class="text-xs text-emerald-400">ticket timer</span>
+      </div>
     </div>
 
     <!-- 2 Panels -->
@@ -118,11 +123,12 @@
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Ticket</th>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Judul</th>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Resolved</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Durasi</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-if="!ticketActivities.length">
-                <td colspan="3" class="text-center py-8 text-slate-400 text-xs">Tidak ada aktivitas ticket pada tanggal ini</td>
+                <td colspan="4" class="text-center py-8 text-slate-400 text-xs">Tidak ada aktivitas ticket pada tanggal ini</td>
               </tr>
               <tr v-for="ta in pagedTickets" :key="ta.id" class="hover:bg-slate-50/50">
                 <td class="px-3 py-2 whitespace-nowrap">
@@ -136,9 +142,18 @@
                 <td class="px-3 py-2 whitespace-nowrap">
                   <span class="text-xs font-mono" :class="ta.resolved_at ? 'text-green-600' : 'text-slate-400'">{{ ta.resolved_at ? fmtTime(ta.resolved_at) : '—' }}</span>
                 </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <span v-if="ticketTimeMap.get(ta.ticket_id)" class="text-xs font-semibold font-mono text-emerald-600">{{ fmtSecs(ticketTimeMap.get(ta.ticket_id)!) }}</span>
+                  <span v-else class="text-xs text-slate-300">—</span>
+                </td>
               </tr>
             </tbody>
           </table>
+        </div>
+        <!-- Ticket time total -->
+        <div v-if="summary.total_ticket_seconds > 0" class="border-t border-slate-100 px-4 py-2.5 flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-700">Total ticket time</span>
+          <span class="text-xs font-bold font-mono text-emerald-600">{{ fmtSecs(summary.total_ticket_seconds) }}</span>
         </div>
         <!-- Ticket pagination -->
         <div v-if="ticketTotalPages > 1" class="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 text-xs text-slate-500">
@@ -212,7 +227,8 @@ const copied = ref(false)
 
 const timelogs = ref<any[]>([])
 const ticketActivities = ref<any[]>([])
-const summary = ref({ total_task_seconds: 0, tasks_count: 0, tickets_count: 0 })
+const ticketTimelogs = ref<any[]>([])
+const summary = ref({ total_task_seconds: 0, total_ticket_seconds: 0, tasks_count: 0, tickets_count: 0 })
 const reportUser = ref<any>(null)
 
 const { data: userData } = await useFetch('/api/users', { query: { limit: 500 } })
@@ -234,7 +250,8 @@ async function fetchReport() {
     }) as any
     timelogs.value = res.timelogs || []
     ticketActivities.value = res.ticket_activities || []
-    summary.value = res.summary || { total_task_seconds: 0, tasks_count: 0, tickets_count: 0 }
+    ticketTimelogs.value = res.ticket_timelogs || []
+    summary.value = res.summary || { total_task_seconds: 0, total_ticket_seconds: 0, tasks_count: 0, tickets_count: 0 }
     reportUser.value = res.user
     loaded.value = true
   } finally { loading.value = false }
@@ -246,6 +263,15 @@ const TICKET_PER_PAGE = 10
 const pagedTickets = computed(() => ticketActivities.value.slice((ticketPage.value - 1) * TICKET_PER_PAGE, ticketPage.value * TICKET_PER_PAGE))
 const ticketTotalPages = computed(() => Math.ceil(ticketActivities.value.length / TICKET_PER_PAGE))
 watch(ticketActivities, () => { ticketPage.value = 1 })
+
+// Per-ticket time from ticket_timelogs keyed by ticket_id
+const ticketTimeMap = computed(() => {
+  const map = new Map<number, number>()
+  for (const tl of ticketTimelogs.value) {
+    map.set(tl.ticket_id, (map.get(tl.ticket_id) || 0) + Number(tl.duration_seconds || 0))
+  }
+  return map
+})
 
 // Per-task grouped summary
 const taskGroups = computed(() => {
@@ -308,7 +334,12 @@ const reportText = computed(() => {
     lines.push('Ticket yang ditangani:')
     for (const tk of ticketActivities.value) {
       const who = filters.user_id === '' ? ` (${tk.user_name})` : ''
-      lines.push(`• ${tk.ticket_number} ${tk.ticket_title}${who}`)
+      const ticketSecs = ticketTimeMap.value.get(tk.ticket_id)
+      const duration = ticketSecs ? ` — ${fmtSecs(ticketSecs)}` : ''
+      lines.push(`• ${tk.ticket_number} ${tk.ticket_title}${who}${duration}`)
+    }
+    if (summary.value.total_ticket_seconds > 0) {
+      lines.push(`  Total ticket time: ${fmtSecs(summary.value.total_ticket_seconds)}`)
     }
     lines.push('')
   } else {
@@ -317,7 +348,8 @@ const reportText = computed(() => {
     lines.push('')
   }
 
-  lines.push(`Total task time: ${fmtSecs(summary.value.total_task_seconds)} | Tickets: ${summary.value.tickets_count}`)
+  const ticketTimePart = summary.value.total_ticket_seconds > 0 ? ` | Ticket time: ${fmtSecs(summary.value.total_ticket_seconds)}` : ''
+  lines.push(`Total task time: ${fmtSecs(summary.value.total_task_seconds)} | Tickets: ${summary.value.tickets_count}${ticketTimePart}`)
   return lines.join('\n')
 })
 

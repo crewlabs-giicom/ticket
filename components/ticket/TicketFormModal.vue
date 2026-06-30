@@ -77,6 +77,31 @@
           <p v-if="uploadError" class="text-xs text-red-600 mt-1">{{ uploadError }}</p>
         </div>
 
+        <!-- Participants -->
+        <div>
+          <label class="label">Participant</label>
+          <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <div v-if="!allUsers.length" class="px-3 py-2.5 text-xs text-slate-400">Tidak ada user tersedia</div>
+            <div v-else class="max-h-36 overflow-y-auto divide-y divide-slate-50">
+              <label
+                v-for="u in allUsers"
+                :key="u.id"
+                class="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  :value="u.id"
+                  v-model="selectedParticipants"
+                  class="rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <span class="text-xs text-slate-700">{{ u.name }}</span>
+                <span class="text-[10px] text-slate-400 ml-auto">{{ u.role }}</span>
+              </label>
+            </div>
+          </div>
+          <p v-if="selectedParticipants.length" class="text-[11px] text-indigo-500 mt-1">{{ selectedParticipants.length }} participant dipilih</p>
+        </div>
+
         <p v-if="error" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{{ error }}</p>
         <div class="flex justify-end gap-2 pt-2">
           <button type="button" @click="$emit('close')" class="btn-secondary">Batal</button>
@@ -107,9 +132,11 @@ const emit = defineEmits(['close', 'created'])
 const { data: pd } = await useFetch('/api/priorities')
 const { data: sd } = await useFetch('/api/statuses')
 const { data: prd } = await useFetch('/api/projects')
+const { data: ud } = await useFetch('/api/users', { query: { limit: 500 } })
 const priorities = computed(() => (pd.value as any)?.data || [])
 const statuses = computed(() => (sd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data?.filter((p: any) => p.is_active) || [])
+const allUsers = computed(() => ((ud.value as any)?.data || []).filter((u: any) => u.is_active && u.id !== auth.user?.id))
 const systemMenus = ref<any[]>([])
 
 const systemMenuOptions = computed(() => {
@@ -142,6 +169,7 @@ const form = reactive({
   subsystem: '',
   system_menu_id: props.prefillSystemMenuId ? String(props.prefillSystemMenuId) : '',
 })
+const selectedParticipants = ref<number[]>([])
 const taskId = computed(() => props.taskId)
 
 // Auto-set project_id from selected menu's project
@@ -248,6 +276,7 @@ async function submit() {
         ...form,
         task_id: taskId.value || undefined,
         attachments: uploadedFiles.value,
+        participants: selectedParticipants.value,
       },
     })
     emit('created')

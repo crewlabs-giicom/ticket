@@ -108,7 +108,7 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'POST') {
     const body = await readBody(event)
-    const { title, description, project_id, priority_id, status_id, assigned_to, due_date, task_id, subsystem, system_menu_id } = body
+    const { title, description, project_id, priority_id, status_id, assigned_to, due_date, task_id, subsystem, system_menu_id, participants } = body
 
     if (!title || !project_id || !priority_id || !status_id) {
       throw createError({ statusCode: 400, statusMessage: 'Field tidak lengkap' })
@@ -152,6 +152,16 @@ export default defineEventHandler(async (event) => {
         }
       }
 
+      // Insert participants
+      const participantIds: number[] = Array.isArray(participants) ? participants.map(Number).filter(Boolean) : []
+      for (const pid of participantIds) {
+        if (pid === user.id) continue
+        await conn.execute(
+          'INSERT IGNORE INTO ticket_participants (ticket_id, user_id, invited_by) VALUES (?, ?, ?)',
+          [ticketId, pid, user.id]
+        )
+      }
+
       await conn.commit()
     } catch (e) {
       await conn.rollback()
@@ -160,8 +170,19 @@ export default defineEventHandler(async (event) => {
       conn.release()
     }
 
+    const participantIds: number[] = Array.isArray(participants) ? participants.map(Number).filter(Boolean) : []
     const [ticketRows] = await db.execute('SELECT * FROM tickets WHERE id = ?', [ticketId!])
     const ticket = (ticketRows as any[])[0]
+
+    // Notify participants
+    for (const pid of participantIds) {
+      if (pid === user.id) continue
+      await db.execute(
+        'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
+        [pid, 'Diundang ke ticket', `${user.name} mengundang Anda ke ticket ${ticketNumber}: ${title}`, 'ticket_invite', ticketId!]
+      )
+      broadcastToUser(pid, 'notification', { title: 'Diundang ke ticket', message: `${user.name} mengundang Anda ke ticket ${ticketNumber}`, type: 'ticket_invite', ticket_id: ticketId! })
+    }
 
     if (assigned_to) {
       await db.execute(
