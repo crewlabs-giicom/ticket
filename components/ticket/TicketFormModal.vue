@@ -80,23 +80,55 @@
         <!-- Participants -->
         <div>
           <label class="label">Participant</label>
-          <div class="border border-slate-200 rounded-xl overflow-hidden">
-            <div v-if="!allUsers.length" class="px-3 py-2.5 text-xs text-slate-400">Tidak ada user tersedia</div>
-            <div v-else class="max-h-36 overflow-y-auto divide-y divide-slate-50">
-              <label
-                v-for="u in allUsers"
+          <!-- Selected chips -->
+          <div v-if="selectedParticipantUsers.length" class="flex flex-wrap gap-1.5 mb-2">
+            <span
+              v-for="u in selectedParticipantUsers"
+              :key="u.id"
+              class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded-full border border-indigo-200"
+            >
+              {{ u.name }}
+              <button type="button" @click="removeParticipantById(u.id)" class="text-indigo-400 hover:text-indigo-700 leading-none ml-0.5">✕</button>
+            </span>
+          </div>
+          <!-- Search input -->
+          <div class="relative" ref="participantDropdownRef">
+            <input
+              v-model="participantSearch"
+              type="text"
+              class="input text-xs"
+              placeholder="Cari participant..."
+              @focus="participantOpen = true"
+              @keydown.escape="participantOpen = false"
+            />
+            <!-- Dropdown -->
+            <div
+              v-if="participantOpen && filteredParticipantUsers.length"
+              class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-44 overflow-y-auto"
+            >
+              <button
+                v-for="u in filteredParticipantUsers"
                 :key="u.id"
-                class="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
+                type="button"
+                @click="toggleParticipant(u)"
+                class="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 transition-colors text-left"
+                :class="selectedParticipants.includes(u.id) ? 'bg-indigo-50' : ''"
               >
-                <input
-                  type="checkbox"
-                  :value="u.id"
-                  v-model="selectedParticipants"
-                  class="rounded text-indigo-600 focus:ring-indigo-500"
-                />
-                <span class="text-xs text-slate-700">{{ u.name }}</span>
-                <span class="text-[10px] text-slate-400 ml-auto">{{ u.role }}</span>
-              </label>
+                <span
+                  class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                  :class="selectedParticipants.includes(u.id) ? 'bg-indigo-500 text-white' : 'bg-slate-200 text-slate-500'"
+                >
+                  {{ selectedParticipants.includes(u.id) ? '✓' : u.name.charAt(0) }}
+                </span>
+                <span class="text-xs text-slate-700 flex-1">{{ u.name }}</span>
+                <span class="text-[10px] text-slate-400">{{ u.role }}</span>
+              </button>
+            </div>
+            <div
+              v-else-if="participantOpen && participantSearch && !filteredParticipantUsers.length"
+              class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2.5 text-xs text-slate-400"
+            >
+              Tidak ada user ditemukan
             </div>
           </div>
           <p v-if="selectedParticipants.length" class="text-[11px] text-indigo-500 mt-1">{{ selectedParticipants.length }} participant dipilih</p>
@@ -170,7 +202,40 @@ const form = reactive({
   system_menu_id: props.prefillSystemMenuId ? String(props.prefillSystemMenuId) : '',
 })
 const selectedParticipants = ref<number[]>([])
+const participantSearch = ref('')
+const participantOpen = ref(false)
+const participantDropdownRef = ref<HTMLElement | null>(null)
 const taskId = computed(() => props.taskId)
+
+const selectedParticipantUsers = computed(() =>
+  allUsers.value.filter((u: any) => selectedParticipants.value.includes(u.id))
+)
+
+const filteredParticipantUsers = computed(() => {
+  const q = participantSearch.value.toLowerCase().trim()
+  return allUsers.value.filter((u: any) =>
+    !q || u.name.toLowerCase().includes(q) || (u.role || '').toLowerCase().includes(q)
+  )
+})
+
+function toggleParticipant(u: any) {
+  const idx = selectedParticipants.value.indexOf(u.id)
+  if (idx === -1) selectedParticipants.value.push(u.id)
+  else selectedParticipants.value.splice(idx, 1)
+  participantSearch.value = ''
+}
+
+function removeParticipantById(id: number) {
+  selectedParticipants.value = selectedParticipants.value.filter(x => x !== id)
+}
+
+onMounted(() => {
+  document.addEventListener('click', (e) => {
+    if (participantDropdownRef.value && !participantDropdownRef.value.contains(e.target as Node)) {
+      participantOpen.value = false
+    }
+  })
+})
 
 // Auto-set project_id from selected menu's project
 watch(selectedMenu, (menu) => {
