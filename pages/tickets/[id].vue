@@ -782,6 +782,12 @@ async function startTimer() {
   const openStatusId = sorted[0]?.id
   const currentIsOpen = !ticket.value?.status_is_resolved && ticket.value?.status_id === openStatusId
   const autoId = (currentIsOpen && inProgressStatus.value) ? inProgressStatus.value.id : undefined
+
+  // Auto-assign to timer starter if ticket is unassigned or assigned to someone else
+  if (ticket.value && auth.user && Number(ticket.value.assigned_to) !== Number(auth.user.id)) {
+    await updateField('assigned_to', auth.user.id)
+  }
+
   await timer.start(autoId)
 }
 
