@@ -477,6 +477,92 @@ async function migrate(db: mysql.Pool) {
   await db.execute(`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS pin_x INT DEFAULT NULL`).catch(() => {})
   await db.execute(`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS pin_y INT DEFAULT NULL`).catch(() => {})
   await db.execute(`ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS is_minimized TINYINT(1) NOT NULL DEFAULT 0`).catch(() => {})
+
+  // === PRD / Request workflow ===
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS prds (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(500) NOT NULL,
+      project_id INT NOT NULL,
+      status ENUM('draft','in_review','approved','in_progress','done') NOT NULL DEFAULT 'draft',
+      current_version_id INT NULL,
+      created_by INT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id),
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS prd_versions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      prd_id INT NOT NULL,
+      version_number INT NOT NULL DEFAULT 1,
+      background TEXT,
+      goals TEXT,
+      scope_in TEXT,
+      scope_out TEXT,
+      requirements TEXT,
+      technical_approach TEXT,
+      changelog TEXT,
+      created_by INT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (prd_id) REFERENCES prds(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `)
+
+  // Add FK current_version_id after prd_versions exists
+  await db.execute(`ALTER TABLE prds ADD CONSTRAINT fk_prd_current_version FOREIGN KEY (current_version_id) REFERENCES prd_versions(id) ON DELETE SET NULL`).catch(() => {})
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS prd_milestones (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      prd_id INT NOT NULL,
+      prd_version_id INT NOT NULL,
+      name VARCHAR(500) NOT NULL,
+      due_date DATE,
+      \`order\` INT NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (prd_id) REFERENCES prds(id) ON DELETE CASCADE,
+      FOREIGN KEY (prd_version_id) REFERENCES prd_versions(id) ON DELETE CASCADE
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS requests (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      title VARCHAR(500) NOT NULL,
+      description TEXT,
+      requester_id INT NOT NULL,
+      project_id INT NOT NULL,
+      urgency ENUM('low','medium','high') NOT NULL DEFAULT 'medium',
+      status ENUM('under_review','approved','in_progress','done','rejected','standalone') NOT NULL DEFAULT 'under_review',
+      prd_id INT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (requester_id) REFERENCES users(id),
+      FOREIGN KEY (project_id) REFERENCES projects(id),
+      FOREIGN KEY (prd_id) REFERENCES prds(id) ON DELETE SET NULL,
+      INDEX idx_req_prd (prd_id),
+      INDEX idx_req_status (status)
+    )
+  `)
+
+  // Extend tasks with PRD foreign keys
+  await db.execute(`ALTER TABLE tasks ADD COLUMN prd_id INT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD COLUMN prd_version_id INT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD COLUMN milestone_id INT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD CONSTRAINT fk_task_prd FOREIGN KEY (prd_id) REFERENCES prds(id) ON DELETE SET NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD CONSTRAINT fk_task_prd_version FOREIGN KEY (prd_version_id) REFERENCES prd_versions(id) ON DELETE SET NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD CONSTRAINT fk_task_milestone FOREIGN KEY (milestone_id) REFERENCES prd_milestones(id) ON DELETE SET NULL`).catch(() => {})
+
+  // Add Requests & PRDs menu items (idempotent)
+  await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Requests','/requests','inbox',3,'all' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/requests')`).catch(() => {})
+  await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'PRDs','/prds','document',4,'all' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/prds')`).catch(() => {})
 }
 
 async function seed(db: mysql.Pool) {

@@ -56,11 +56,13 @@ export default defineEventHandler(async (event) => {
   const baseQuery = `SELECT t.*, p.name as project_name,
           u.name as assigned_to_name, u.avatar as assigned_to_avatar,
           cb.name as created_by_name,
-          (SELECT COUNT(*) FROM tickets tk WHERE tk.task_id = t.id) as ticket_count
+          (SELECT COUNT(*) FROM tickets tk WHERE tk.task_id = t.id) as ticket_count,
+          pv.version_number as prd_version_number
    FROM tasks t
    LEFT JOIN projects p ON p.id = t.project_id
    LEFT JOIN users u ON u.id = t.assigned_to
    LEFT JOIN users cb ON cb.id = t.created_by
+   LEFT JOIN prd_versions pv ON pv.id = t.prd_version_id
    ${where}
    ORDER BY t.project_id ASC, t.position ASC, t.created_at DESC`
 

@@ -65,6 +65,18 @@
                 >
                   <p :class="['text-sm font-medium leading-snug line-clamp-2', col.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800']">{{ element.title }}</p>
 
+                  <!-- PRD badge -->
+                  <div v-if="element.prd_id" class="mt-1.5">
+                    <NuxtLink
+                      :to="`/prds/${element.prd_id}`"
+                      @click.stop
+                      class="inline-flex items-center gap-1 text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded-full font-medium hover:bg-purple-100 transition-colors"
+                    >
+                      <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                      PRD-{{ element.prd_id }}<span v-if="element.prd_version_number"> v{{ element.prd_version_number }}</span>
+                    </NuxtLink>
+                  </div>
+
                   <div class="flex items-center justify-between mt-2.5 gap-2">
                     <!-- Left: ticket badge + due date -->
                     <div class="flex items-center gap-1.5 flex-wrap">

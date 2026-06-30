@@ -1,0 +1,440 @@
+<template>
+  <div class="p-6 max-w-5xl mx-auto">
+    <div v-if="loading" class="text-center py-16 text-gray-400">Loading...</div>
+    <template v-else-if="prd">
+      <!-- Header -->
+      <div class="flex items-start justify-between mb-6">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <NuxtLink to="/prds" class="text-sm text-indigo-600 hover:underline">PRDs</NuxtLink>
+            <span class="text-gray-400">/</span>
+            <span class="text-sm text-gray-500">PRD-{{ prd.id }}</span>
+          </div>
+          <h1 class="text-2xl font-bold text-gray-900">{{ prd.title }}</h1>
+          <p class="text-sm text-gray-500 mt-1">{{ prd.project_name }} · by {{ prd.created_by_name }} · {{ fmtDate(prd.created_at) }}</p>
+        </div>
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <!-- Version selector -->
+          <select
+            v-model="selectedVersionId"
+            class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option v-for="v in prd.versions" :key="v.id" :value="v.id">
+              v{{ v.version_number }}{{ v.id === prd.current_version_id ? ' (active)' : '' }}
+            </option>
+          </select>
+          <!-- Status -->
+          <select
+            v-if="authStore.isStaffOrAdmin"
+            :value="prd.status"
+            @change="updateStatus(($event.target as HTMLSelectElement).value)"
+            class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option v-for="s in prdStatuses" :key="s.value" :value="s.value">{{ s.label }}</option>
+          </select>
+          <span v-else :class="prdStatusClass(prd.status)" class="px-3 py-1 rounded-full text-sm font-medium">{{ prd.status.replace('_', ' ') }}</span>
+          <button
+            v-if="authStore.isStaffOrAdmin"
+            @click="showNewVersionModal = true"
+            class="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50"
+          >New Version</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex border-b border-gray-200 mb-6">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="activeTab = tab.id"
+          :class="['px-5 py-3 text-sm font-medium transition-colors border-b-2 -mb-px', activeTab === tab.id ? 'text-indigo-600 border-indigo-600' : 'text-gray-500 border-transparent hover:text-gray-700']"
+        >{{ tab.label }}<span v-if="tab.count !== undefined" class="ml-1.5 bg-gray-100 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">{{ tab.count }}</span></button>
+      </div>
+
+      <!-- Tab: Content -->
+      <div v-if="activeTab === 'content'">
+        <div v-if="selectedVersion" class="space-y-6">
+          <div v-if="selectedVersion.id !== prd.current_version_id" class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+            Viewing v{{ selectedVersion.version_number }} (not the active version). Switch to v{{ prd.current_version_number }} to edit.
+          </div>
+          <div v-for="field in contentFields" :key="field.key" class="bg-white border border-gray-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-gray-700">{{ field.label }}</h3>
+              <button
+                v-if="authStore.isStaffOrAdmin && selectedVersion.id === prd.current_version_id && !editingField"
+                @click="startEdit(field.key)"
+                class="text-xs text-indigo-600 hover:underline"
+              >Edit</button>
+            </div>
+            <div v-if="editingField === field.key">
+              <textarea
+                v-model="editValue"
+                rows="5"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <div class="flex gap-2 mt-2">
+                <button @click="saveField(field.key)" :disabled="saving" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">Save</button>
+                <button @click="cancelEdit" class="px-3 py-1 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">Cancel</button>
+              </div>
+            </div>
+            <p v-else class="text-sm text-gray-700 whitespace-pre-wrap">{{ selectedVersion[field.key] || '—' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Milestones & Tasks -->
+      <div v-if="activeTab === 'milestones'">
+        <div class="flex justify-between items-center mb-4">
+          <p class="text-sm text-gray-500">Milestones for the active version</p>
+          <button
+            v-if="authStore.isStaffOrAdmin"
+            @click="showMilestoneModal = true"
+            class="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Milestone
+          </button>
+        </div>
+
+        <div v-if="!prd.milestones.length" class="text-center py-10 text-gray-400 bg-white border border-gray-200 rounded-xl">No milestones yet</div>
+
+        <div class="space-y-4">
+          <div v-for="m in prd.milestones" :key="m.id" class="bg-white border border-gray-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <h3 class="font-semibold text-gray-900">{{ m.name }}</h3>
+                <span v-if="m.due_date" class="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Due {{ fmtDate(m.due_date) }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400">{{ m.task_count }} task(s)</span>
+                <button
+                  v-if="authStore.isStaffOrAdmin"
+                  @click="openGenerateTask(m)"
+                  class="text-xs px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100"
+                >+ Task</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Linked Requests -->
+      <div v-if="activeTab === 'requests'">
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div v-if="!prd.requests.length" class="text-center py-10 text-gray-400">No requests linked</div>
+          <table v-else class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">Title</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">Requester</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">Urgency</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in prd.requests" :key="r.id" class="border-t border-gray-100 hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-900 max-w-xs truncate">{{ r.title }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ r.requester_name }}</td>
+                <td class="px-4 py-3">
+                  <span :class="urgencyClass(r.urgency)" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ r.urgency }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <span :class="reqStatusClass(r.status)" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ r.status.replace('_', ' ') }}</span>
+                </td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ fmtDate(r.created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <!-- New Version Modal -->
+    <div v-if="showNewVersionModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold">Create New Version</h2>
+          <button @click="showNewVersionModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-sm text-gray-500">Content will be copied from the current active version. You can update fields below.</p>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Changelog <span class="text-red-500">*</span></label>
+            <textarea v-model="newVersionForm.changelog" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="What changed in this version?" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t">
+          <button @click="showNewVersionModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button @click="createNewVersion" :disabled="creatingVersion" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            {{ creatingVersion ? 'Creating...' : 'Create Version' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Milestone Modal -->
+    <div v-if="showMilestoneModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold">Add Milestone</h2>
+          <button @click="showMilestoneModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
+            <input v-model="milestoneForm.name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Milestone name" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+            <input v-model="milestoneForm.due_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t">
+          <button @click="showMilestoneModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button @click="addMilestone" :disabled="addingMilestone" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            {{ addingMilestone ? 'Adding...' : 'Add Milestone' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate Task Modal -->
+    <div v-if="showGenTaskModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold">Generate Task for "{{ genTaskMilestone?.name }}"</h2>
+          <button @click="showGenTaskModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Task Title <span class="text-red-500">*</span></label>
+            <input v-model="genTaskForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Task title" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea v-model="genTaskForm.description" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input v-model="genTaskForm.due_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <p class="text-xs text-gray-400 mt-1">Leave blank to inherit from milestone</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+              <select v-model="genTaskForm.assigned_to" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Unassigned</option>
+                <option v-for="u in staffUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t">
+          <button @click="showGenTaskModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button @click="generateTask" :disabled="generatingTask" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            {{ generatingTask ? 'Creating...' : 'Generate Task' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useAuthStore } from '~/stores/auth'
+
+const authStore = useAuthStore()
+const route = useRoute()
+const prdId = computed(() => Number(route.params.id))
+
+const prd = ref<any>(null)
+const loading = ref(true)
+const activeTab = ref('content')
+const selectedVersionId = ref<number | null>(null)
+const editingField = ref<string | null>(null)
+const editValue = ref('')
+const saving = ref(false)
+
+const showNewVersionModal = ref(false)
+const creatingVersion = ref(false)
+const newVersionForm = ref({ changelog: '' })
+
+const showMilestoneModal = ref(false)
+const addingMilestone = ref(false)
+const milestoneForm = ref({ name: '', due_date: '' })
+
+const showGenTaskModal = ref(false)
+const generatingTask = ref(false)
+const genTaskMilestone = ref<any>(null)
+const genTaskForm = ref({ title: '', description: '', due_date: '', assigned_to: '' })
+const staffUsers = ref<any[]>([])
+
+const prdStatuses = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'in_review', label: 'In Review' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'done', label: 'Done' },
+]
+
+const contentFields = [
+  { key: 'background', label: 'Background' },
+  { key: 'goals', label: 'Goals' },
+  { key: 'scope_in', label: 'Scope In' },
+  { key: 'scope_out', label: 'Scope Out' },
+  { key: 'requirements', label: 'Requirements' },
+  { key: 'technical_approach', label: 'Technical Approach' },
+]
+
+const tabs = computed(() => [
+  { id: 'content', label: 'Content' },
+  { id: 'milestones', label: 'Milestones & Tasks', count: prd.value?.milestones?.length },
+  { id: 'requests', label: 'Linked Requests', count: prd.value?.requests?.length },
+])
+
+const selectedVersion = computed(() =>
+  prd.value?.versions?.find((v: any) => v.id === selectedVersionId.value) ?? null
+)
+
+function fmtDate(d: string) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function prdStatusClass(s: string) {
+  const map: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-600',
+    in_review: 'bg-blue-100 text-blue-700',
+    approved: 'bg-green-100 text-green-700',
+    in_progress: 'bg-indigo-100 text-indigo-700',
+    done: 'bg-emerald-100 text-emerald-700',
+  }
+  return map[s] || 'bg-gray-100 text-gray-600'
+}
+
+function urgencyClass(u: string) {
+  return { low: 'bg-green-100 text-green-700', medium: 'bg-yellow-100 text-yellow-700', high: 'bg-red-100 text-red-700' }[u] || 'bg-gray-100 text-gray-700'
+}
+
+function reqStatusClass(s: string) {
+  const map: Record<string, string> = {
+    under_review: 'bg-blue-100 text-blue-700',
+    approved: 'bg-green-100 text-green-700',
+    in_progress: 'bg-indigo-100 text-indigo-700',
+    done: 'bg-emerald-100 text-emerald-700',
+    rejected: 'bg-red-100 text-red-700',
+    standalone: 'bg-gray-100 text-gray-700',
+  }
+  return map[s] || 'bg-gray-100 text-gray-700'
+}
+
+function startEdit(key: string) {
+  editingField.value = key
+  editValue.value = selectedVersion.value?.[key] ?? ''
+}
+
+function cancelEdit() {
+  editingField.value = null
+  editValue.value = ''
+}
+
+async function saveField(key: string) {
+  if (!selectedVersion.value) return
+  saving.value = true
+  try {
+    // Update via new version approach — patch current version content inline
+    // We'll do a minimal PUT to save the field via patch version endpoint
+    await $fetch(`/api/prds/${prdId.value}/versions/${selectedVersion.value.id}`, {
+      method: 'PATCH',
+      body: { [key]: editValue.value }
+    })
+    selectedVersion.value[key] = editValue.value
+    cancelEdit()
+  } finally {
+    saving.value = false
+  }
+}
+
+async function updateStatus(status: string) {
+  await $fetch(`/api/prds/${prdId.value}/status`, { method: 'PATCH', body: { status } })
+  prd.value.status = status
+}
+
+async function createNewVersion() {
+  if (!newVersionForm.value.changelog.trim()) return
+  creatingVersion.value = true
+  try {
+    const v = await $fetch<any>(`/api/prds/${prdId.value}/versions`, { method: 'POST', body: newVersionForm.value })
+    showNewVersionModal.value = false
+    newVersionForm.value = { changelog: '' }
+    await loadPrd()
+    selectedVersionId.value = v.id
+  } finally {
+    creatingVersion.value = false
+  }
+}
+
+async function addMilestone() {
+  if (!milestoneForm.value.name.trim()) return
+  addingMilestone.value = true
+  try {
+    await $fetch(`/api/prds/${prdId.value}/milestones`, { method: 'POST', body: milestoneForm.value })
+    showMilestoneModal.value = false
+    milestoneForm.value = { name: '', due_date: '' }
+    await loadPrd()
+  } finally {
+    addingMilestone.value = false
+  }
+}
+
+function openGenerateTask(m: any) {
+  genTaskMilestone.value = m
+  genTaskForm.value = { title: '', description: '', due_date: m.due_date || '', assigned_to: '' }
+  showGenTaskModal.value = true
+}
+
+async function generateTask() {
+  if (!genTaskForm.value.title.trim() || !genTaskMilestone.value) return
+  generatingTask.value = true
+  try {
+    await $fetch(`/api/milestones/${genTaskMilestone.value.id}/generate-task`, {
+      method: 'POST',
+      body: genTaskForm.value
+    })
+    showGenTaskModal.value = false
+    genTaskForm.value = { title: '', description: '', due_date: '', assigned_to: '' }
+    await loadPrd()
+  } finally {
+    generatingTask.value = false
+  }
+}
+
+async function loadPrd() {
+  const data = await $fetch<any>(`/api/prds/${prdId.value}`)
+  prd.value = data
+  if (!selectedVersionId.value && data.current_version_id) {
+    selectedVersionId.value = data.current_version_id
+  }
+}
+
+async function loadStaffUsers() {
+  const res = await $fetch<any>('/api/users', { query: { role: 'staff', limit: 200 } })
+  staffUsers.value = res.data || res
+}
+
+onMounted(async () => {
+  try {
+    await loadPrd()
+    await loadStaffUsers()
+  } finally {
+    loading.value = false
+  }
+})
+</script>

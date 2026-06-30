@@ -222,6 +222,8 @@ function fallbackMenus(role?: string) {
     { id: 'f2', name: 'Projects', path: '/projects', icon: 'folder' },
     { id: 'f3', name: 'Tasks', path: '/tasks', icon: 'check-square' },
     { id: 'f4', name: 'Tickets', path: '/tickets', icon: 'ticket' },
+    { id: 'f-requests', name: 'Requests', path: '/requests', icon: 'inbox' },
+    { id: 'f-prds', name: 'PRDs', path: '/prds', icon: 'document' },
     { id: 'f4n', name: 'Notifikasi', path: '/notifications', icon: 'bell' },
     { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar' },
     { id: 'f-wishlist', name: 'Catatan', path: '/wishlist', icon: 'clipboard' },
