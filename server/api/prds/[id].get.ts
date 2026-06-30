@@ -37,6 +37,28 @@ export default defineEventHandler(async (event) => {
     [id]
   )
 
+  const [milestoneTasks] = await db.execute(
+    `SELECT t.*, u.name as assigned_to_name, u.avatar as assigned_to_avatar, cb.name as created_by_name
+     FROM tasks t
+     LEFT JOIN users u ON u.id = t.assigned_to
+     LEFT JOIN users cb ON cb.id = t.created_by
+     WHERE t.prd_id = ? AND t.is_archived = 0
+     ORDER BY t.milestone_id ASC, t.position ASC`,
+    [id]
+  )
+
+  const tasksByMilestone: Record<number, any[]> = {}
+  for (const task of milestoneTasks as any[]) {
+    const mid = task.milestone_id
+    if (!tasksByMilestone[mid]) tasksByMilestone[mid] = []
+    tasksByMilestone[mid].push(task)
+  }
+
+  const milestonesWithTasks = (milestones as any[]).map(m => ({
+    ...m,
+    tasks: tasksByMilestone[m.id] || []
+  }))
+
   const [requests] = await db.execute(
     `SELECT r.*, u.name as requester_name, p.name as project_name
      FROM requests r
@@ -47,5 +69,5 @@ export default defineEventHandler(async (event) => {
     [id]
   )
 
-  return { ...prd, versions, milestones, requests }
+  return { ...prd, versions, milestones: milestonesWithTasks, requests }
 })

@@ -99,20 +99,73 @@
         <div v-if="!prd.milestones.length" class="text-center py-10 text-gray-400 bg-white border border-gray-200 rounded-xl">No milestones yet</div>
 
         <div class="space-y-4">
-          <div v-for="m in prd.milestones" :key="m.id" class="bg-white border border-gray-200 rounded-xl p-5">
-            <div class="flex items-center justify-between mb-3">
+          <div v-for="m in prd.milestones" :key="m.id" class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <!-- Milestone header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></div>
                 <h3 class="font-semibold text-gray-900">{{ m.name }}</h3>
-                <span v-if="m.due_date" class="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full">Due {{ fmtDate(m.due_date) }}</span>
+                <span v-if="m.due_date" :class="['text-xs px-2 py-0.5 rounded-full', isMilestoneOverdue(m) ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600']">
+                  Due {{ fmtDate(m.due_date) }}
+                </span>
               </div>
               <div class="flex items-center gap-2">
-                <span class="text-xs text-gray-400">{{ m.task_count }} task(s)</span>
+                <!-- Progress bubble -->
+                <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                  <span class="font-medium text-emerald-600">{{ m.tasks.filter((t: any) => t.status === 'done').length }}</span>
+                  <span class="text-gray-300">/</span>
+                  <span>{{ m.tasks.length }} task</span>
+                  <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden ml-1">
+                    <div
+                      class="h-full bg-emerald-500 rounded-full transition-all"
+                      :style="{ width: m.tasks.length ? (m.tasks.filter((t: any) => t.status === 'done').length / m.tasks.length * 100) + '%' : '0%' }"
+                    ></div>
+                  </div>
+                </div>
                 <button
                   v-if="authStore.isStaffOrAdmin"
                   @click="openGenerateTask(m)"
                   class="text-xs px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100"
                 >+ Task</button>
               </div>
+            </div>
+
+            <!-- Task list -->
+            <div v-if="m.tasks.length" class="divide-y divide-gray-50">
+              <div
+                v-for="task in m.tasks"
+                :key="task.id"
+                class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <!-- Status dot -->
+                <span :class="['w-2 h-2 rounded-full flex-shrink-0', taskStatusDot(task.status)]"></span>
+
+                <div class="flex-1 min-w-0">
+                  <p :class="['text-sm font-medium truncate', task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800']">{{ task.title }}</p>
+                  <p v-if="task.description" class="text-xs text-gray-400 truncate mt-0.5">{{ task.description }}</p>
+                </div>
+
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span :class="['text-xs px-2 py-0.5 rounded-full font-medium', taskStatusClass(task.status)]">
+                    {{ task.status.replace('_', ' ') }}
+                  </span>
+                  <span v-if="task.due_date" :class="['text-xs', isTaskOverdue(task) ? 'text-red-500 font-medium' : 'text-gray-400']">
+                    {{ fmtDate(task.due_date) }}
+                  </span>
+                  <span
+                    v-if="task.assigned_to_name"
+                    class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold overflow-hidden"
+                    :title="task.assigned_to_name"
+                  >
+                    <img v-if="task.assigned_to_avatar" :src="`/uploads/${task.assigned_to_avatar}`" class="w-full h-full object-cover" />
+                    <span v-else>{{ initials(task.assigned_to_name) }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="px-5 py-4 text-sm text-gray-400 text-center">
+              No tasks yet —
+              <button v-if="authStore.isStaffOrAdmin" @click="openGenerateTask(m)" class="text-indigo-600 hover:underline">generate one</button>
             </div>
           </div>
         </div>
@@ -333,6 +386,37 @@ function reqStatusClass(s: string) {
     standalone: 'bg-gray-100 text-gray-700',
   }
   return map[s] || 'bg-gray-100 text-gray-700'
+}
+
+function initials(name: string) {
+  return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+}
+
+function isMilestoneOverdue(m: any) {
+  if (!m.due_date) return false
+  return new Date(m.due_date) < new Date() && m.tasks.some((t: any) => t.status !== 'done')
+}
+
+function isTaskOverdue(task: any) {
+  if (!task.due_date || task.status === 'done') return false
+  return new Date(task.due_date) < new Date()
+}
+
+function taskStatusDot(s: string) {
+  const map: Record<string, string> = {
+    backlog: 'bg-gray-300', todo: 'bg-blue-400',
+    in_progress: 'bg-indigo-500', review: 'bg-yellow-400', done: 'bg-emerald-500'
+  }
+  return map[s] || 'bg-gray-300'
+}
+
+function taskStatusClass(s: string) {
+  const map: Record<string, string> = {
+    backlog: 'bg-gray-100 text-gray-600', todo: 'bg-blue-50 text-blue-600',
+    in_progress: 'bg-indigo-50 text-indigo-700', review: 'bg-yellow-50 text-yellow-700',
+    done: 'bg-emerald-50 text-emerald-700'
+  }
+  return map[s] || 'bg-gray-100 text-gray-600'
 }
 
 function startEdit(key: string) {

@@ -371,6 +371,49 @@
         />
       </div>
 
+      <!-- ─ PRDs ─ -->
+      <div v-else-if="activeTab === 'prds'" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <p class="text-sm text-slate-500">PRDs yang terkait dengan project ini</p>
+          <NuxtLink
+            :to="`/prds?project_id=${projectId}`"
+            class="text-sm text-indigo-600 hover:underline flex items-center gap-1"
+          >Lihat semua →</NuxtLink>
+        </div>
+
+        <div v-if="prdsLoading" class="text-center py-10 text-slate-400">Memuat…</div>
+        <div v-else-if="!projectPrds.length" class="card p-10 text-center text-slate-400">
+          Belum ada PRD untuk project ini.
+          <NuxtLink to="/prds" class="ml-1 text-indigo-600 hover:underline">Buat PRD baru →</NuxtLink>
+        </div>
+
+        <div v-else class="space-y-3">
+          <NuxtLink
+            v-for="prd in projectPrds"
+            :key="prd.id"
+            :to="`/prds/${prd.id}`"
+            class="card p-4 flex items-start gap-4 hover:shadow-md hover:border-indigo-300 transition-all block"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-mono text-slate-400">PRD-{{ prd.id }}</span>
+                <span :class="prdStatusClass(prd.status)" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ prd.status.replace('_', ' ') }}</span>
+                <span v-if="prd.current_version_number" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">v{{ prd.current_version_number }}</span>
+              </div>
+              <p class="font-semibold text-slate-800 truncate">{{ prd.title }}</p>
+              <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                <span>{{ prd.request_count }} request</span>
+                <span>·</span>
+                <span>by {{ prd.created_by_name }}</span>
+                <span>·</span>
+                <span>{{ fmtPrdDate(prd.created_at) }}</span>
+              </div>
+            </div>
+            <svg class="w-4 h-4 text-slate-300 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </NuxtLink>
+        </div>
+      </div>
+
       <!-- ─ SYSTEM MENUS ─ -->
       <div v-else-if="activeTab === 'system-menus'" class="space-y-4">
         <div v-if="auth.isAdmin" class="card p-4 space-y-3">
@@ -514,6 +557,7 @@ const TABS = [
   { key: 'overview',      label: 'Overview' },
   { key: 'tasks',         label: 'Tasks' },
   { key: 'tickets',       label: 'Tickets' },
+  { key: 'prds',          label: 'PRDs' },
   { key: 'members',       label: 'Members' },
   { key: 'system-menus',  label: 'System Menus' },
 ] as const
@@ -798,9 +842,40 @@ async function deleteSystemMenu(id: number) {
 
 watch(() => activeTab.value, (tab) => {
   if (tab === 'system-menus') loadSystemMenus()
+  if (tab === 'prds') loadProjectPrds()
 })
 
 onMounted(() => { loadSystemMenus(); fetchRole(projectId) })
+
+// ── PRDs tab ──────────────────────────────────────────────────────────────────
+const projectPrds = ref<any[]>([])
+const prdsLoading = ref(false)
+
+async function loadProjectPrds() {
+  prdsLoading.value = true
+  try {
+    const res = await $fetch<any>('/api/prds', { query: { project_id: projectId, limit: 100 } })
+    projectPrds.value = res.data || []
+  } finally {
+    prdsLoading.value = false
+  }
+}
+
+function prdStatusClass(s: string) {
+  const map: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-600',
+    in_review: 'bg-blue-100 text-blue-700',
+    approved: 'bg-green-100 text-green-700',
+    in_progress: 'bg-indigo-100 text-indigo-700',
+    done: 'bg-emerald-100 text-emerald-700',
+  }
+  return map[s] || 'bg-gray-100 text-gray-600'
+}
+
+function fmtPrdDate(d: string) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
 
 // ── Edit project ──────────────────────────────────────────────────────────────
 const showEditModal = ref(false)
