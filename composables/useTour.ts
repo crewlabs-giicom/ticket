@@ -69,6 +69,26 @@ export function useTour() {
       },
     },
     {
+      element: '#nav-link-requests',
+      popover: {
+        title: '📥 Request Fitur',
+        description:
+          'Gunakan menu <b>Requests</b> untuk mengajukan permintaan fitur baru atau perubahan. Isi judul, deskripsi, proyek, dan urgensi. Request yang disetujui tim akan masuk ke PRD dan mulai dikerjakan.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
+      element: '#nav-link-prds',
+      popover: {
+        title: '📄 PRD (Progres Fitur)',
+        description:
+          'Di halaman <b>PRDs</b> Anda bisa memantau perkembangan fitur yang sedang dikerjakan dari Request Anda. Klik PRD untuk melihat spesifikasi, milestone, dan task-task yang dibuat.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
       element: '#sidebar-catatan',
       popover: {
         title: '📝 Catatan Pribadi',
@@ -93,7 +113,7 @@ export function useTour() {
       popover: {
         title: '🎉 Selesai!',
         description:
-          'Tour selesai. Jika ingin membaca panduan lengkap, klik tombol <b>Panduan & FAQ</b> ini kapan saja. Selamat menggunakan sistem!',
+          'Tour selesai. Jika ingin membaca panduan lengkap, klik tombol <b>Panduan & FAQ</b> ini kapan saja — termasuk panduan <b>Alur Development Fitur Baru</b> yang menjelaskan perjalanan Request hingga selesai dikerjakan.',
         side: 'right' as const,
         align: 'center' as const,
       },
@@ -191,6 +211,46 @@ export function useTour() {
       },
     },
     {
+      element: '#nav-link-requests',
+      popover: {
+        title: '📥 Manajemen Request',
+        description:
+          'Halaman <b>Requests</b> menampilkan semua permintaan fitur dari customer maupun staff. Anda bisa <b>Reject</b>, tandai <b>Standalone</b>, atau mengelompokkan beberapa request ke dalam PRD.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
+      element: '#nav-link-prds',
+      popover: {
+        title: '📄 PRD — Spesifikasi Fitur',
+        description:
+          'Halaman <b>PRDs</b> berisi semua Product Requirements Document. Buat PRD baru, undang peserta, tambahkan milestone & task, dan pantau progress pengerjaan fitur dari awal hingga selesai.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
+      element: '#nav-link-qcforms',
+      popover: {
+        title: '🔍 Form QC',
+        description:
+          'Halaman <b>Form QC</b> menampilkan semua quality check yang sedang atau sudah berjalan. Setelah task di-push ke QC, checker bisa membuka form ini, mengisi checklist, dan membuka tiket untuk bug yang ditemukan.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
+      element: '#nav-link-tasks',
+      popover: {
+        title: '🔄 Alur: Task → QC',
+        description:
+          'Ingat alur development: task yang sudah <b>Review</b> bisa di-<b>Push to QC</b> dari panel detail task. Jika ada bug, QC bisa diulang (<b>Loop QC</b>) hingga semua item bersih dan task berstatus Done.',
+        side: 'right' as const,
+        align: 'center' as const,
+      },
+    },
+    {
       element: '#sidebar-catatan',
       popover: {
         title: '📝 Catatan Pribadi',
@@ -215,7 +275,7 @@ export function useTour() {
       popover: {
         title: '🎉 Tour Selesai!',
         description:
-          'Semua fitur utama sudah diperkenalkan. Klik <b>Panduan & FAQ</b> ini untuk membaca panduan lengkap termasuk cara penggunaan time tracker, laporan, dan master data.',
+          'Semua fitur utama sudah diperkenalkan. Klik <b>Panduan & FAQ</b> untuk panduan lengkap — termasuk tombol <b>Alur Development Fitur Baru</b> yang menjelaskan seluruh flow dari Request hingga Done.',
         side: 'right' as const,
         align: 'center' as const,
       },

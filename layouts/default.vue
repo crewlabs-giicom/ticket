@@ -434,6 +434,9 @@ function navLinkId(path: string | null) {
     '/reports': 'nav-link-reports',
     '/workload': 'nav-link-workload',
     '/wishlist': 'sidebar-catatan',
+    '/requests': 'nav-link-requests',
+    '/prds': 'nav-link-prds',
+    '/qc-forms': 'nav-link-qcforms',
   }
   return map[path] || undefined
 }

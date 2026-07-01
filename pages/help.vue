@@ -1,14 +1,186 @@
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
       <div>
         <h2 class="text-xl font-bold text-slate-900">Panduan & FAQ</h2>
         <p class="text-sm text-slate-500 mt-0.5">Tata cara penggunaan sistem Shadow Care</p>
       </div>
-      <button @click="tour.startTour(true)" class="flex items-center gap-2 px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Mulai Tour Interaktif
-      </button>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button @click="showFlowModal = true" class="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+          Alur Development Fitur Baru
+        </button>
+        <button @click="tour.startTour(true)" class="flex items-center gap-2 px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Mulai Tour Interaktif
+        </button>
+      </div>
+    </div>
+
+    <!-- Alur Development Modal -->
+    <div v-if="showFlowModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showFlowModal = false">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Alur Development Fitur Baru</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Dari permintaan fitur hingga selesai dikerjakan</p>
+          </div>
+          <button @click="showFlowModal = false" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+
+          <!-- Flow steps -->
+          <div class="flex flex-col gap-0">
+
+            <!-- Step 1: Request -->
+            <div class="flex gap-4">
+              <div class="flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-lg font-bold flex-shrink-0">1</div>
+                <div class="w-0.5 bg-slate-200 flex-1 mt-2 mb-2"></div>
+              </div>
+              <div class="pb-6 flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-base font-bold text-slate-800">📥 Request</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">Customer / Staff</span>
+                </div>
+                <p class="text-sm text-slate-600 mb-2">Fitur baru dimulai dari sebuah <strong>Request</strong> — permintaan fitur atau perubahan yang diajukan oleh customer maupun staff.</p>
+                <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1 border border-slate-100">
+                  <p>✅ Customer mengisi judul, deskripsi, proyek, dan urgensi</p>
+                  <p>✅ Staff dapat melihat, menyetujui, menolak (Reject), atau menandai sebagai berdiri sendiri (Standalone)</p>
+                  <p>✅ Request yang disetujui dikelompokkan ke dalam PRD</p>
+                  <p>⚠️ Request yang berstatus <strong>Rejected</strong> atau <strong>Standalone</strong> tidak bisa diedit lagi</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: PRD -->
+            <div class="flex gap-4">
+              <div class="flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-lg font-bold flex-shrink-0">2</div>
+                <div class="w-0.5 bg-slate-200 flex-1 mt-2 mb-2"></div>
+              </div>
+              <div class="pb-6 flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-base font-bold text-slate-800">📄 PRD (Product Requirements Document)</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Staff / Admin</span>
+                </div>
+                <p class="text-sm text-slate-600 mb-2">Satu atau beberapa Request dikelompokkan menjadi satu <strong>PRD</strong>. PRD berisi spesifikasi lengkap fitur yang akan dikerjakan.</p>
+                <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1 border border-slate-100">
+                  <p>✅ PRD memiliki versi (v1, v2, …) untuk melacak perubahan spesifikasi</p>
+                  <p>✅ PRD memiliki milestone dan task yang harus diselesaikan</p>
+                  <p>✅ Peserta (participants) bisa diundang untuk ikut dalam PRD</p>
+                  <p>✅ Customer yang requestnya masuk ke PRD bisa melihat progress di halaman PRD</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Task -->
+            <div class="flex gap-4">
+              <div class="flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg font-bold flex-shrink-0">3</div>
+                <div class="w-0.5 bg-slate-200 flex-1 mt-2 mb-2"></div>
+              </div>
+              <div class="pb-6 flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-base font-bold text-slate-800">✅ Task</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">Staff</span>
+                </div>
+                <p class="text-sm text-slate-600 mb-2">Dari PRD, dibuat <strong>Task</strong>-task yang merupakan unit kerja aktual. Task dikerjakan oleh developer/staff dan mengikuti alur kanban.</p>
+                <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1 border border-slate-100">
+                  <p>✅ Alur status task: <span class="font-medium">Backlog → To Do → In Progress → Review → In QC → Done</span></p>
+                  <p>✅ Task bisa dilihat di Kanban Board (per proyek atau semua task)</p>
+                  <p>✅ Setiap task punya time tracker untuk mencatat waktu pengerjaan</p>
+                  <p>✅ Saat task sudah di-review, staff bisa <strong>Push to QC</strong> untuk masuk ke tahap quality check</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4: QC -->
+            <div class="flex gap-4">
+              <div class="flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-lg font-bold flex-shrink-0">4</div>
+                <div class="w-0.5 bg-slate-200 flex-1 mt-2 mb-2"></div>
+              </div>
+              <div class="pb-6 flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-base font-bold text-slate-800">🔍 QC (Quality Check)</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Checker</span>
+                </div>
+                <p class="text-sm text-slate-600 mb-2">Task yang sudah selesai dikerjakan masuk ke tahap <strong>QC (Quality Check)</strong>. Checker memverifikasi semua item checklist sebelum fitur dinyatakan selesai.</p>
+                <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1 border border-slate-100">
+                  <p>✅ Staff melakukan <strong>Push to QC</strong> dari panel detail task (task harus berstatus Review)</p>
+                  <p>✅ Checker yang ditunjuk mengisi checklist — bisa dari template atau dibuat manual</p>
+                  <p>✅ Checker bisa membuka tiket baru langsung dari item QC yang ditemukan bermasalah</p>
+                  <p>✅ Setiap checker punya time tracker sendiri di Form QC</p>
+                  <p>✅ Jika semua checker selesai dan tidak ada masalah → <strong>QC Approved</strong></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 5: Loop QC -->
+            <div class="flex gap-4">
+              <div class="flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center text-lg font-bold flex-shrink-0">5</div>
+                <div class="w-0.5 bg-slate-200 flex-1 mt-2 mb-2"></div>
+              </div>
+              <div class="pb-6 flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-base font-bold text-slate-800">🔁 Loop QC <span class="text-slate-400 font-normal text-sm">(jika ada bug)</span></span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">Opsional</span>
+                </div>
+                <p class="text-sm text-slate-600 mb-2">Jika ditemukan masalah saat QC, task dikembalikan ke developer untuk diperbaiki, lalu <strong>QC diulang</strong> (Loop QC). Form QC baru dibuat dengan nomor urut berikutnya.</p>
+                <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 space-y-1 border border-slate-100">
+                  <p>✅ Bug dari QC dicatat sebagai tiket baru di sistem</p>
+                  <p>✅ Developer memperbaiki bug, mengubah status task kembali ke <strong>Review</strong></p>
+                  <p>✅ Staff klik <strong>"Ajukan QC Ulang"</strong> untuk membuat Form QC baru (Loop 2, Loop 3, dst.)</p>
+                  <p>✅ Loop bisa terjadi beberapa kali hingga semua item QC bersih</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 6: Done -->
+            <div class="flex gap-4">
+              <div class="flex flex-col items-center">
+                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-bold flex-shrink-0">✓</div>
+              </div>
+              <div class="pb-2 flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-base font-bold text-slate-800">🎉 Done / Selesai</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">Semua pihak</span>
+                </div>
+                <p class="text-sm text-slate-600 mb-2">Setelah QC disetujui, task berubah ke status <strong>Done</strong>. Jika semua task dalam PRD selesai, PRD bisa ditandai Done juga.</p>
+                <div class="bg-emerald-50 rounded-lg p-3 text-xs text-emerald-700 space-y-1 border border-emerald-100">
+                  <p>✅ Task status → <strong>Done</strong></p>
+                  <p>✅ PRD bisa diupdate ke status <strong>Done</strong> jika semua task selesai</p>
+                  <p>✅ Customer bisa melihat request mereka sudah diselesaikan melalui PRD terkait</p>
+                  <p>✅ Semua waktu kerja dan log QC tersimpan untuk keperluan laporan</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Summary flow bar -->
+          <div class="border-t pt-4">
+            <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-3">Ringkasan Alur</p>
+            <div class="flex items-center gap-1 flex-wrap text-xs font-medium">
+              <span class="px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-700">📥 Request</span>
+              <svg class="w-4 h-4 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              <span class="px-2.5 py-1.5 rounded-lg bg-purple-100 text-purple-700">📄 PRD</span>
+              <svg class="w-4 h-4 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              <span class="px-2.5 py-1.5 rounded-lg bg-indigo-100 text-indigo-700">✅ Task</span>
+              <svg class="w-4 h-4 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              <span class="px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-700">🔍 QC</span>
+              <svg class="w-4 h-4 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              <span class="px-2.5 py-1.5 rounded-lg bg-orange-100 text-orange-700">🔁 Loop QC</span>
+              <svg class="w-4 h-4 text-slate-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              <span class="px-2.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-700">🎉 Done</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Tab switcher — for admin/staff show both, for customer only customer tab -->
@@ -53,6 +225,7 @@ definePageMeta({ middleware: 'auth' })
 const auth = useAuthStore()
 const tour = useTour()
 const activeTab = ref(auth.isStaffOrAdmin ? 'staff' : 'customer')
+const showFlowModal = ref(false)
 
 const customerSections = [
   {
@@ -169,6 +342,64 @@ const customerSections = [
           <li>Isi password lama dan password baru</li>
           <li>Klik <strong>Simpan Password</strong></li>
         </ol>`,
+      },
+    ],
+  },
+  {
+    icon: '📥',
+    title: 'Request Fitur',
+    items: [
+      {
+        q: 'Apa itu Request?',
+        a: 'Request adalah cara Anda mengajukan permintaan fitur baru atau perubahan pada sistem. Setiap Request akan ditinjau oleh tim dan bisa berkembang menjadi fitur yang dikerjakan.',
+      },
+      {
+        q: 'Cara mengajukan Request',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Buka menu <strong>Requests</strong> di sidebar</li>
+          <li>Klik tombol <strong>"+ New Request"</strong></li>
+          <li>Isi judul, deskripsi kebutuhan, pilih proyek, dan tingkat urgensi</li>
+          <li>Klik <strong>Create Request</strong></li>
+        </ol>`,
+      },
+      {
+        q: 'Apa yang terjadi setelah Request diajukan?',
+        a: `<ul class="space-y-1">
+          <li>Tim staff akan meninjau Request Anda</li>
+          <li>Jika disetujui, Request akan dikelompokkan ke dalam <strong>PRD</strong> dan mulai dikerjakan</li>
+          <li>Jika tidak sesuai, Request bisa ditolak (<strong>Rejected</strong>) atau dijadikan standalone</li>
+        </ul>`,
+      },
+      {
+        q: 'Bisakah saya mengedit Request yang sudah diajukan?',
+        a: 'Bisa, selama Request belum masuk ke PRD, belum ditolak, dan belum berstatus Standalone. Klik baris Request lalu klik <strong>Edit</strong> di modal detail.',
+      },
+      {
+        q: 'Bagaimana cara melihat status Request saya?',
+        a: 'Buka menu <strong>Requests</strong>. Klik baris Request untuk melihat detail status, urgensi, dan apakah sudah terhubung ke PRD. Jika sudah ada link PRD, klik untuk melihat progress pengerjaan.',
+      },
+    ],
+  },
+  {
+    icon: '📄',
+    title: 'PRD & Progress Pengerjaan',
+    items: [
+      {
+        q: 'Apa itu PRD?',
+        a: 'PRD (Product Requirements Document) adalah dokumen yang berisi spesifikasi fitur yang akan dikerjakan. Satu PRD bisa mencakup beberapa Request sekaligus.',
+      },
+      {
+        q: 'Bagaimana saya tahu Request saya sudah masuk PRD?',
+        a: 'Di halaman Requests, kolom <strong>PRD</strong> akan menampilkan link PRD jika Request Anda sudah dikelompokkan. Klik link tersebut untuk melihat detail dan progress pengerjaan.',
+      },
+      {
+        q: 'Apa yang bisa dilihat di halaman PRD?',
+        a: `<ul class="list-disc list-inside space-y-1">
+          <li>Spesifikasi dan deskripsi fitur yang akan dikerjakan</li>
+          <li>Milestone dan task yang dibuat dari PRD tersebut</li>
+          <li>Status pengerjaan keseluruhan</li>
+          <li>Daftar Request yang terhubung</li>
+        </ul>`,
       },
     ],
   },
@@ -391,6 +622,126 @@ const staffSections = [
       {
         q: 'Bisakah membuat tiket langsung dari catatan?',
         a: 'Bisa! Klik ikon pilih item di catatan, centang item yang ingin dijadikan tiket, lalu klik <strong>Buat Tiket</strong>. Kamu bisa edit deskripsi, pilih modul, dan priority sebelum submit.',
+      },
+    ],
+  },
+  {
+    icon: '📥',
+    title: 'Manajemen Request',
+    adminOnly: false,
+    items: [
+      {
+        q: 'Apa itu Request dan dari mana asalnya?',
+        a: 'Request adalah permintaan fitur atau perubahan yang diajukan oleh customer atau staff. Request adalah titik awal dari alur development fitur baru.',
+      },
+      {
+        q: 'Cara mengelola Request yang masuk',
+        a: `<ul class="space-y-1">
+          <li>Buka menu <strong>Requests</strong></li>
+          <li>Klik baris Request untuk melihat detail</li>
+          <li>Tombol <strong>Reject</strong> — tolak request yang tidak relevan</li>
+          <li>Tombol <strong>Standalone</strong> — tandai request yang dikerjakan langsung tanpa PRD</li>
+          <li>Centang beberapa Request + klik <strong>"Group to PRD"</strong> untuk mengelompokkannya ke PRD baru atau yang sudah ada</li>
+        </ul>`,
+      },
+      {
+        q: 'Kapan Request tidak bisa diedit lagi?',
+        a: 'Request tidak bisa diedit jika sudah berstatus <strong>Rejected</strong>, <strong>Standalone</strong>, atau sudah masuk ke dalam PRD.',
+      },
+      {
+        q: 'Cara mengelompokkan Request ke PRD',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Centang satu atau lebih Request di daftar (Request tidak boleh Rejected/Standalone)</li>
+          <li>Klik tombol <strong>"Group to PRD"</strong> yang muncul di atas</li>
+          <li>Pilih <strong>PRD yang sudah ada</strong> atau buat <strong>PRD baru</strong></li>
+          <li>Klik <strong>Group Requests</strong></li>
+        </ol>`,
+      },
+    ],
+  },
+  {
+    icon: '📄',
+    title: 'Manajemen PRD',
+    adminOnly: false,
+    items: [
+      {
+        q: 'Apa itu PRD dan kapan dibuat?',
+        a: 'PRD (Product Requirements Document) dibuat setelah Request disetujui. PRD berisi spesifikasi lengkap fitur, dibagi per versi, dan menjadi dasar pembuatan Task.',
+      },
+      {
+        q: 'Cara membuat PRD baru',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Buka menu <strong>PRDs</strong></li>
+          <li>Klik <strong>"+ New PRD"</strong></li>
+          <li>Isi judul dan pilih proyek</li>
+          <li>Atau langsung dari halaman Requests — centang Request dan klik "Group to PRD" lalu pilih "Create New PRD"</li>
+        </ol>`,
+      },
+      {
+        q: 'Cara membuat Task dari PRD',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Buka detail PRD</li>
+          <li>Klik tab <strong>Milestones & Tasks</strong></li>
+          <li>Buat milestone terlebih dahulu, lalu tambahkan task di dalamnya</li>
+          <li>Task yang dibuat akan otomatis terhubung ke PRD</li>
+        </ol>`,
+      },
+      {
+        q: 'Apa itu versi PRD?',
+        a: 'PRD bisa memiliki beberapa versi (v1, v2, …) ketika spesifikasi berubah. Klik <strong>"New Version"</strong> di halaman PRD untuk membuat versi baru dengan changelog.',
+      },
+      {
+        q: 'Cara mengundang peserta ke PRD',
+        a: 'Di halaman detail PRD, bagian <strong>Peserta</strong> di bawah header — klik tombol <strong>"+ Undang"</strong>, cari nama user, lalu klik untuk menambahkan. Peserta mendapat notifikasi undangan.',
+      },
+    ],
+  },
+  {
+    icon: '🔍',
+    title: 'QC (Quality Check)',
+    adminOnly: false,
+    items: [
+      {
+        q: 'Apa itu QC dan kapan dilakukan?',
+        a: 'QC (Quality Check) dilakukan setelah task selesai dikerjakan dan siap direview. Staff melakukan "Push to QC" dari panel detail task — task harus berstatus <strong>Review</strong> terlebih dahulu.',
+      },
+      {
+        q: 'Cara melakukan Push to QC',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Buka detail task yang sudah selesai dikerjakan</li>
+          <li>Pastikan status task sudah <strong>Review</strong></li>
+          <li>Klik tombol <strong>"Push to QC"</strong></li>
+          <li>Pilih template QC (opsional) atau buat item checklist manual</li>
+          <li>Pilih satu atau lebih <strong>Checker</strong> yang akan melakukan pengecekan</li>
+          <li>Klik <strong>Push to QC</strong></li>
+        </ol>`,
+      },
+      {
+        q: 'Cara mengisi Form QC sebagai Checker',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Buka menu <strong>Form QC</strong> di sidebar atau notifikasi yang diterima</li>
+          <li>Buka form QC yang ditugaskan</li>
+          <li>Centang setiap item checklist yang sudah diverifikasi</li>
+          <li>Jika ada bug, klik <strong>"Buka Ticket"</strong> di item yang bermasalah</li>
+          <li>Setelah semua item selesai, klik <strong>"Selesai (Done)"</strong></li>
+        </ol>`,
+      },
+      {
+        q: 'Cara melakukan Loop QC (QC ulang)',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Setelah bug diperbaiki, ubah status task kembali ke <strong>Review</strong></li>
+          <li>Di panel detail task, klik <strong>"Ajukan QC Ulang"</strong></li>
+          <li>Pilih checker untuk putaran QC berikutnya</li>
+          <li>Form QC baru dibuat dengan nomor loop berikutnya (Loop 2, Loop 3, dst.)</li>
+        </ol>`,
+      },
+      {
+        q: 'Di mana melihat semua Form QC?',
+        a: 'Buka menu <strong>Form QC</strong> di sidebar. Tersedia filter berdasarkan status, project, checker, template, dan rentang tanggal.',
+      },
+      {
+        q: 'Apa itu Template QC?',
+        a: 'Template QC adalah kumpulan item checklist yang bisa digunakan berulang kali saat membuat Form QC. Buat dan kelola template di <strong>Master → Template QC</strong> (admin only).',
       },
     ],
   },
