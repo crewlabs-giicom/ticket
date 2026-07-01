@@ -181,8 +181,8 @@
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <span class="font-semibold text-slate-700">Form #{{ form.sequence }}</span>
-                  <span :class="['badge text-[10px]', form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700']">
-                    {{ form.status === 'completed' ? 'Selesai' : 'Aktif' }}
+                  <span :class="['badge text-[10px]', statusBadgeClass(form.status)]">
+                    {{ statusBadgeLabel(form.status) }}
                   </span>
                 </div>
                 <NuxtLink :to="`/qc-forms/${form.id}`" @click="$emit('close')"
@@ -194,7 +194,7 @@
           <p v-else-if="task.status !== 'review'" class="text-xs text-slate-400">Belum ada QC form.</p>
 
           <!-- Loop QC button — only once the latest form's linked tickets are all resolved -->
-          <div v-if="auth.isStaffOrAdmin && latestQcForm && latestQcForm.open_ticket_count === 0 && task.status === 'in_qc'" class="mt-2">
+          <div v-if="auth.isStaffOrAdmin && latestQcForm && latestQcForm.status === 'waiting_resubmit'" class="mt-2">
             <button @click="checkerSearchLoop = ''; showLoopQcModal = true" class="text-xs text-slate-500 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50">
               + Ajukan QC Ulang
             </button>
@@ -782,6 +782,16 @@ function isImage(mime?: string) { return !!mime?.startsWith('image/') }
 function initials(name: string) { return name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '?' }
 function statusColor(status: string) { return COLUMNS.find(c => c.status === status)?.color ?? '#94a3b8' }
 function statusLabel(status: string) { return COLUMNS.find(c => c.status === status)?.label ?? status }
+function statusBadgeClass(status: string) {
+  if (status === 'completed') return 'bg-green-100 text-green-700'
+  if (status === 'waiting_resubmit') return 'bg-orange-100 text-orange-700'
+  return 'bg-amber-100 text-amber-700'
+}
+function statusBadgeLabel(status: string) {
+  if (status === 'completed') return 'Selesai'
+  if (status === 'waiting_resubmit') return 'Menunggu Pengajuan Ulang'
+  return 'Aktif'
+}
 const { fmtShort: fmtDate, isOverdue } = useDate()
 const { timeAgo } = useTimeAgo()
 

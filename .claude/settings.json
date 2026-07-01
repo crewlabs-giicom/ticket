@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mysql -uroot -proot ticketing_app -e ' *)"
+      "Bash(mysql -uroot -proot ticketing_app -e ' *)",
+      "Bash(curl -s -X POST http://localhost:3000/api/qc-forms/8/checkers/2/done -b /tmp/cookies3.txt)",
+      "Bash(mysql -uroot -proot ticketing_app -e \"SELECT id, status FROM qc_forms WHERE id=8;\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/qc-forms/8/items -b /tmp/cookies3.txt -H \"Content-Type: application/json\" -d '{\"item_name\":\"C2 \\(added late\\)\",\"checker_ids\":[2]}')",
+      "Bash(mysql -uroot -proot ticketing_app -e \"SELECT qc_form_id, user_id, is_done, done_at FROM qc_form_checkers WHERE qc_form_id=8;\")",
+      "Bash(curl -s -X PUT http://localhost:3000/api/tickets/17 -b /tmp/cookies3.txt -H \"Content-Type: application/json\" -d '{\"status_id\":4}')",
+      "Bash(mysql -uroot -proot ticketing_app -e \"SELECT id FROM qc_checklist_items WHERE qc_form_id=8 AND item_name LIKE 'C2%';\")",
+      "Bash(curl -s -X PATCH http://localhost:3000/api/qc-forms/8/items/11 -b /tmp/cookies3.txt -H \"Content-Type: application/json\" -d '{\"is_checked\":true}')",
+      "Bash(npx vue-tsc *)"
     ]
   }
 }

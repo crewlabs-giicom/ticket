@@ -624,7 +624,7 @@ async function migrate(db: mysql.Pool) {
       task_id INT NOT NULL,
       sequence INT NOT NULL DEFAULT 1,
       qc_template_id INT,
-      status ENUM('active','completed') NOT NULL DEFAULT 'active',
+      status ENUM('active','completed','waiting_resubmit') NOT NULL DEFAULT 'active',
       created_by INT NOT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -753,6 +753,7 @@ async function migrate(db: mysql.Pool) {
   await db.execute(`ALTER TABLE qc_forms ADD COLUMN actual_start_date DATETIME NULL`).catch(() => {})
   await db.execute(`ALTER TABLE qc_forms ADD COLUMN actual_end_date DATETIME NULL`).catch(() => {})
   await db.execute(`ALTER TABLE qc_forms ADD COLUMN estimated_duration INT NULL COMMENT 'jam'`).catch(() => {})
+  await db.execute(`ALTER TABLE qc_forms MODIFY COLUMN status ENUM('active','completed','waiting_resubmit') NOT NULL DEFAULT 'active'`).catch(() => {})
 
   // Due date revision audit log
   await db.execute(`

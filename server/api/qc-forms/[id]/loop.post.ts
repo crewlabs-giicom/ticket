@@ -23,6 +23,19 @@ export default defineEventHandler(async (event) => {
   ) as any[]
   if (!prevForm) throw createError({ statusCode: 404, message: 'QC Form tidak ditemukan' })
 
+  if (prevForm.status !== 'waiting_resubmit') {
+    throw createError({ statusCode: 400, message: 'QC Form ini belum siap untuk diajukan ulang' })
+  }
+
+  // Block re-submitting an already-superseded form (a newer loop already exists for this task)
+  const [[newerForm]] = await db.execute(
+    `SELECT COUNT(*) as c FROM qc_forms WHERE task_id = ? AND sequence > ?`,
+    [prevForm.task_id, prevForm.sequence]
+  ) as any[]
+  if (Number(newerForm.c) > 0) {
+    throw createError({ statusCode: 400, message: 'QC Form ini sudah digantikan oleh pengajuan ulang berikutnya' })
+  }
+
   // Precondition: all QC tickets from this form must be resolved/closed
   const [[openTickets]] = await db.execute(
     `SELECT COUNT(*) as c

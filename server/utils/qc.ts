@@ -39,6 +39,56 @@ export async function checkQcFormCompletion(db: mysql.Pool, qcFormId: number) {
   ) as any[]
   if (Number(openTickets.c) > 0) return
 
+  // Check whether this form ever had any tickets linked (resolved or not)
+  const [[everTickets]] = await db.execute(
+    `SELECT COUNT(*) as c
+     FROM tickets tk
+     JOIN qc_checklist_item_tickets qcit ON qcit.ticket_id = tk.id
+     JOIN qc_checklist_items qci ON qci.id = qcit.qc_checklist_item_id
+     WHERE qci.qc_form_id = ?`,
+    [qcFormId]
+  ) as any[]
+  if (Number(everTickets.c) > 0) {
+    // Tickets were raised during this loop — even though resolved, require an explicit
+    // re-submission (new loop) before the task can be considered Done.
+    await db.execute(`UPDATE qc_forms SET status = 'waiting_resubmit' WHERE id = ?`, [qcFormId])
+
+    await logActivity(db, {
+      entity_type: 'qc_form', entity_id: qcFormId,
+      action: 'status_changed',
+      from_value: 'active', to_value: 'waiting_resubmit',
+      label: `Semua checklist QC untuk task "${form.task_title}" selesai, namun pernah ada ticket — menunggu pengajuan ulang`,
+    })
+
+    if (form.task_assignee) {
+      await db.execute(
+        `INSERT INTO notifications (user_id, title, message, type, task_id) VALUES (?, ?, ?, ?, ?)`,
+        [form.task_assignee, 'QC Menunggu Pengajuan Ulang', `QC untuk task "${form.task_title}" perlu diajukan ulang untuk verifikasi karena sempat ada ticket.`, 'qc_waiting_resubmit', form.task_id]
+      )
+      broadcastToUser(Number(form.task_assignee), 'notification', {
+        title: 'QC Menunggu Pengajuan Ulang',
+        message: `Task "${form.task_title}" perlu QC ulang untuk verifikasi.`,
+        type: 'qc_waiting_resubmit',
+        task_id: form.task_id,
+      })
+    }
+
+    const [waitingCheckers] = await db.execute(
+      `SELECT user_id FROM qc_form_checkers WHERE qc_form_id = ?`, [qcFormId]
+    ) as any[]
+    for (const c of waitingCheckers as any[]) {
+      if (c.user_id === form.task_assignee) continue
+      await db.execute(
+        `INSERT INTO notifications (user_id, title, message, type, task_id) VALUES (?, ?, ?, ?, ?)`,
+        [c.user_id, 'QC Menunggu Pengajuan Ulang', `QC untuk task "${form.task_title}" perlu diajukan ulang untuk verifikasi.`, 'qc_waiting_resubmit', form.task_id]
+      )
+      broadcastToUser(Number(c.user_id), 'notification', {
+        title: 'QC Menunggu Pengajuan Ulang', message: `Task "${form.task_title}" perlu QC ulang.`, type: 'qc_waiting_resubmit', task_id: form.task_id,
+      })
+    }
+    return
+  }
+
   // All clear — mark form completed (with actual_end_date) and task done
   await db.execute(`UPDATE qc_forms SET status = 'completed', actual_end_date = NOW() WHERE id = ?`, [qcFormId])
   await db.execute(

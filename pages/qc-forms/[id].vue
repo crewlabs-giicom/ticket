@@ -6,8 +6,8 @@
         <div>
           <div class="flex items-center gap-2 mb-1">
             <span class="inline-flex items-center justify-center px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-xs font-bold">QC Form #{{ form.sequence }}</span>
-            <span :class="['badge text-xs', form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700']">
-              {{ form.status === 'completed' ? 'Selesai' : 'Aktif' }}
+            <span :class="['badge text-xs', statusBadgeClass(form.status)]">
+              {{ statusBadgeLabel(form.status) }}
             </span>
           </div>
           <h1 class="text-lg font-bold text-slate-900">{{ form.task_title }}</h1>
@@ -186,8 +186,8 @@
       </div>
     </div>
 
-    <!-- Loop QC — only once every ticket linked to this form's checklist is resolved -->
-    <div v-if="auth.isStaffOrAdmin && !hasOpenQcTickets && form.task_status === 'in_qc'" class="card p-4 flex items-center justify-between">
+    <!-- Loop QC — only once the form is waiting for an explicit re-submission -->
+    <div v-if="auth.isStaffOrAdmin && form.status === 'waiting_resubmit'" class="card p-4 flex items-center justify-between">
       <div>
         <p class="text-sm font-semibold text-slate-700">Semua ticket QC sudah selesai</p>
         <p class="text-xs text-slate-400">Ajukan pemeriksaan QC ulang untuk verifikasi.</p>
@@ -382,10 +382,16 @@ const filteredUsersLoop = computed(() =>
     ? allUsers.value.filter((u: any) => u.name.toLowerCase().includes(checkerSearchLoop.value.toLowerCase()))
     : allUsers.value
 )
-const hasOpenQcTickets = computed(() => {
-  const allTickets = (form.value?.items || []).flatMap((i: any) => i.tickets || [])
-  return allTickets.some((t: any) => !t.is_resolved)
-})
+function statusBadgeClass(status: string) {
+  if (status === 'completed') return 'bg-green-100 text-green-700'
+  if (status === 'waiting_resubmit') return 'bg-orange-100 text-orange-700'
+  return 'bg-amber-100 text-amber-700'
+}
+function statusBadgeLabel(status: string) {
+  if (status === 'completed') return 'Selesai'
+  if (status === 'waiting_resubmit') return 'Menunggu Pengajuan Ulang'
+  return 'Aktif'
+}
 async function submitLoopQc() {
   if (!loopCheckerIds.value.length) return
   loopingQc.value = true
