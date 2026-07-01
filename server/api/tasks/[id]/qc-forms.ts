@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
     // Only staff/admin can push to QC
     const user = requireRole(event, ['admin', 'staff'])
     const body = await readBody(event)
-    const { qc_template_id, checker_ids, manual_items } = body
+    const { qc_template_id, checker_ids, manual_items, estimated_duration } = body
 
     if (!Array.isArray(checker_ids) || checker_ids.length === 0) {
       throw createError({ statusCode: 400, message: 'Minimal 1 checker diperlukan' })
@@ -34,11 +34,18 @@ export default defineEventHandler(async (event) => {
 
     // Validate task exists and is in review status
     const [[task]] = await db.execute(
-      `SELECT id, title, status, project_id, assigned_to FROM tasks WHERE id = ? AND is_archived = 0`,
+      `SELECT id, title, status, project_id, assigned_to, prd_id FROM tasks WHERE id = ? AND is_archived = 0`,
       [taskId]
     ) as any[]
     if (!task) throw createError({ statusCode: 404, message: 'Task tidak ditemukan' })
     if (task.status !== 'review') throw createError({ statusCode: 400, message: 'Task harus berstatus Review untuk Push to QC' })
+
+    // Fetch PRD's original_due_date if task is linked to a PRD
+    let prdOriginalDueDate: string | null = null
+    if (task.prd_id) {
+      const [[prd]] = await db.execute(`SELECT original_due_date FROM prds WHERE id = ?`, [task.prd_id]) as any[]
+      prdOriginalDueDate = prd?.original_due_date || null
+    }
 
     // Determine next sequence
     const [[seqRow]] = await db.execute(
@@ -54,8 +61,9 @@ export default defineEventHandler(async (event) => {
 
       // Create qc_forms row
       const [formResult] = await conn.execute(
-        `INSERT INTO qc_forms (task_id, sequence, qc_template_id, status, created_by) VALUES (?, ?, ?, 'active', ?)`,
-        [taskId, sequence, qc_template_id || null, user.id]
+        `INSERT INTO qc_forms (task_id, sequence, qc_template_id, status, created_by, original_due_date, actual_start_date, estimated_duration)
+         VALUES (?, ?, ?, 'active', ?, ?, NOW(), ?)`,
+        [taskId, sequence, qc_template_id || null, user.id, prdOriginalDueDate, estimated_duration ? Number(estimated_duration) : null]
       ) as any[]
       qcFormId = formResult.insertId
 

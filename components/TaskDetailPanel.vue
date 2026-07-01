@@ -37,6 +37,45 @@
               class="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400" />
             <button v-if="task.due_date" @click="clearDueDate" class="text-xs text-slate-400 hover:text-red-500 px-1.5">✕</button>
           </div>
+          <button
+            v-if="auth.isStaffOrAdmin && task.due_date"
+            @click="taskReviseForm.new_due_date = String(task.due_date).slice(0,10); showTaskReviseModal = true"
+            class="text-xs px-2 py-0.5 bg-amber-50 text-amber-600 rounded-lg border border-amber-200 hover:bg-amber-100"
+          >Revisi</button>
+        </div>
+
+        <!-- Timeline Info -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <!-- Original Due Date -->
+          <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Due Date Awal</p>
+            <p class="text-slate-700 font-medium">{{ task.original_due_date ? fmtDate(task.original_due_date) : '—' }}</p>
+          </div>
+          <!-- Estimated Duration -->
+          <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Estimasi</p>
+            <div v-if="auth.isStaffOrAdmin" class="flex items-center gap-1">
+              <input
+                v-model.number="localEstimatedDuration"
+                type="number" min="1"
+                class="w-14 border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                placeholder="jam"
+                @change="saveEstimatedDuration"
+              />
+              <span class="text-slate-400">jam</span>
+            </div>
+            <p v-else class="text-slate-700 font-medium">{{ task.estimated_duration ? `${task.estimated_duration} jam` : '—' }}</p>
+          </div>
+          <!-- Actual Start -->
+          <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Mulai Aktual</p>
+            <p class="text-slate-700">{{ task.actual_start_date ? fmtDatetime(task.actual_start_date) : '—' }}</p>
+          </div>
+          <!-- Actual End -->
+          <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Selesai Aktual</p>
+            <p class="text-slate-700">{{ task.actual_end_date ? fmtDatetime(task.actual_end_date) : '—' }}</p>
+          </div>
         </div>
 
         <!-- Assign -->
@@ -49,6 +88,17 @@
             class="flex-1"
             @update:modelValue="updateAssigned"
           />
+        </div>
+
+        <!-- System Menu -->
+        <div v-if="systemMenus.length" class="flex items-center gap-3">
+          <span class="text-xs text-gray-500 w-20 flex-shrink-0">Menu Sistem</span>
+          <AppSelect v-if="auth.isStaffOrAdmin"
+            v-model="localSystemMenuId"
+            :options="[{ value: '', label: 'Tidak ada' }, ...systemMenuOptions]"
+            class="flex-1"
+            @update:modelValue="updateSystemMenu" />
+          <span v-else class="text-sm text-slate-600">{{ currentSystemMenuLabel || '—' }}</span>
         </div>
 
         <!-- Participants -->
@@ -187,6 +237,12 @@
                     <button @click="removeManualItem(idx)" class="text-slate-300 hover:text-red-500">✕</button>
                   </div>
                 </div>
+              </div>
+
+              <!-- Estimated Duration -->
+              <div>
+                <label class="label">Estimasi Durasi QC <span class="text-slate-400 font-normal">(jam, opsional)</span></label>
+                <input v-model.number="pushQcForm.estimated_duration" type="number" min="1" class="input w-32 text-sm" placeholder="cth: 4" />
               </div>
 
               <!-- Checkers -->
@@ -472,6 +528,29 @@
         </div>
       </div>
 
+      <!-- Task Revise Due Date Modal -->
+      <div v-if="showTaskReviseModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+          <h3 class="text-base font-semibold text-slate-900 mb-4">Revisi Due Date Task</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="label">Due Date Baru <span class="text-red-500">*</span></label>
+              <input v-model="taskReviseForm.new_due_date" type="date" class="input w-full" />
+            </div>
+            <div>
+              <label class="label">Alasan Revisi <span class="text-red-500">*</span></label>
+              <textarea v-model="taskReviseForm.reason" rows="3" class="input w-full resize-none" placeholder="Jelaskan alasan perubahan due date..." />
+            </div>
+          </div>
+          <div class="flex gap-2 mt-5">
+            <button @click="showTaskReviseModal = false" class="btn-secondary flex-1">Batal</button>
+            <button @click="submitTaskRevise" :disabled="revisingTaskDate || !taskReviseForm.new_due_date || !taskReviseForm.reason.trim()" class="flex-1 px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
+              {{ revisingTaskDate ? 'Menyimpan...' : 'Simpan Revisi' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Footer -->
       <div class="p-5 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
         <button @click="deleteTask" class="text-xs text-red-500 hover:text-red-700">Hapus task</button>
@@ -494,6 +573,50 @@ watch(() => props.task, (val) => Object.assign(task, JSON.parse(JSON.stringify(v
 
 const editAssigned = ref(task.assigned_to || '')
 const assignableUsers = ref<any[]>([])
+const localEstimatedDuration = ref<number | ''>(task.estimated_duration || '')
+const systemMenus = ref<any[]>([])
+const localSystemMenuId = ref<any>(task.system_menu_id || '')
+
+const systemMenuOptions = computed(() =>
+  systemMenus.value.map((m: any) => ({ value: m.id, label: m.name ? `[${m.module}] ${m.name}` : m.module }))
+)
+const currentSystemMenuLabel = computed(() => {
+  const m = systemMenus.value.find((m: any) => m.id === task.system_menu_id)
+  return m ? (m.name ? `[${m.module}] ${m.name}` : m.module) : null
+})
+
+async function updateSystemMenu(val: any) {
+  await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { system_menu_id: val || null } })
+  task.system_menu_id = val || null
+}
+
+async function saveEstimatedDuration() {
+  await $fetch(`/api/tasks/${task.id}`, { method: 'PUT', body: { estimated_duration: localEstimatedDuration.value || null } })
+  task.estimated_duration = localEstimatedDuration.value || null
+}
+
+function fmtDatetime(d: string) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+const showTaskReviseModal = ref(false)
+const revisingTaskDate = ref(false)
+const taskReviseForm = reactive({ new_due_date: '', reason: '' })
+
+async function submitTaskRevise() {
+  if (!taskReviseForm.new_due_date || !taskReviseForm.reason.trim()) return
+  revisingTaskDate.value = true
+  try {
+    await $fetch(`/api/tasks/${task.id}/revise-due-date`, { method: 'POST', body: { ...taskReviseForm } })
+    task.due_date = taskReviseForm.new_due_date
+    showTaskReviseModal.value = false
+    taskReviseForm.new_due_date = ''
+    taskReviseForm.reason = ''
+  } finally {
+    revisingTaskDate.value = false
+  }
+}
 
 // Due date edit
 const showDueDateInput = ref(false)
@@ -513,6 +636,8 @@ async function clearDueDate() {
 onMounted(async () => {
   const res = await $fetch<any>('/api/users', { query: { project_id: task.project_id, limit: 500 } }).catch(() => null)
   assignableUsers.value = (res?.data || []).filter((u: any) => u.is_active && u.role !== 'customer')
+  const smRes = await $fetch<any>('/api/system-menus', { query: { project_id: task.project_id } }).catch(() => null)
+  systemMenus.value = smRes?.data || smRes || []
 })
 
 async function updateStatus(status: string) {
@@ -557,6 +682,7 @@ const pushQcForm = reactive({
   template_id: '' as any,
   checker_ids: [] as number[],
   items: [] as { name: string; source: string }[],
+  estimated_duration: '' as any,
 })
 
 const loopQcForm = reactive({ checker_ids: [] as number[] })
@@ -612,6 +738,7 @@ async function submitPushQc() {
         qc_template_id: pushQcForm.template_id || null,
         checker_ids: pushQcForm.checker_ids,
         manual_items: pushQcForm.items.filter(i => i.source === 'manual').map(i => i.name).filter(Boolean),
+        estimated_duration: pushQcForm.estimated_duration || null,
       },
     })
     task.status = 'in_qc'

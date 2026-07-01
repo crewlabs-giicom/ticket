@@ -414,6 +414,127 @@
         </div>
       </div>
 
+      <!-- ─ TIMELINE ─ -->
+      <div v-else-if="activeTab === 'timeline'">
+        <div v-if="timelineLoading" class="text-center py-16 text-slate-400">Memuat timeline…</div>
+        <div v-else-if="!timelineHasData" class="card p-12 text-center text-slate-400">
+          <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <p class="text-sm">Belum ada data timeline.</p>
+          <p class="text-xs mt-1 text-slate-300">Isi due date pada PRD, Task, atau QC Form terlebih dahulu.</p>
+        </div>
+        <div v-else>
+          <!-- Legend + controls -->
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div class="flex items-center gap-4 text-xs text-slate-500">
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-indigo-500 inline-block"></span>PRD</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-blue-400 inline-block"></span>Task</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-400 inline-block"></span>QC Form</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-400 inline-block"></span>Overdue</span>
+              <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-400 inline-block"></span>Selesai</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">Skala:</span>
+              <button v-for="s in ['week','month'] as const" :key="s" @click="tlScale = s"
+                :class="['text-xs px-2.5 py-1 rounded-lg border transition-colors', tlScale === s ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">
+                {{ s === 'week' ? 'Minggu' : 'Bulan' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Gantt container -->
+          <div class="card overflow-auto">
+            <div class="min-w-[700px]">
+              <!-- Column header row -->
+              <div class="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
+                <div class="w-52 flex-shrink-0 px-3 py-2 text-xs font-semibold text-slate-500 border-r border-slate-200">Item</div>
+                <div class="flex-1 flex">
+                  <div v-for="col in tlColumns" :key="col.key"
+                    class="flex-shrink-0 text-center text-[10px] text-slate-400 py-2 border-r border-slate-100 font-medium"
+                    :style="{ width: tlColWidth + 'px' }">
+                    {{ col.label }}
+                    <div v-if="col.isToday" class="h-0.5 bg-red-400 rounded-full mt-0.5 mx-1"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Gantt rows -->
+              <div class="divide-y divide-slate-100">
+                <template v-for="group in tlGroups" :key="group.prdId ?? 'no-prd'">
+                  <!-- PRD row -->
+                  <div v-if="group.prd" class="flex items-center hover:bg-slate-50 transition-colors group">
+                    <div class="w-52 flex-shrink-0 px-3 py-2.5 border-r border-slate-100">
+                      <NuxtLink :to="`/prds/${group.prd.id}`" class="flex items-center gap-1.5 min-w-0">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
+                        <span class="text-xs font-semibold text-indigo-700 truncate hover:underline">{{ group.prd.title }}</span>
+                      </NuxtLink>
+                      <div class="flex items-center gap-1 mt-0.5 pl-3.5">
+                        <span :class="['text-[10px] px-1.5 py-px rounded-full font-medium', prdStatusClass(group.prd.status)]">{{ group.prd.status.replace('_',' ') }}</span>
+                      </div>
+                    </div>
+                    <div class="flex-1 relative h-10">
+                      <GanttBar :item="group.prd" type="prd" :columns="tlColumns" :col-width="tlColWidth" />
+                    </div>
+                  </div>
+
+                  <!-- Task rows -->
+                  <template v-for="task in group.tasks" :key="'t'+task.id">
+                    <div class="flex items-center hover:bg-slate-50 transition-colors">
+                      <div class="w-52 flex-shrink-0 px-3 py-2 border-r border-slate-100 pl-7">
+                        <p class="text-xs text-slate-700 truncate">{{ task.title }}</p>
+                        <div class="flex items-center gap-1 mt-0.5">
+                          <span :class="['text-[10px] px-1 py-px rounded font-medium', tlTaskStatusClass(task.status)]">{{ task.status.replace('_',' ') }}</span>
+                          <span v-if="task.assigned_to_name" class="text-[10px] text-slate-400 truncate">· {{ task.assigned_to_name }}</span>
+                        </div>
+                      </div>
+                      <div class="flex-1 relative h-9">
+                        <GanttBar :item="task" type="task" :columns="tlColumns" :col-width="tlColWidth" />
+                      </div>
+                    </div>
+
+                    <!-- QC Form rows for this task -->
+                    <div v-for="qc in tlQcForTask(task.id)" :key="'qc'+qc.id"
+                      class="flex items-center hover:bg-amber-50/50 transition-colors">
+                      <div class="w-52 flex-shrink-0 px-3 py-2 border-r border-slate-100 pl-12">
+                        <NuxtLink :to="`/qc-forms/${qc.id}`" class="text-[11px] text-amber-700 hover:underline truncate block">
+                          QC #{{ qc.sequence }}{{ qc.sequence > 1 ? ' (Loop)' : '' }}
+                        </NuxtLink>
+                        <span :class="['text-[10px] px-1 py-px rounded font-medium', qc.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
+                          {{ qc.status === 'completed' ? 'Selesai' : 'Aktif' }}
+                        </span>
+                      </div>
+                      <div class="flex-1 relative h-8">
+                        <GanttBar :item="qc" type="qc" :columns="tlColumns" :col-width="tlColWidth" />
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Tasks without PRD (no-prd group) -->
+                  <template v-if="!group.prd" v-for="task in group.tasks" :key="'np'+task.id">
+                    <div class="flex items-center hover:bg-slate-50 transition-colors">
+                      <div class="w-52 flex-shrink-0 px-3 py-2 border-r border-slate-100">
+                        <p class="text-xs text-slate-700 truncate">{{ task.title }}</p>
+                        <span :class="['text-[10px] px-1 py-px rounded font-medium', tlTaskStatusClass(task.status)]">{{ task.status.replace('_',' ') }}</span>
+                      </div>
+                      <div class="flex-1 relative h-9">
+                        <GanttBar :item="task" type="task" :columns="tlColumns" :col-width="tlColWidth" />
+                      </div>
+                    </div>
+                  </template>
+                </template>
+              </div>
+
+              <!-- Today marker overlay line -->
+              <div class="relative h-0 pointer-events-none" style="margin-top:-1px">
+                <div v-if="tlTodayOffset >= 0"
+                  class="absolute top-0 bottom-0 w-px bg-red-400 opacity-60"
+                  :style="{ left: (208 + tlTodayOffset) + 'px', height: '100%', position: 'fixed', pointerEvents: 'none', display: 'none' }">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ─ SYSTEM MENUS ─ -->
       <div v-else-if="activeTab === 'system-menus'" class="space-y-4">
         <div v-if="auth.isAdmin" class="card p-4 space-y-3">
@@ -558,6 +679,7 @@ const TABS = [
   { key: 'tasks',         label: 'Tasks' },
   { key: 'tickets',       label: 'Tickets' },
   { key: 'prds',          label: 'PRDs' },
+  { key: 'timeline',      label: 'Timeline' },
   { key: 'members',       label: 'Members' },
   { key: 'system-menus',  label: 'System Menus' },
 ] as const
@@ -902,6 +1024,125 @@ async function saveEdit() {
   } finally {
     editSaving.value = false
   }
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+const timelineLoading = ref(false)
+const tlData = ref<{ prds: any[]; tasks: any[]; qcForms: any[] }>({ prds: [], tasks: [], qcForms: [] })
+const tlScale = ref<'week' | 'month'>('week')
+
+async function loadTimeline() {
+  timelineLoading.value = true
+  try {
+    tlData.value = await $fetch<any>(`/api/projects/${projectId}/timeline`)
+  } finally {
+    timelineLoading.value = false
+  }
+}
+
+watch(() => activeTab.value, (tab) => {
+  if (tab === 'timeline') loadTimeline()
+})
+
+const timelineHasData = computed(() => tlData.value.prds.length || tlData.value.tasks.length)
+
+// Collect all relevant dates to determine date range
+const tlDateRange = computed(() => {
+  const dates: Date[] = []
+  const push = (d: string | null) => { if (d) dates.push(new Date(d)) }
+  for (const p of tlData.value.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date) }
+  for (const t of tlData.value.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date) }
+  for (const q of tlData.value.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date) }
+  if (!dates.length) {
+    const now = new Date()
+    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 2, 0) }
+  }
+  const minMs = Math.min(...dates.map(d => d.getTime()))
+  const maxMs = Math.max(...dates.map(d => d.getTime()))
+  const pad = 7 * 86400000 // 1 week padding
+  return { start: new Date(minMs - pad), end: new Date(maxMs + pad) }
+})
+
+const tlColWidth = computed(() => tlScale.value === 'week' ? 120 : 80)
+
+const tlColumns = computed(() => {
+  const cols: { key: string; date: Date; label: string; isToday: boolean }[] = []
+  const { start, end } = tlDateRange.value
+  const today = new Date(); today.setHours(0,0,0,0)
+  // Snap start to Monday (week) or 1st (month)
+  const cur = new Date(start)
+  if (tlScale.value === 'week') {
+    const day = cur.getDay(); const diff = day === 0 ? -6 : 1 - day
+    cur.setDate(cur.getDate() + diff)
+    cur.setHours(0,0,0,0)
+    while (cur <= end) {
+      const isToday = cur <= today && today < new Date(cur.getTime() + 7 * 86400000)
+      cols.push({
+        key: cur.toISOString(),
+        date: new Date(cur),
+        label: cur.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+        isToday,
+      })
+      cur.setDate(cur.getDate() + 7)
+    }
+  } else {
+    cur.setDate(1); cur.setHours(0,0,0,0)
+    while (cur <= end) {
+      const isToday = cur.getFullYear() === today.getFullYear() && cur.getMonth() === today.getMonth()
+      cols.push({
+        key: cur.toISOString(),
+        date: new Date(cur),
+        label: cur.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }),
+        isToday,
+      })
+      cur.setMonth(cur.getMonth() + 1)
+    }
+  }
+  return cols
+})
+
+const tlTodayOffset = computed(() => {
+  if (!tlColumns.value.length) return -1
+  const today = new Date(); today.setHours(0,0,0,0)
+  const first = tlColumns.value[0].date
+  const msPerPx = tlScale.value === 'week' ? 86400000 * 7 / tlColWidth.value : 86400000 * 30 / tlColWidth.value
+  return (today.getTime() - first.getTime()) / msPerPx
+})
+
+// Group data: PRD → tasks → QC forms
+const tlGroups = computed(() => {
+  const groups: { prdId: number | null; prd: any | null; tasks: any[] }[] = []
+  const tasksByPrd: Record<string, any[]> = {}
+  for (const t of tlData.value.tasks) {
+    const key = String(t.prd_id ?? 'none')
+    if (!tasksByPrd[key]) tasksByPrd[key] = []
+    tasksByPrd[key].push(t)
+  }
+  // PRD groups
+  for (const prd of tlData.value.prds) {
+    groups.push({ prdId: prd.id, prd, tasks: tasksByPrd[String(prd.id)] || [] })
+  }
+  // Orphan tasks (no PRD)
+  if (tasksByPrd['none']?.length) {
+    groups.push({ prdId: null, prd: null, tasks: tasksByPrd['none'] })
+  }
+  return groups
+})
+
+function tlQcForTask(taskId: number) {
+  return tlData.value.qcForms.filter(q => q.task_id === taskId)
+}
+
+function tlTaskStatusClass(s: string) {
+  const map: Record<string, string> = {
+    backlog: 'bg-slate-100 text-slate-500',
+    todo: 'bg-blue-50 text-blue-600',
+    in_progress: 'bg-indigo-100 text-indigo-700',
+    review: 'bg-amber-100 text-amber-700',
+    in_qc: 'bg-purple-100 text-purple-700',
+    done: 'bg-emerald-100 text-emerald-700',
+  }
+  return map[s] || 'bg-slate-100 text-slate-500'
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

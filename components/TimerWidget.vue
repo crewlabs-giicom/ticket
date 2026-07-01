@@ -100,17 +100,17 @@ function formatSeconds(s: number) {
   return `${sec}s`
 }
 
-const apiBase = computed(() =>
-  store.timerType === 'ticket'
-    ? `/api/tickets/${store.ticketId}/timelogs`
-    : `/api/tasks/${store.taskId}/timelogs`
-)
+const apiBase = computed(() => {
+  if (store.timerType === 'ticket') return `/api/tickets/${store.ticketId}/timelogs`
+  if (store.timerType === 'qc') return `/api/qc-forms/${store.qcFormId}/timelogs`
+  return `/api/tasks/${store.taskId}/timelogs`
+})
 
-const storageKey = computed(() =>
-  store.timerType === 'ticket'
-    ? `ticket_timer_${store.ticketId}`
-    : `task_timer_${store.taskId}`
-)
+const storageKey = computed(() => {
+  if (store.timerType === 'ticket') return `ticket_timer_${store.ticketId}`
+  if (store.timerType === 'qc') return `qc_timer_${store.qcFormId}`
+  return `task_timer_${store.taskId}`
+})
 
 async function pause() {
   if (!store.logId) return
@@ -126,6 +126,8 @@ async function pause() {
     }))
     if (store.timerType === 'ticket') {
       store.setPausedTicket(store.ticketId!, store.taskName, store.ticketTitle, currentElapsed)
+    } else if (store.timerType === 'qc') {
+      store.setPausedQc(store.qcFormId!, store.taskName, store.ticketTitle, currentElapsed)
     } else {
       store.setPaused(store.taskId!, store.taskName, store.ticketTitle, currentElapsed)
     }
@@ -137,7 +139,9 @@ async function pause() {
 async function resume() {
   busy.value = true
   try {
-    const entityId = store.timerType === 'ticket' ? store.ticketId! : store.taskId!
+    const entityId = store.timerType === 'ticket' ? store.ticketId!
+      : store.timerType === 'qc' ? store.qcFormId!
+      : store.taskId!
     const taskName = store.taskName
     const ticketTitle = store.ticketTitle
     localStorage.removeItem(storageKey.value)
@@ -146,6 +150,8 @@ async function resume() {
     localStorage.setItem(storageKey.value, JSON.stringify({ logId: res.data.id, start: res.data.started_at }))
     if (store.timerType === 'ticket') {
       store.setActiveTicket(entityId, taskName, ticketTitle, res.data.id, startedAt)
+    } else if (store.timerType === 'qc') {
+      store.setActiveQc(entityId, taskName, ticketTitle, res.data.id, startedAt)
     } else {
       store.setActive(entityId, taskName, ticketTitle, res.data.id, startedAt)
     }

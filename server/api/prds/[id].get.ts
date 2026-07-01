@@ -8,7 +8,9 @@ export default defineEventHandler(async (event) => {
 
   const [[prd]] = await db.execute(
     `SELECT p.*, pr.name as project_name, u.name as created_by_name,
-            pv.version_number as current_version_number
+            pv.version_number as current_version_number,
+            p.original_due_date, p.revised_due_date, p.planned_start_date,
+            p.actual_start_date, p.actual_end_date
      FROM prds p
      LEFT JOIN projects pr ON pr.id = p.project_id
      LEFT JOIN users u ON u.id = p.created_by

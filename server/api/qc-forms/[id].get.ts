@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
        t.title as task_title, t.status as task_status, t.project_id,
        t.description as task_description,
        t.assigned_to as task_assignee_id,
+       t.system_menu_id as task_system_menu_id,
        ua.name as task_assignee_name,
        p.name as project_name,
        qt.name as template_name,

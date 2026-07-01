@@ -57,6 +57,63 @@
       </div>
     </div>
 
+    <!-- Due Dates Card -->
+    <div v-if="form.original_due_date || form.actual_start_date || auth.isStaffOrAdmin" class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-semibold text-slate-700">Timeline QC</span>
+        <button
+          v-if="auth.isStaffOrAdmin && form.original_due_date"
+          @click="qcReviseForm.new_due_date = form.revised_due_date || form.original_due_date || ''; showQcReviseModal = true"
+          class="text-xs px-2.5 py-1 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+        >Revisi Due Date</button>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Due Date Awal</p>
+          <p class="text-slate-700 font-medium">{{ fmtDate(form.original_due_date) }}</p>
+        </div>
+        <div v-if="form.revised_due_date" class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <p class="text-[10px] font-semibold text-amber-500 uppercase tracking-wide mb-0.5">Due Date Revisi</p>
+          <p class="text-amber-700 font-medium">{{ fmtDate(form.revised_due_date) }}</p>
+        </div>
+        <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Mulai Aktual</p>
+          <p class="text-slate-700">{{ fmtDatetime(form.actual_start_date) }}</p>
+        </div>
+        <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Selesai Aktual</p>
+          <p class="text-slate-700">{{ fmtDatetime(form.actual_end_date) }}</p>
+        </div>
+        <div v-if="form.estimated_duration" class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Estimasi</p>
+          <p class="text-slate-700">{{ form.estimated_duration }} jam</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- QC Revise Due Date Modal -->
+    <div v-if="showQcReviseModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <h3 class="text-base font-semibold text-slate-900 mb-4">Revisi Due Date QC Form</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="label">Due Date Baru <span class="text-red-500">*</span></label>
+            <input v-model="qcReviseForm.new_due_date" type="date" class="input w-full" />
+          </div>
+          <div>
+            <label class="label">Alasan Revisi <span class="text-red-500">*</span></label>
+            <textarea v-model="qcReviseForm.reason" rows="3" class="input w-full resize-none" placeholder="Jelaskan alasan perubahan due date..." />
+          </div>
+        </div>
+        <div class="flex gap-2 mt-5">
+          <button @click="showQcReviseModal = false" class="btn-secondary flex-1">Batal</button>
+          <button @click="submitQcRevise" :disabled="revisingQcDate || !qcReviseForm.new_due_date || !qcReviseForm.reason.trim()" class="flex-1 px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
+            {{ revisingQcDate ? 'Menyimpan...' : 'Simpan Revisi' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Time Tracker (only visible to checkers + staff/admin) -->
     <div v-if="isChecker" class="card p-4">
       <div class="flex items-center justify-between">
@@ -195,13 +252,19 @@
 
     <!-- Open Ticket Modal -->
     <div v-if="ticketModal.show" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-base font-semibold text-slate-900 mb-1">Buka Ticket dari Checklist</h3>
         <p class="text-xs text-slate-400 mb-4">Item: {{ ticketModal.item?.item_name }}</p>
         <div class="space-y-3">
           <div>
             <label class="label">Judul Ticket</label>
-            <input v-model="ticketModal.title" class="input text-sm" :placeholder="`[QC] ${ticketModal.item?.item_name}`" />
+            <input v-model="ticketModal.title" class="input text-sm" />
+          </div>
+          <div v-if="systemMenus.length">
+            <label class="label">Menu Sistem</label>
+            <AppSelect v-model="ticketModal.system_menu_id"
+              :options="[{ value: '', label: 'Tidak ada' }, ...systemMenus.map((m: any) => ({ value: m.id, label: m.name ? `[${m.module}] ${m.name}` : m.module }))]"
+              placeholder="Pilih menu sistem" />
           </div>
           <div>
             <label class="label">Priority <span class="text-red-500">*</span></label>
@@ -211,12 +274,33 @@
           </div>
           <div>
             <label class="label">Deskripsi</label>
-            <textarea v-model="ticketModal.description" class="input text-sm" rows="3" placeholder="Opsional"></textarea>
+            <textarea v-model="ticketModal.description" class="input text-sm" rows="3"
+              placeholder="Opsional... (Ctrl+V untuk paste gambar)"
+              @paste="handleTicketPaste"></textarea>
+          </div>
+          <!-- Attachment preview -->
+          <div v-if="ticketModal.pendingFiles.length || ticketModal.uploading" class="space-y-1.5">
+            <p v-if="ticketModal.uploading" class="text-xs text-slate-400">Mengupload...</p>
+            <div v-for="(f, i) in ticketModal.pendingFiles" :key="i"
+              class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+              <img v-if="f.mime_type?.startsWith('image/')" :src="`/uploads/${f.filename}`" class="w-8 h-8 object-cover rounded" />
+              <svg v-else class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+              <span class="text-xs text-slate-600 flex-1 truncate">{{ f.original_name }}</span>
+              <button @click="ticketModal.pendingFiles.splice(i, 1)" class="text-slate-300 hover:text-red-500 text-xs">✕</button>
+            </div>
+          </div>
+          <!-- File upload -->
+          <div>
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-indigo-600 hover:text-indigo-800">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+              Lampirkan file
+              <input type="file" accept="image/*,.pdf,.doc,.docx" multiple class="hidden" @change="handleTicketFileInput" />
+            </label>
           </div>
         </div>
         <div class="flex gap-2 mt-5">
           <button @click="ticketModal.show = false" class="btn-secondary flex-1">Batal</button>
-          <button @click="submitOpenTicket" :disabled="ticketModal.loading || !ticketModal.priority_id" class="btn-primary flex-1">
+          <button @click="submitOpenTicket" :disabled="ticketModal.loading || !ticketModal.priority_id || ticketModal.uploading" class="btn-primary flex-1">
             {{ ticketModal.loading ? 'Membuat...' : 'Buka Ticket' }}
           </button>
         </div>
@@ -327,6 +411,9 @@ async function addManualItem() {
   await fetchForm()
 }
 
+// System menus
+const systemMenus = ref<any[]>([])
+
 // Ticket modal
 const ticketModal = reactive({
   show: false,
@@ -334,17 +421,63 @@ const ticketModal = reactive({
   checker: null as any,
   title: '',
   priority_id: '' as any,
+  system_menu_id: '' as any,
   description: '',
   loading: false,
+  uploading: false,
+  pendingFiles: [] as any[],
 })
 
 function openTicketModal(item: any, checker: any) {
   ticketModal.item = item
   ticketModal.checker = checker
-  ticketModal.title = ''
+  ticketModal.title = `[QC] ${item.item_name}`
   ticketModal.priority_id = ''
+  ticketModal.system_menu_id = form.value?.task_system_menu_id || ''
   ticketModal.description = ''
+  ticketModal.pendingFiles = []
+  ticketModal.uploading = false
   ticketModal.show = true
+}
+
+async function handleTicketPaste(e: ClipboardEvent) {
+  const imageItems = Array.from(e.clipboardData?.items || []).filter(i => i.type.startsWith('image/'))
+  if (!imageItems.length) return
+  e.preventDefault()
+  ticketModal.uploading = true
+  try {
+    for (const item of imageItems) {
+      const file = item.getAsFile()
+      if (!file) continue
+      const ext = item.type.split('/')[1] || 'png'
+      const fd = new FormData()
+      fd.append('file', file, `paste-${Date.now()}.${ext}`)
+      fd.append('menu', 'ticket')
+      if (form.value?.project_id) fd.append('project_id', String(form.value.project_id))
+      const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+      ticketModal.pendingFiles.push(res.data)
+    }
+  } finally {
+    ticketModal.uploading = false
+  }
+}
+
+async function handleTicketFileInput(e: Event) {
+  const files = Array.from((e.target as HTMLInputElement).files || [])
+  if (!files.length) return
+  ticketModal.uploading = true
+  try {
+    for (const file of files) {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('menu', 'ticket')
+      if (form.value?.project_id) fd.append('project_id', String(form.value.project_id))
+      const res = await $fetch<any>('/api/upload', { method: 'POST', body: fd })
+      ticketModal.pendingFiles.push(res.data)
+    }
+  } finally {
+    ticketModal.uploading = false
+  }
 }
 
 async function submitOpenTicket() {
@@ -358,6 +491,8 @@ async function submitOpenTicket() {
           priority_id: ticketModal.priority_id,
           title: ticketModal.title || `[QC] ${ticketModal.item.item_name}`,
           description: ticketModal.description || undefined,
+          system_menu_id: ticketModal.system_menu_id || undefined,
+          attachments: ticketModal.pendingFiles.length ? ticketModal.pendingFiles : undefined,
         },
       },
     })
@@ -370,6 +505,34 @@ async function submitOpenTicket() {
   }
 }
 
+function fmtDate(d: string) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function fmtDatetime(d: string) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+const showQcReviseModal = ref(false)
+const revisingQcDate = ref(false)
+const qcReviseForm = reactive({ new_due_date: '', reason: '' })
+
+async function submitQcRevise() {
+  if (!qcReviseForm.new_due_date || !qcReviseForm.reason.trim()) return
+  revisingQcDate.value = true
+  try {
+    await $fetch(`/api/qc-forms/${id}/revise-due-date`, { method: 'POST', body: { ...qcReviseForm } })
+    form.value.revised_due_date = qcReviseForm.new_due_date
+    showQcReviseModal.value = false
+    qcReviseForm.new_due_date = ''
+    qcReviseForm.reason = ''
+  } finally {
+    revisingQcDate.value = false
+  }
+}
+
 const tabStore = useTabStore()
 
 onMounted(async () => {
@@ -378,6 +541,11 @@ onMounted(async () => {
   if (form.value) {
     tabStore.addQcTab({ id, task_title: form.value.task_title, sequence: form.value.sequence }, false)
     tabStore.activeQcTabId = id
+    // Load system menus for the project
+    try {
+      const res = await $fetch<any>('/api/system-menus', { query: { project_id: form.value.project_id } })
+      systemMenus.value = res?.data || res || []
+    } catch {}
   }
 })
 

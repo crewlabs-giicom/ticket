@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     if (!(mem as any[]).length) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  const allowed = ['title', 'description', 'status', 'position', 'assigned_to', 'due_date', 'system_menu_id']
+  const allowed = ['title', 'description', 'status', 'position', 'assigned_to', 'due_date', 'system_menu_id', 'estimated_duration']
   const sets: string[] = []
   const params: any[] = []
 
@@ -36,11 +36,28 @@ export default defineEventHandler(async (event) => {
       sets.push(`${key} = ?`)
       let val = body[key] ?? null
       if (key === 'due_date' && val) val = String(val).slice(0, 10)
+      if (key === 'estimated_duration') val = val ? Number(val) : null
       params.push(val)
     }
   }
 
   if (!sets.length) throw createError({ statusCode: 400, message: 'Nothing to update' })
+
+  // Auto actual dates on status transition
+  if ('status' in body && body.status !== old.status) {
+    if (body.status === 'in_progress' && !old.actual_start_date) {
+      sets.push('actual_start_date = NOW()')
+    }
+    if (body.status === 'review' && !old.actual_end_date) {
+      sets.push('actual_end_date = NOW()')
+    }
+    if (body.status !== 'review' && body.status !== 'done' && body.status !== 'in_qc') {
+      // reopened — clear actual_end_date
+      if (old.actual_end_date && body.status === 'in_progress') {
+        sets.push('actual_end_date = NULL')
+      }
+    }
+  }
 
   // Set completed_at when status changes to 'done'
   if ('status' in body && body.status === 'done' && old.status !== 'done') {

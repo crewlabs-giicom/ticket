@@ -321,6 +321,7 @@ function fallbackMenus(role?: string) {
     { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar', parent_id: null },
     { id: 'f-wishlist', name: 'Catatan', path: '/wishlist', icon: 'clipboard', parent_id: null },
     { id: 'f-qcforms', name: 'Form QC', path: '/qc-forms', icon: 'check-square', parent_id: null },
+    { id: 'f-timeline', name: 'Master Timeline', path: '/timeline', icon: 'calendar', parent_id: null },
   ]
   if (role === 'admin') {
     return [
@@ -437,6 +438,7 @@ function navLinkId(path: string | null) {
     '/requests': 'nav-link-requests',
     '/prds': 'nav-link-prds',
     '/qc-forms': 'nav-link-qcforms',
+    '/timeline': 'nav-link-timeline',
   }
   return map[path] || undefined
 }

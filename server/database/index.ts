@@ -701,6 +701,46 @@ async function migrate(db: mysql.Pool) {
   // QC Template menu item (admin only)
   await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Template QC','/master/qc-templates','clipboard-check',13,'admin' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/master/qc-templates')`).catch(() => {})
 
+  // ── Timeline / Due Date columns ──────────────────────────────────────────
+
+  // PRD date columns
+  await db.execute(`ALTER TABLE prds ADD COLUMN original_due_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE prds ADD COLUMN revised_due_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE prds ADD COLUMN planned_start_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE prds ADD COLUMN actual_start_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE prds ADD COLUMN actual_end_date DATE NULL`).catch(() => {})
+
+  // Task date / estimation columns (due_date already exists)
+  await db.execute(`ALTER TABLE tasks ADD COLUMN original_due_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD COLUMN planned_start_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD COLUMN actual_start_date DATETIME NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD COLUMN actual_end_date DATETIME NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tasks ADD COLUMN estimated_duration INT NULL COMMENT 'jam'`).catch(() => {})
+
+  // QC form date / estimation columns
+  await db.execute(`ALTER TABLE qc_forms ADD COLUMN original_due_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE qc_forms ADD COLUMN revised_due_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE qc_forms ADD COLUMN planned_start_date DATE NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE qc_forms ADD COLUMN actual_start_date DATETIME NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE qc_forms ADD COLUMN actual_end_date DATETIME NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE qc_forms ADD COLUMN estimated_duration INT NULL COMMENT 'jam'`).catch(() => {})
+
+  // Due date revision audit log
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS due_date_revisions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      entity_type ENUM('prd','task','qc_form') NOT NULL,
+      entity_id INT NOT NULL,
+      previous_due_date DATE NULL,
+      new_due_date DATE NOT NULL,
+      reason TEXT NOT NULL,
+      revised_by INT NOT NULL,
+      revised_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_entity (entity_type, entity_id),
+      FOREIGN KEY (revised_by) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
+
   // Pinned QC form tabs
   await db.execute(`
     CREATE TABLE IF NOT EXISTS user_pinned_qc_tabs (

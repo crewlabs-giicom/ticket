@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
 
   // Handle open-ticket action: create a ticket from this checklist item
   if (body.open_ticket) {
-    const { priority_id, title, description } = body.open_ticket
+    const { priority_id, title, description, system_menu_id, attachments } = body.open_ticket
     if (!priority_id) throw createError({ statusCode: 400, message: 'priority_id required' })
 
     // Get the "Open" status id
@@ -65,12 +65,22 @@ export default defineEventHandler(async (event) => {
 
     const [r] = await db.execute(
       `INSERT INTO tickets
-         (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, source, qc_checklist_item_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'qc', ?)`,
+         (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, source, qc_checklist_item_id, system_menu_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'qc', ?, ?)`,
       [ticketNumber, ticketTitle, description || '', item.project_id, priority_id, openStatus.id,
-       user.id, item.task_assignee || null, dueDate, itemId]
+       user.id, item.task_assignee || null, dueDate, itemId, system_menu_id || null]
     ) as any[]
     const ticketId = (r as ResultSetHeader).insertId
+
+    // Insert attachments if any
+    if (Array.isArray(attachments) && attachments.length) {
+      for (const att of attachments) {
+        await db.execute(
+          `INSERT INTO ticket_attachments (ticket_id, filename, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)`,
+          [ticketId, att.filename, att.original_name, att.mime_type, att.size || 0, user.id]
+        )
+      }
+    }
 
     // Link to pivot table
     await db.execute(

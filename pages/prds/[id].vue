@@ -100,6 +100,82 @@
         </div>
       </div>
 
+      <!-- Due Dates -->
+      <div class="flex items-center gap-6 mb-5 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl flex-wrap">
+        <!-- Planned Start -->
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">Mulai Rencana</span>
+          <template v-if="authStore.isStaffOrAdmin">
+            <input
+              :value="prd.planned_start_date || ''"
+              type="date"
+              class="border border-slate-200 rounded-lg px-2 py-0.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              @change="savePrdDate('planned_start_date', ($event.target as HTMLInputElement).value)"
+            />
+          </template>
+          <span v-else class="text-sm text-slate-700">{{ fmtDate(prd.planned_start_date) }}</span>
+        </div>
+
+        <div class="w-px h-5 bg-slate-200 flex-shrink-0"></div>
+
+        <!-- Original Due Date -->
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">Due Date Awal</span>
+          <template v-if="authStore.isStaffOrAdmin && !prd.original_due_date">
+            <input
+              v-model="newOriginalDueDate"
+              type="date"
+              class="border border-slate-200 rounded-lg px-2 py-0.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <button
+              :disabled="!newOriginalDueDate || savingDates"
+              @click="savePrdDate('original_due_date', newOriginalDueDate)"
+              class="text-xs px-2 py-0.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-40"
+            >Simpan</button>
+          </template>
+          <template v-else>
+            <span class="text-sm text-slate-700">{{ fmtDate(prd.original_due_date) }}</span>
+            <svg v-if="prd.original_due_date" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </template>
+        </div>
+
+        <template v-if="prd.revised_due_date">
+          <div class="w-px h-5 bg-slate-200 flex-shrink-0"></div>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xs font-semibold text-amber-500 uppercase tracking-wide whitespace-nowrap">Due Date Revisi</span>
+            <span class="text-sm text-amber-700 font-medium">{{ fmtDate(prd.revised_due_date) }}</span>
+          </div>
+        </template>
+
+        <div v-if="authStore.isStaffOrAdmin && prd.original_due_date" class="ml-auto flex items-center gap-2 flex-shrink-0">
+          <button @click="loadRevisionHistory(); showRevisionHistory = !showRevisionHistory"
+            class="text-[11px] text-slate-400 hover:text-slate-600 underline">Riwayat</button>
+          <button @click="reviseForm.new_due_date = prd.revised_due_date || prd.original_due_date || ''; showReviseModal = true"
+            class="text-xs px-2.5 py-1 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium">
+            Revisi Due Date
+          </button>
+        </div>
+      </div>
+
+      <!-- Revision history -->
+      <div v-if="showRevisionHistory && revisionHistory.length" class="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <p class="text-xs font-semibold text-amber-700 mb-2">Riwayat Revisi Due Date</p>
+        <div class="space-y-1.5">
+          <div v-for="r in revisionHistory" :key="r.id" class="text-xs text-amber-900 flex items-start gap-2">
+            <span class="text-amber-400 flex-shrink-0">•</span>
+            <span>
+              <span class="font-medium">{{ r.revised_by_name }}</span>
+              mengubah dari <span class="line-through">{{ fmtDate(r.previous_due_date) }}</span>
+              ke <span class="font-semibold">{{ fmtDate(r.new_due_date) }}</span>
+              — "{{ r.reason }}"
+              <span class="text-amber-400 ml-1">{{ fmtDate(r.revised_at) }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Tabs -->
       <div class="flex border-b border-gray-200 mb-6">
         <button
@@ -262,6 +338,34 @@
       </div>
     </template>
 
+    <!-- Revise Due Date Modal -->
+    <div v-if="showReviseModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div class="flex items-center justify-between px-5 py-4 border-b">
+          <h3 class="text-sm font-semibold text-slate-900">Revisi Due Date PRD</h3>
+          <button @click="showReviseModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="p-5 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Due Date Baru <span class="text-red-500">*</span></label>
+            <input v-model="reviseForm.new_due_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Revisi <span class="text-red-500">*</span></label>
+            <textarea v-model="reviseForm.reason" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" placeholder="Jelaskan alasan perubahan due date..." />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-5 py-4 border-t">
+          <button @click="showReviseModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
+          <button @click="submitRevise" :disabled="revisingDate || !reviseForm.new_due_date || !reviseForm.reason.trim()" class="px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
+            {{ revisingDate ? 'Menyimpan...' : 'Simpan Revisi' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- New Version Modal -->
     <div v-if="showNewVersionModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
@@ -348,6 +452,11 @@
               />
             </div>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Estimasi Durasi <span class="text-gray-400 font-normal">(jam)</span></label>
+            <input v-model.number="genTaskForm.estimated_duration" type="number" min="1" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="cth: 8" />
+            <p v-if="prd.original_due_date" class="text-xs text-indigo-500 mt-1">Due Date Awal PRD ({{ fmtDate(prd.original_due_date) }}) akan otomatis disalin ke task.</p>
+          </div>
         </div>
         <div class="flex justify-end gap-3 px-6 py-4 border-t">
           <button @click="showGenTaskModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
@@ -375,6 +484,43 @@ const editingField = ref<string | null>(null)
 const editValue = ref('')
 const saving = ref(false)
 
+const newOriginalDueDate = ref('')
+const savingDates = ref(false)
+const showReviseModal = ref(false)
+const revisingDate = ref(false)
+const reviseForm = ref({ new_due_date: '', reason: '' })
+const showRevisionHistory = ref(false)
+const revisionHistory = ref<any[]>([])
+
+async function savePrdDate(field: string, value: string) {
+  savingDates.value = true
+  try {
+    await $fetch(`/api/prds/${prdId.value}`, { method: 'PATCH', body: { [field]: value || null } })
+    prd.value[field] = value || null
+    if (field === 'original_due_date') newOriginalDueDate.value = ''
+  } finally {
+    savingDates.value = false
+  }
+}
+
+async function submitRevise() {
+  if (!reviseForm.value.new_due_date || !reviseForm.value.reason.trim()) return
+  revisingDate.value = true
+  try {
+    await $fetch(`/api/prds/${prdId.value}/revise-due-date`, { method: 'POST', body: reviseForm.value })
+    prd.value.revised_due_date = reviseForm.value.new_due_date
+    showReviseModal.value = false
+    reviseForm.value = { new_due_date: '', reason: '' }
+    await loadRevisionHistory()
+  } finally {
+    revisingDate.value = false
+  }
+}
+
+async function loadRevisionHistory() {
+  revisionHistory.value = await $fetch<any[]>('/api/due-date-revisions', { query: { entity_type: 'prd', entity_id: prdId.value } }) || []
+}
+
 const showNewVersionModal = ref(false)
 const creatingVersion = ref(false)
 const newVersionForm = ref({ changelog: '' })
@@ -386,7 +532,7 @@ const milestoneForm = ref({ name: '', due_date: '' })
 const showGenTaskModal = ref(false)
 const generatingTask = ref(false)
 const genTaskMilestone = ref<any>(null)
-const genTaskForm = ref({ title: '', description: '', due_date: '', assigned_to: '' })
+const genTaskForm = ref({ title: '', description: '', due_date: '', assigned_to: '', estimated_duration: '' as any })
 const staffUsers = ref<any[]>([])
 
 const prdStatuses = [
@@ -540,7 +686,7 @@ async function addMilestone() {
 
 function openGenerateTask(m: any) {
   genTaskMilestone.value = m
-  genTaskForm.value = { title: '', description: '', due_date: m.due_date || '', assigned_to: '' }
+  genTaskForm.value = { title: '', description: '', due_date: m.due_date || '', assigned_to: '', estimated_duration: '' }
   showGenTaskModal.value = true
 }
 
@@ -553,7 +699,7 @@ async function generateTask() {
       body: genTaskForm.value
     })
     showGenTaskModal.value = false
-    genTaskForm.value = { title: '', description: '', due_date: '', assigned_to: '' }
+    genTaskForm.value = { title: '', description: '', due_date: '', assigned_to: '', estimated_duration: '' }
     await loadPrd()
   } finally {
     generatingTask.value = false

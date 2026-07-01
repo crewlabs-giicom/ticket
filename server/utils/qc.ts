@@ -38,8 +38,8 @@ export async function checkQcFormCompletion(db: mysql.Pool, qcFormId: number) {
   ) as any[]
   if (Number(openTickets.c) > 0) return
 
-  // All clear — mark form completed and task done
-  await db.execute(`UPDATE qc_forms SET status = 'completed' WHERE id = ?`, [qcFormId])
+  // All clear — mark form completed (with actual_end_date) and task done
+  await db.execute(`UPDATE qc_forms SET status = 'completed', actual_end_date = NOW() WHERE id = ?`, [qcFormId])
   await db.execute(
     `UPDATE tasks SET status = 'done', completed_at = NOW() WHERE id = ? AND status = 'in_qc'`,
     [form.task_id]

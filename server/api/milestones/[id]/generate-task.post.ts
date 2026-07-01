@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Cannot generate tasks from an outdated PRD version' })
   }
 
-  const [[prd]] = await db.execute(`SELECT project_id FROM prds WHERE id = ?`, [milestone.prd_id]) as any[]
+  const [[prd]] = await db.execute(`SELECT project_id, original_due_date FROM prds WHERE id = ?`, [milestone.prd_id]) as any[]
 
   // Position: next after existing tasks in same project
   const [[{ maxPos }]] = await db.execute(
@@ -32,10 +32,12 @@ export default defineEventHandler(async (event) => {
   ) as any[]
 
   const dueDate = body.due_date || milestone.due_date || null
+  const originalDueDate = prd.original_due_date || null
+  const estimatedDuration = body.estimated_duration ? Number(body.estimated_duration) : null
 
   const [result] = await db.execute(
-    `INSERT INTO tasks (project_id, title, description, status, position, assigned_to, created_by, due_date, prd_id, prd_version_id, milestone_id)
-     VALUES (?, ?, ?, 'backlog', ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO tasks (project_id, title, description, status, position, assigned_to, created_by, due_date, original_due_date, estimated_duration, prd_id, prd_version_id, milestone_id)
+     VALUES (?, ?, ?, 'backlog', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       prd.project_id,
       body.title.trim(),
@@ -44,6 +46,8 @@ export default defineEventHandler(async (event) => {
       body.assigned_to || null,
       user.id,
       dueDate,
+      originalDueDate,
+      estimatedDuration,
       milestone.prd_id,
       milestone.prd_version_id,
       id
