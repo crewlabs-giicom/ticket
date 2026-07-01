@@ -7,6 +7,7 @@ function _parse(str: string): Date {
   // "2026-06-22 15:00:00" or "2026-06-22" → treat as WIB
   return new Date(str.replace(' ', 'T') + '+07:00')
 }
+export { _parse as parseWib }
 
 const WIB = { timeZone: 'Asia/Jakarta' }
 

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
   // Tasks with dates
   const [tasks] = await db.execute(
-    `SELECT t.id, t.title, t.status, t.prd_id,
+    `SELECT t.id, t.title, t.status, t.prd_id, t.assigned_to,
             t.planned_start_date, t.original_due_date, t.due_date,
             t.actual_start_date, t.actual_end_date, t.estimated_duration,
             u.name as assigned_to_name

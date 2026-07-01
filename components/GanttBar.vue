@@ -31,12 +31,13 @@ const props = defineProps<{
 
 const startDate = computed(() => {
   const d = props.item.planned_start_date || props.item.actual_start_date
-  return d ? new Date(d) : null
+  // Default to today when no start date is set, so the item still gets a visible bar.
+  return d ? parseWib(d) : new Date()
 })
 
 const endDate = computed(() => {
   const d = props.item.revised_due_date || props.item.original_due_date || props.item.due_date || props.item.actual_end_date
-  return d ? new Date(d) : null
+  return d ? parseWib(d) : null
 })
 
 const isCompleted = computed(() => {

@@ -50,99 +50,8 @@
       <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rotate-45 bg-fuchsia-500 inline-block"></span>Milestone</span>
     </div>
 
-    <div v-if="loading" class="text-center py-16 text-slate-400">Memuat…</div>
-    <div v-else-if="!filteredGroups.length" class="card p-12 text-center text-slate-400">
-      <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      <p class="text-sm">Tidak ada data timeline yang cocok.</p>
-      <p class="text-xs mt-1 text-slate-300">Coba ubah filter atau isi due date pada PRD / Task / QC Form.</p>
-    </div>
-
-    <!-- Gantt -->
-    <div v-else class="card overflow-auto">
-      <div :style="{ minWidth: (208 + tlColumns.length * tlColWidth) + 'px' }">
-        <!-- Header row -->
-        <div class="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
-          <div class="w-52 flex-shrink-0 px-3 py-2 text-xs font-semibold text-slate-500 border-r border-slate-200">Item</div>
-          <div class="flex-1 flex">
-            <div v-for="col in tlColumns" :key="col.key"
-              class="flex-shrink-0 text-center text-[10px] text-slate-400 py-2 border-r border-slate-100 font-medium"
-              :style="{ width: tlColWidth + 'px' }">
-              {{ col.label }}
-              <div v-if="col.isToday" class="h-0.5 bg-red-400 rounded-full mt-0.5 mx-1"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Rows -->
-        <div class="divide-y divide-slate-100">
-          <template v-for="group in filteredGroups" :key="group.projectId + '-' + (group.prdId ?? 'np')">
-            <!-- Project label (when project changes) -->
-            <div v-if="group.showProjectLabel" class="flex items-center bg-slate-100/70 border-b border-slate-200">
-              <div class="w-52 flex-shrink-0 px-3 py-1.5 border-r border-slate-200">
-                <NuxtLink :to="`/projects/${group.projectId}`" class="text-[11px] font-bold text-slate-600 hover:text-indigo-600 truncate block">
-                  📁 {{ group.projectName }}
-                </NuxtLink>
-              </div>
-              <div class="flex-1 h-6"></div>
-            </div>
-
-            <!-- PRD row -->
-            <div v-if="group.prd && showTypes.find(t => t.key === 'prd')?.visible" class="flex items-center hover:bg-slate-50">
-              <div class="w-52 flex-shrink-0 px-3 py-2.5 border-r border-slate-100 pl-5">
-                <NuxtLink :to="`/prds/${group.prd.id}`" class="text-xs font-semibold text-indigo-700 hover:underline truncate flex items-center gap-1">
-                  <span class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
-                  {{ group.prd.title }}
-                </NuxtLink>
-                <span :class="['text-[10px] px-1.5 py-px rounded-full font-medium ml-3', prdStatusClass(group.prd.status)]">{{ group.prd.status.replace('_',' ') }}</span>
-              </div>
-              <div class="flex-1 relative h-10">
-                <GanttBar :item="group.prd" type="prd" :columns="tlColumns" :col-width="tlColWidth" />
-                <GanttMilestone v-for="m in milestonesByPrd[group.prd.id]" :key="'m'+m.id" :milestone="m" :columns="tlColumns" :col-width="tlColWidth" />
-              </div>
-            </div>
-
-            <!-- Tasks -->
-            <template v-if="showTypes.find(t => t.key === 'task')?.visible">
-              <template v-for="task in group.tasks" :key="'t'+task.id">
-                <div class="flex items-center hover:bg-slate-50">
-                  <div class="w-52 flex-shrink-0 px-3 py-2 border-r border-slate-100" :class="group.prd ? 'pl-8' : 'pl-5'">
-                    <p class="text-xs text-slate-700 truncate">{{ task.title }}</p>
-                    <div class="flex items-center gap-1">
-                      <span :class="['text-[10px] px-1 py-px rounded font-medium', taskStatusClass(task.status)]">{{ task.status.replace('_',' ') }}</span>
-                      <span v-if="task.assigned_to_name" class="text-[10px] text-slate-400 truncate">· {{ task.assigned_to_name }}</span>
-                    </div>
-                  </div>
-                  <div class="flex-1 relative h-9">
-                    <GanttBar :item="task" type="task" :columns="tlColumns" :col-width="tlColWidth" />
-                  </div>
-                </div>
-
-                <!-- QC Forms -->
-                <template v-if="showTypes.find(t => t.key === 'qc')?.visible">
-                  <div v-for="qc in qcByTask[task.id]" :key="'qc'+qc.id"
-                    class="flex items-center hover:bg-amber-50/50">
-                    <div class="w-52 flex-shrink-0 px-3 py-2 border-r border-slate-100" :class="group.prd ? 'pl-14' : 'pl-10'">
-                      <NuxtLink :to="`/qc-forms/${qc.id}`" class="text-[11px] text-amber-700 hover:underline truncate block">
-                        QC #{{ qc.sequence }}{{ qc.sequence > 1 ? ' (Loop)' : '' }}
-                      </NuxtLink>
-                      <span :class="['text-[10px] px-1 py-px rounded font-medium', qc.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
-                        {{ qc.status === 'completed' ? 'Selesai' : 'Aktif' }}
-                      </span>
-                    </div>
-                    <div class="flex-1 relative h-8">
-                      <GanttBar :item="qc" type="qc" :columns="tlColumns" :col-width="tlColWidth" />
-                    </div>
-                  </div>
-                </template>
-              </template>
-            </template>
-          </template>
-        </div>
-      </div>
-    </div>
-
     <!-- Summary per assignee -->
-    <div v-if="assigneeSummary.length" class="mt-6">
+    <div v-if="assigneeSummary.length" class="mb-6">
       <h2 class="text-sm font-semibold text-slate-700 mb-3">Ringkasan per Assignee</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div v-for="a in assigneeSummary" :key="a.name" class="card p-4">
@@ -169,6 +78,97 @@
           <div v-if="a.total > 0" class="mt-2 bg-slate-100 rounded-full h-1.5">
             <div class="bg-emerald-500 h-1.5 rounded-full" :style="{ width: (a.done/a.total*100) + '%' }"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="loading" class="text-center py-16 text-slate-400">Memuat…</div>
+    <div v-else-if="!filteredGroups.length" class="card p-12 text-center text-slate-400">
+      <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      <p class="text-sm">Tidak ada data timeline yang cocok.</p>
+      <p class="text-xs mt-1 text-slate-300">Coba ubah filter atau isi due date pada PRD / Task / QC Form.</p>
+    </div>
+
+    <!-- Gantt -->
+    <div v-else class="card overflow-auto max-h-[65vh]">
+      <div :style="{ minWidth: (208 + tlColumns.length * tlColWidth) + 'px' }">
+        <!-- Header row (stays put — only the body below scrolls) -->
+        <div class="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
+          <div class="w-52 flex-shrink-0 px-3 py-2 text-xs font-semibold text-slate-500 border-r border-slate-200 sticky left-0 bg-slate-50 z-20">Item</div>
+          <div class="flex-1 flex">
+            <div v-for="col in tlColumns" :key="col.key"
+              class="flex-shrink-0 text-center text-[10px] text-slate-400 py-2 border-r border-slate-100 font-medium"
+              :style="{ width: tlColWidth + 'px' }">
+              {{ col.label }}
+              <div v-if="col.isToday" class="h-0.5 bg-red-400 rounded-full mt-0.5 mx-1"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rows -->
+        <div class="divide-y divide-slate-100">
+          <template v-for="group in filteredGroups" :key="group.projectId + '-' + (group.prdId ?? 'np')">
+            <!-- Project label (when project changes) -->
+            <div v-if="group.showProjectLabel" class="flex items-center bg-slate-100/70 border-b border-slate-200">
+              <div class="w-52 flex-shrink-0 px-3 py-1.5 border-r border-slate-200 sticky left-0 z-[5] bg-slate-100">
+                <NuxtLink :to="`/projects/${group.projectId}`" class="text-[11px] font-bold text-slate-600 hover:text-indigo-600 truncate block">
+                  📁 {{ group.projectName }}
+                </NuxtLink>
+              </div>
+              <div class="flex-1 h-6"></div>
+            </div>
+
+            <!-- PRD row -->
+            <div v-if="group.prd && showTypes.find(t => t.key === 'prd')?.visible" class="flex items-center hover:bg-slate-50">
+              <div class="w-52 flex-shrink-0 px-3 py-2.5 border-r border-slate-100 pl-5 sticky left-0 z-[5] bg-white">
+                <NuxtLink :to="`/prds/${group.prd.id}`" class="text-xs font-semibold text-indigo-700 hover:underline truncate flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
+                  {{ group.prd.title }}
+                </NuxtLink>
+                <span :class="['text-[10px] px-1.5 py-px rounded-full font-medium ml-3', prdStatusClass(group.prd.status)]">{{ group.prd.status.replace('_',' ') }}</span>
+              </div>
+              <div class="flex-1 relative h-10">
+                <GanttBar :item="group.prd" type="prd" :columns="tlColumns" :col-width="tlColWidth" />
+                <GanttMilestone v-for="m in milestonesByPrd[group.prd.id]" :key="'m'+m.id" :milestone="m" :columns="tlColumns" :col-width="tlColWidth" />
+              </div>
+            </div>
+
+            <!-- Tasks -->
+            <template v-if="showTypes.find(t => t.key === 'task')?.visible">
+              <template v-for="task in group.tasks" :key="'t'+task.id">
+                <div class="flex items-center hover:bg-slate-50">
+                  <div class="w-52 flex-shrink-0 px-3 py-2 border-r border-slate-100 sticky left-0 z-[5] bg-white" :class="group.prd ? 'pl-8' : 'pl-5'">
+                    <p class="text-xs text-slate-700 truncate">{{ task.title }}</p>
+                    <div class="flex items-center gap-1">
+                      <span :class="['text-[10px] px-1 py-px rounded font-medium', taskStatusClass(task.status)]">{{ task.status.replace('_',' ') }}</span>
+                      <span v-if="task.assigned_to_name" class="text-[10px] text-slate-400 truncate">· {{ task.assigned_to_name }}</span>
+                    </div>
+                  </div>
+                  <div class="flex-1 relative h-9">
+                    <GanttBar :item="task" type="task" :columns="tlColumns" :col-width="tlColWidth" />
+                  </div>
+                </div>
+
+                <!-- QC Forms -->
+                <template v-if="showTypes.find(t => t.key === 'qc')?.visible">
+                  <div v-for="qc in qcByTask[task.id]" :key="'qc'+qc.id"
+                    class="flex items-center hover:bg-amber-50/50">
+                    <div class="w-52 flex-shrink-0 px-3 py-2 border-r border-slate-100 sticky left-0 z-[5] bg-amber-50/70" :class="group.prd ? 'pl-14' : 'pl-10'">
+                      <NuxtLink :to="`/qc-forms/${qc.id}`" class="text-[11px] text-amber-700 hover:underline truncate block">
+                        QC #{{ qc.sequence }}{{ qc.sequence > 1 ? ' (Loop)' : '' }}
+                      </NuxtLink>
+                      <span :class="['text-[10px] px-1 py-px rounded font-medium', qc.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
+                        {{ qc.status === 'completed' ? 'Selesai' : 'Aktif' }}
+                      </span>
+                    </div>
+                    <div class="flex-1 relative h-8">
+                      <GanttBar :item="qc" type="qc" :columns="tlColumns" :col-width="tlColWidth" />
+                    </div>
+                  </div>
+                </template>
+              </template>
+            </template>
+          </template>
         </div>
       </div>
     </div>
@@ -310,8 +310,8 @@ const filteredGroups = computed((): GanttGroup[] => {
 
 // Date range across all data
 const tlDateRange = computed(() => {
-  const dates: Date[] = []
-  const push = (d: string | null) => { if (d) dates.push(new Date(d)) }
+  const dates: Date[] = [new Date()] // always include today so tasks defaulted to "today" stay in range
+  const push = (d: string | null) => { if (d) dates.push(parseWib(d)) }
   for (const proj of allData.value) {
     for (const p of proj.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date); push(p.actual_start_date); push(p.actual_end_date) }
     for (const t of proj.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date); push(t.actual_end_date) }

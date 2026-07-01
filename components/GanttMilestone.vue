@@ -15,14 +15,14 @@ const props = defineProps<{
 
 const dateLabel = computed(() => {
   if (!props.milestone.due_date) return '—'
-  return new Date(props.milestone.due_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+  return parseWib(props.milestone.due_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 })
 
 const left = computed(() => {
   if (!props.milestone.due_date || !props.columns.length) return null
   const firstDate = props.columns[0].date
   const msPerPx = 86400000 / props.colWidth
-  const ms = new Date(props.milestone.due_date).getTime() - firstDate.getTime()
+  const ms = parseWib(props.milestone.due_date).getTime() - firstDate.getTime()
   return Math.max(0, ms / msPerPx)
 })
 </script>
