@@ -89,6 +89,11 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Buat Task
           </button>
+          <NuxtLink v-if="ticket.source === 'qc' && ticket.qc_form_id" :to="`/qc-forms/${ticket.qc_form_id}`"
+            class="inline-flex items-center gap-1.5 text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg text-xs transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l-6 6m0 0l6-6m-6 6h12a6 6 0 006-6v-1"/></svg>
+            Lihat QC Form
+          </NuxtLink>
         </div>
 
         <!-- Ticket-level Attachments -->
