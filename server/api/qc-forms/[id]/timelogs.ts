@@ -5,35 +5,43 @@ import type { ResultSetHeader } from 'mysql2'
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)
   const db = getDb()
-  const taskId = Number(event.context.params?.id)
+  const formId = Number(getRouterParam(event, 'id'))
+
+  // Permission: only checkers of this form (+ staff/admin) can access timelogs
+  if (user.role === 'customer') {
+    const [[isMember]] = await db.execute(
+      `SELECT 1 FROM qc_form_checkers WHERE qc_form_id = ? AND user_id = ?`, [formId, user.id]
+    ) as any[]
+    if (!isMember) throw createError({ statusCode: 403, message: 'Forbidden' })
+  }
 
   if (event.method === 'GET') {
     const [logs] = await db.execute(
       `SELECT tl.*, u.name as user_name
-       FROM task_timelogs tl
+       FROM qc_timelogs tl
        LEFT JOIN users u ON u.id = tl.user_id
-       WHERE tl.task_id = ?
+       WHERE tl.qc_form_id = ?
        ORDER BY tl.started_at DESC`,
-      [taskId]
+      [formId]
     )
     const [[{ total_seconds }]] = await db.execute(
-      `SELECT COALESCE(SUM(duration_seconds), 0) as total_seconds FROM task_timelogs WHERE task_id = ? AND stopped_at IS NOT NULL`,
-      [taskId]
+      `SELECT COALESCE(SUM(duration_seconds), 0) as total_seconds FROM qc_timelogs WHERE qc_form_id = ? AND stopped_at IS NOT NULL`,
+      [formId]
     ) as any[]
     const [[activeLog]] = await db.execute(
-      `SELECT tl.*, u.name as user_name, t.title as task_name,
-              (SELECT ti.title FROM tickets ti WHERE ti.task_id = tl.task_id LIMIT 1) as ticket_title
-       FROM task_timelogs tl
+      `SELECT tl.*, u.name as user_name, qf.sequence as form_sequence, t.title as task_title
+       FROM qc_timelogs tl
        LEFT JOIN users u ON u.id = tl.user_id
-       LEFT JOIN tasks t ON t.id = tl.task_id
-       WHERE tl.task_id = ? AND tl.user_id = ? AND tl.stopped_at IS NULL LIMIT 1`,
-      [taskId, user.id]
+       LEFT JOIN qc_forms qf ON qf.id = tl.qc_form_id
+       LEFT JOIN tasks t ON t.id = qf.task_id
+       WHERE tl.qc_form_id = ? AND tl.user_id = ? AND tl.stopped_at IS NULL LIMIT 1`,
+      [formId, user.id]
     ) as any[]
     return { data: logs, total_seconds, active_log: activeLog || null }
   }
 
   if (event.method === 'POST') {
-    // Stop ALL active timers for this user (globally — one active timer at a time)
+    // Stop ALL active timers for this user globally (task + ticket + qc)
     await db.execute(
       `UPDATE task_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE user_id = ? AND stopped_at IS NULL`,
       [user.id]
@@ -45,25 +53,26 @@ export default defineEventHandler(async (event) => {
     await db.execute(
       `UPDATE qc_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE user_id = ? AND stopped_at IS NULL`,
       [user.id]
-    ).catch(() => {})
-    // Start new timer
+    )
+    // Start new QC timer
     const [r] = await db.execute(
-      `INSERT INTO task_timelogs (task_id, user_id, started_at) VALUES (?, ?, NOW())`,
-      [taskId, user.id]
+      `INSERT INTO qc_timelogs (qc_form_id, user_id, started_at) VALUES (?, ?, NOW())`,
+      [formId, user.id]
     ) as any[]
-    const [rows] = await db.execute('SELECT * FROM task_timelogs WHERE id = ?', [(r as ResultSetHeader).insertId])
+    const [rows] = await db.execute('SELECT * FROM qc_timelogs WHERE id = ?', [(r as ResultSetHeader).insertId])
     return { data: (rows as any[])[0] }
   }
 
   if (event.method === 'PUT') {
-    // Stop timer
     const logId = Number(getQuery(event).log_id)
     if (!logId) throw createError({ statusCode: 400, message: 'log_id required' })
     await db.execute(
-      `UPDATE task_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE id = ? AND user_id = ?`,
+      `UPDATE qc_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE id = ? AND user_id = ?`,
       [logId, user.id]
     )
-    const [rows] = await db.execute('SELECT * FROM task_timelogs WHERE id = ?', [logId])
+    const [rows] = await db.execute('SELECT * FROM qc_timelogs WHERE id = ?', [logId])
     return { data: (rows as any[])[0] }
   }
+
+  throw createError({ statusCode: 405, message: 'Method not allowed' })
 })

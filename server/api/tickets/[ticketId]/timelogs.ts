@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (event.method === 'POST') {
-    // Stop ALL active timers for this user globally (task + ticket)
+    // Stop ALL active timers for this user globally (task + ticket + qc)
     await db.execute(
       `UPDATE task_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE user_id = ? AND stopped_at IS NULL`,
       [user.id]
@@ -41,6 +41,10 @@ export default defineEventHandler(async (event) => {
       `UPDATE ticket_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE user_id = ? AND stopped_at IS NULL`,
       [user.id]
     )
+    await db.execute(
+      `UPDATE qc_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE user_id = ? AND stopped_at IS NULL`,
+      [user.id]
+    ).catch(() => {})
     const [r] = await db.execute(
       `INSERT INTO ticket_timelogs (ticket_id, user_id, started_at) VALUES (?, ?, NOW())`,
       [ticketId, user.id]

@@ -16,16 +16,78 @@
       </div>
 
       <!-- Nav -->
-      <nav class="flex-1 overflow-y-auto p-2 space-y-3">
-        <div v-for="group in menuGroups" :key="group.label">
-          <p v-show="!sidebarCollapsed || sidebarOpen" class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 px-2 mb-1">{{ group.label }}</p>
-          <div class="space-y-0.5">
-            <NuxtLink v-for="m in group.items" :key="m.id" :id="navLinkId(m.path)" :to="m.path" class="nav-link" :class="[{ active: isActive(m.path) }, (sidebarCollapsed && !sidebarOpen) ? 'lg:justify-center lg:px-2' : '']" @click="sidebarOpen = false" :title="(sidebarCollapsed && !sidebarOpen) ? m.name : undefined">
-              <component :is="getIcon(m.icon)" class="w-4 h-4 flex-shrink-0" />
-              <span v-show="!sidebarCollapsed || sidebarOpen">{{ m.name }}</span>
-            </NuxtLink>
+      <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
+        <template v-for="node in treeItems" :key="node.id">
+          <!-- Folder / group node (no path) -->
+          <div v-if="node.isFolder">
+            <button
+              @click="toggleGroup(node.id)"
+              :class="['nav-link w-full', (sidebarCollapsed && !sidebarOpen) ? 'lg:justify-center lg:px-2' : '', node.hasActiveChild ? 'text-primary-600' : '']"
+              :title="(sidebarCollapsed && !sidebarOpen) ? node.name : undefined"
+            >
+              <component :is="getIcon(node.icon)" class="w-4 h-4 flex-shrink-0" />
+              <span v-show="!sidebarCollapsed || sidebarOpen" class="flex-1 text-left">{{ node.name }}</span>
+              <svg v-show="!sidebarCollapsed || sidebarOpen" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform duration-200" :class="openGroups[node.id] ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <!-- Children -->
+            <div v-show="openGroups[node.id] && (!sidebarCollapsed || sidebarOpen)" class="ml-3 mt-0.5 mb-0.5 border-l-2 border-slate-100 pl-2 space-y-0.5">
+              <NuxtLink
+                v-for="c in node.children" :key="c.id"
+                :id="navLinkId(c.path)" :to="c.path"
+                class="nav-link text-sm"
+                :class="{ active: isActive(c.path) }"
+                @click="sidebarOpen = false"
+              >
+                <component :is="getIcon(c.icon)" class="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{{ c.name }}</span>
+              </NuxtLink>
+            </div>
           </div>
-        </div>
+
+          <!-- Regular link with children (collapsible parent link) -->
+          <div v-else-if="node.children.length">
+            <div class="flex items-center gap-0">
+              <NuxtLink
+                :id="navLinkId(node.path)" :to="node.path"
+                class="nav-link flex-1"
+                :class="[{ active: isActive(node.path) }, (sidebarCollapsed && !sidebarOpen) ? 'lg:justify-center lg:px-2' : '']"
+                @click="sidebarOpen = false"
+                :title="(sidebarCollapsed && !sidebarOpen) ? node.name : undefined"
+              >
+                <component :is="getIcon(node.icon)" class="w-4 h-4 flex-shrink-0" />
+                <span v-show="!sidebarCollapsed || sidebarOpen" class="flex-1">{{ node.name }}</span>
+              </NuxtLink>
+              <button v-show="!sidebarCollapsed || sidebarOpen" @click="toggleGroup(node.id)" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg transition-colors flex-shrink-0">
+                <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="openGroups[node.id] ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+            <div v-show="openGroups[node.id] && (!sidebarCollapsed || sidebarOpen)" class="ml-3 mt-0.5 mb-0.5 border-l-2 border-slate-100 pl-2 space-y-0.5">
+              <NuxtLink
+                v-for="c in node.children" :key="c.id"
+                :id="navLinkId(c.path)" :to="c.path"
+                class="nav-link text-sm"
+                :class="{ active: isActive(c.path) }"
+                @click="sidebarOpen = false"
+              >
+                <component :is="getIcon(c.icon)" class="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{{ c.name }}</span>
+              </NuxtLink>
+            </div>
+          </div>
+
+          <!-- Simple flat link -->
+          <NuxtLink
+            v-else
+            :id="navLinkId(node.path)" :to="node.path"
+            class="nav-link"
+            :class="[{ active: isActive(node.path) }, (sidebarCollapsed && !sidebarOpen) ? 'lg:justify-center lg:px-2' : '']"
+            @click="sidebarOpen = false"
+            :title="(sidebarCollapsed && !sidebarOpen) ? node.name : undefined"
+          >
+            <component :is="getIcon(node.icon)" class="w-4 h-4 flex-shrink-0" />
+            <span v-show="!sidebarCollapsed || sidebarOpen">{{ node.name }}</span>
+          </NuxtLink>
+        </template>
       </nav>
 
       <!-- User -->
@@ -196,52 +258,60 @@ function handleNotifClick(n: any) {
 
 const menus = ref<any[]>([])
 
-function menuSection(path: string): string {
-  if (path.startsWith('/master/')) return 'Master Data'
-  if (path === '/workload' || path.startsWith('/reports')) return 'Management'
-  return 'Menu'
-}
-
-const menuGroups = computed(() => {
-  const groups: Record<string, { label: string; order: number; items: any[] }> = {
-    'Menu':        { label: 'Menu',        order: 0, items: [] },
-    'Management':  { label: 'Management',  order: 1, items: [] },
-    'Master Data': { label: 'Master Data', order: 2, items: [] },
-  }
-  for (const m of menus.value) {
-    const section = m.section || menuSection(m.path)
-    if (!groups[section]) groups[section] = { label: section, order: 99, items: [] }
-    groups[section].items.push(m)
-  }
-  return Object.values(groups).filter(g => g.items.length).sort((a, b) => a.order - b.order)
+// Tree structure from flat menus
+const treeItems = computed(() => {
+  const parents = menus.value.filter(m => !m.parent_id)
+  return parents.map(p => {
+    const children = menus.value.filter(c => c.parent_id === p.id)
+    const isFolder = !p.path
+    const hasActiveChild = children.some(c => isActive(c.path))
+    return { ...p, isFolder, children, hasActiveChild }
+  })
 })
 
+// Open/close state per parent id; auto-open if child is active
+const openGroups = ref<Record<number, boolean>>({})
+
+function toggleGroup(id: number) {
+  openGroups.value[id] = !openGroups.value[id]
+}
+
+watch(() => route.path, () => {
+  for (const node of treeItems.value) {
+    if (node.children.length && node.hasActiveChild) {
+      openGroups.value[node.id] = true
+    }
+  }
+}, { immediate: true })
+
 function fallbackMenus(role?: string) {
-  const base = [
-    { id: 'f1', name: 'Dashboard', path: '/', icon: 'dashboard' },
-    { id: 'f2', name: 'Projects', path: '/projects', icon: 'folder' },
-    { id: 'f3', name: 'Tasks', path: '/tasks', icon: 'check-square' },
-    { id: 'f4', name: 'Tickets', path: '/tickets', icon: 'ticket' },
-    { id: 'f-requests', name: 'Requests', path: '/requests', icon: 'inbox' },
-    { id: 'f-prds', name: 'PRDs', path: '/prds', icon: 'document' },
-    { id: 'f4n', name: 'Notifikasi', path: '/notifications', icon: 'bell' },
-    { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar' },
-    { id: 'f-wishlist', name: 'Catatan', path: '/wishlist', icon: 'clipboard' },
+  const base: any[] = [
+    { id: 'f1', name: 'Dashboard', path: '/', icon: 'dashboard', parent_id: null },
+    { id: 'f2', name: 'Projects', path: '/projects', icon: 'folder', parent_id: null },
+    { id: 'f3', name: 'Tasks', path: '/tasks', icon: 'check-square', parent_id: null },
+    { id: 'f4', name: 'Tickets', path: '/tickets', icon: 'ticket', parent_id: null },
+    { id: 'f-requests', name: 'Requests', path: '/requests', icon: 'inbox', parent_id: null },
+    { id: 'f-prds', name: 'PRDs', path: '/prds', icon: 'document', parent_id: null },
+    { id: 'f4n', name: 'Notifikasi', path: '/notifications', icon: 'bell', parent_id: null },
+    { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar', parent_id: null },
+    { id: 'f-wishlist', name: 'Catatan', path: '/wishlist', icon: 'clipboard', parent_id: null },
   ]
   if (role === 'admin') {
     return [
       ...base,
-      { id: 'f6', name: 'Workload', path: '/workload', icon: 'users' },
-      { id: 'f7', name: 'Recapitulation', path: '/reports', icon: 'chart-bar' },
-      { id: 'f7b', name: 'Report Ticket', path: '/reports/tickets', icon: 'chart-bar' },
-      { id: 'f7c', name: 'Report Task', path: '/reports/tasks', icon: 'chart-bar' },
-      { id: 'f7d', name: 'Daily Report', path: '/reports/daily', icon: 'chart-bar' },
-      { id: 'f8', name: 'Users', path: '/master/users', icon: 'users' },
-      { id: 'f9', name: 'Master Projects', path: '/master/projects', icon: 'folder' },
-      { id: 'f10', name: 'Priority', path: '/master/priorities', icon: 'flag' },
-      { id: 'f11', name: 'Status', path: '/master/statuses', icon: 'tag' },
-      { id: 'f12', name: 'Menus', path: '/master/menus', icon: 'menu' },
-      { id: 'f13', name: 'Menu Sistem', path: '/master/system-menus', icon: 'grid' }
+      { id: 'fg-reports', name: 'Reports', path: null, icon: 'chart-bar', parent_id: null },
+      { id: 'f7', name: 'Recapitulation', path: '/reports', icon: 'chart-bar', parent_id: 'fg-reports' },
+      { id: 'f7b', name: 'Report Ticket', path: '/reports/tickets', icon: 'chart-bar', parent_id: 'fg-reports' },
+      { id: 'f7c', name: 'Report Task', path: '/reports/tasks', icon: 'chart-bar', parent_id: 'fg-reports' },
+      { id: 'f7d', name: 'Daily Report', path: '/reports/daily', icon: 'chart-bar', parent_id: 'fg-reports' },
+      { id: 'f6', name: 'Workload', path: '/workload', icon: 'users', parent_id: null },
+      { id: 'fg-master', name: 'Master Data', path: null, icon: 'menu', parent_id: null },
+      { id: 'f8', name: 'Users', path: '/master/users', icon: 'users', parent_id: 'fg-master' },
+      { id: 'f9', name: 'Master Projects', path: '/master/projects', icon: 'folder', parent_id: 'fg-master' },
+      { id: 'f10', name: 'Priority', path: '/master/priorities', icon: 'flag', parent_id: 'fg-master' },
+      { id: 'f11', name: 'Status', path: '/master/statuses', icon: 'tag', parent_id: 'fg-master' },
+      { id: 'f12', name: 'Menus', path: '/master/menus', icon: 'menu', parent_id: 'fg-master' },
+      { id: 'f13', name: 'Menu Sistem', path: '/master/system-menus', icon: 'grid', parent_id: 'fg-master' },
     ]
   }
   return base
@@ -281,8 +351,7 @@ const pageTitle = computed(() => {
 const initials = computed(() => auth.user?.name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U')
 
 const currentPageIcon = computed(() => {
-  const all = menuGroups.value.flatMap((g: any) => g.items) as any[]
-  return all.find((m: any) => m.path === route.path)?.icon || 'grid'
+  return menus.value.find((m: any) => m.path === route.path)?.icon || 'grid'
 })
 
 const PAGE_TAB_EXCLUDE = /^\/tickets\/\d+|^\/login|^\/profile/
@@ -291,7 +360,8 @@ watch(() => route.path, (path) => {
   tabs.openPageTab({ path, label: pageTitle.value, icon: currentPageIcon.value })
 }, { immediate: true })
 
-function isActive(path: string) {
+function isActive(path: string | null) {
+  if (!path) return false
   if (path === '/') return route.path === '/'
   // Exact match untuk path yang punya sub-routes di nav (agar tidak double-active)
   if (path === '/reports') return route.path === '/reports'
@@ -319,7 +389,8 @@ function getIcon(name: string) {
 const { timeAgo } = useTimeAgo()
 const { startTour } = useTour()
 
-function navLinkId(path: string) {
+function navLinkId(path: string | null) {
+  if (!path) return undefined
   const map: Record<string, string> = {
     '/': 'nav-link-dashboard',
     '/tickets': 'nav-link-tickets',

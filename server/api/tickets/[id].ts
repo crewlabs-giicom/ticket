@@ -1,6 +1,7 @@
 import { getDb } from '../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../utils/sse'
 import { logActivity } from '../../utils/activity'
+import { checkQcFormCompletion } from '../../utils/qc'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -167,6 +168,8 @@ export default defineEventHandler(async (event) => {
     // Project admin customer boleh set priority dan task_id
     const priority_id = (user.role !== 'customer' || customerIsPA) ? body.priority_id : undefined
     const task_id = (user.role !== 'customer' || customerIsPA) ? body.task_id : undefined
+    // resolution_type only staff/admin can set
+    const resolution_type = (user.role !== 'customer') ? (body.resolution_type || null) : undefined
 
     // Customer biasa (bukan project admin) hanya boleh mengubah ke status is_resolved=1
     if (user.role === 'customer' && !customerIsPA && status_id && status_id !== old.status_id) {
@@ -223,14 +226,16 @@ export default defineEventHandler(async (event) => {
 
     await db.execute(`
       UPDATE tickets SET title=?, description=?, project_id=?, priority_id=?, status_id=?,
-      assigned_to=?, due_date=?, sla_breached=?, resolved_at=?, task_id=?, updated_at=NOW()
+      assigned_to=?, due_date=?, sla_breached=?, resolved_at=?, task_id=?,
+      resolution_type=COALESCE(?, resolution_type), updated_at=NOW()
       WHERE id=?
     `, [
       title || old.title, description ?? old.description, project_id || old.project_id,
       priority_id || old.priority_id, status_id || old.status_id,
       assigned_to !== undefined ? assigned_to : old.assigned_to,
       computedDueDate, sla_breached, resolved_at,
-      task_id !== undefined ? (task_id || null) : old.task_id, id
+      task_id !== undefined ? (task_id || null) : old.task_id,
+      resolution_type !== undefined ? resolution_type : null, id
     ])
 
     if (status_id && status_id !== old.status_id) {
@@ -250,6 +255,21 @@ export default defineEventHandler(async (event) => {
           label: `Ticket diselesaikan oleh ${user?.name ?? 'System'}`,
           user_id: user?.id,
         })
+      }
+      // If this is a QC ticket and it just became resolved/closed, trigger QC form completion check
+      if (old.source === 'qc' && status_id !== old.status_id) {
+        const [[newStatusMeta]] = await db.execute('SELECT is_resolved FROM ticket_statuses WHERE id = ?', [status_id]) as any[]
+        if (newStatusMeta?.is_resolved) {
+          const [[qcLink]] = await db.execute(
+            `SELECT qci.qc_form_id FROM qc_checklist_item_tickets qcit
+             JOIN qc_checklist_items qci ON qci.id = qcit.qc_checklist_item_id
+             WHERE qcit.ticket_id = ? LIMIT 1`,
+            [id]
+          ) as any[]
+          if (qcLink?.qc_form_id) {
+            checkQcFormCompletion(db, qcLink.qc_form_id).catch(() => {})
+          }
+        }
       }
     }
 

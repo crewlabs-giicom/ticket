@@ -46,9 +46,14 @@
         <span class="text-sm font-semibold text-emerald-700">{{ fmtSecs(summary.total_ticket_seconds) }}</span>
         <span class="text-xs text-emerald-400">ticket timer</span>
       </div>
+      <div v-if="summary.total_qc_seconds > 0" class="inline-flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2">
+        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-sm font-semibold text-amber-700">{{ fmtSecs(summary.total_qc_seconds) }}</span>
+        <span class="text-xs text-amber-400">QC timer · {{ summary.qc_forms_count }} form</span>
+      </div>
     </div>
 
-    <!-- 2 Panels -->
+    <!-- 3 Panels -->
     <div v-if="loaded" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
       <!-- Panel Task -->
@@ -167,6 +172,59 @@
           </div>
         </div>
       </div>
+      <!-- Panel QC -->
+      <div v-if="qcTimelogs.length > 0" class="card overflow-hidden lg:col-span-2">
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+          <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <h3 class="text-sm font-semibold text-slate-700">QC Time Log</h3>
+          <span class="ml-auto text-xs text-slate-400">{{ qcTimelogs.length }} entri</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Form QC</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Project</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Mulai</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Selesai</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Durasi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+              <tr v-for="tl in qcTimelogs" :key="tl.id" class="hover:bg-slate-50/50">
+                <td class="px-3 py-2">
+                  <div class="text-xs font-medium text-slate-700 line-clamp-2 max-w-[200px]">{{ tl.task_title }} <span class="text-amber-500">#{{ tl.form_sequence }}</span></div>
+                  <div v-if="filters.user_id === ''" class="text-[10px] text-indigo-500 mt-0.5">{{ tl.user_name }}</div>
+                </td>
+                <td class="px-3 py-2 hidden sm:table-cell">
+                  <span class="text-[11px] text-slate-500">{{ tl.project_name }}</span>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <span class="text-xs font-mono text-slate-600">{{ fmtTime(tl.started_at) }}</span>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <span class="text-xs font-mono text-slate-600">{{ fmtTime(tl.stopped_at) }}</span>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  <span class="text-xs font-semibold text-amber-600 font-mono">{{ fmtSecs(tl.duration_seconds) }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Per-QC form grouped summary -->
+        <div v-if="qcGroups.length" class="border-t border-slate-100 px-4 py-2.5 space-y-1.5">
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Ringkasan per Form QC</p>
+          <div v-for="g in qcGroups" :key="g.qc_form_id" class="flex items-center justify-between">
+            <span class="text-xs text-slate-600 truncate max-w-[300px]">{{ g.task_title }} <span class="text-amber-500">QC #{{ g.form_sequence }}</span><span class="text-slate-400"> · {{ g.project_name }}</span></span>
+            <span class="text-xs font-semibold font-mono text-amber-600 ml-2 flex-shrink-0">{{ fmtSecs(g.total_seconds) }}</span>
+          </div>
+          <div class="flex items-center justify-between border-t border-dashed border-slate-200 pt-1.5 mt-1.5">
+            <span class="text-xs font-semibold text-slate-700">Total</span>
+            <span class="text-xs font-bold font-mono text-amber-700">{{ fmtSecs(summary.total_qc_seconds) }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Copy-paste text area -->
@@ -228,7 +286,8 @@ const copied = ref(false)
 const timelogs = ref<any[]>([])
 const ticketActivities = ref<any[]>([])
 const ticketTimelogs = ref<any[]>([])
-const summary = ref({ total_task_seconds: 0, total_ticket_seconds: 0, tasks_count: 0, tickets_count: 0 })
+const qcTimelogs = ref<any[]>([])
+const summary = ref({ total_task_seconds: 0, total_ticket_seconds: 0, total_qc_seconds: 0, tasks_count: 0, tickets_count: 0, qc_forms_count: 0 })
 const reportUser = ref<any>(null)
 
 const { data: userData } = await useFetch('/api/users', { query: { limit: 500 } })
@@ -251,7 +310,8 @@ async function fetchReport() {
     timelogs.value = res.timelogs || []
     ticketActivities.value = res.ticket_activities || []
     ticketTimelogs.value = res.ticket_timelogs || []
-    summary.value = res.summary || { total_task_seconds: 0, total_ticket_seconds: 0, tasks_count: 0, tickets_count: 0 }
+    qcTimelogs.value = res.qc_timelogs || []
+    summary.value = res.summary || { total_task_seconds: 0, total_ticket_seconds: 0, total_qc_seconds: 0, tasks_count: 0, tickets_count: 0, qc_forms_count: 0 }
     reportUser.value = res.user
     loaded.value = true
   } finally { loading.value = false }
@@ -271,6 +331,16 @@ const ticketTimeMap = computed(() => {
     map.set(tl.ticket_id, (map.get(tl.ticket_id) || 0) + Number(tl.duration_seconds || 0))
   }
   return map
+})
+
+// Per-QC-form grouped summary
+const qcGroups = computed(() => {
+  const map = new Map<number, { qc_form_id: number; form_sequence: number; task_title: string; project_name: string; total_seconds: number }>()
+  for (const tl of qcTimelogs.value) {
+    if (!map.has(tl.qc_form_id)) map.set(tl.qc_form_id, { qc_form_id: tl.qc_form_id, form_sequence: tl.form_sequence, task_title: tl.task_title, project_name: tl.project_name, total_seconds: 0 })
+    map.get(tl.qc_form_id)!.total_seconds += Number(tl.duration_seconds || 0)
+  }
+  return [...map.values()]
 })
 
 // Per-task grouped summary
@@ -348,8 +418,22 @@ const reportText = computed(() => {
     lines.push('')
   }
 
+  if (qcTimelogs.value.length) {
+    lines.push('QC yang dikerjakan:')
+    for (const g of qcGroups.value) {
+      const entries = qcTimelogs.value.filter(t => t.qc_form_id === g.qc_form_id)
+      const first = entries[0]
+      const last = entries[entries.length - 1]
+      const who = filters.user_id === '' ? ` (${first.user_name})` : ''
+      lines.push(`• [${fmtTime(first.started_at)}–${fmtTime(last.stopped_at)}] ${g.task_title} QC #${g.form_sequence} (${g.project_name})${who} — ${fmtSecs(g.total_seconds)}`)
+    }
+    lines.push(`  Total: ${fmtSecs(summary.value.total_qc_seconds)}`)
+    lines.push('')
+  }
+
   const ticketTimePart = summary.value.total_ticket_seconds > 0 ? ` | Ticket time: ${fmtSecs(summary.value.total_ticket_seconds)}` : ''
-  lines.push(`Total task time: ${fmtSecs(summary.value.total_task_seconds)} | Tickets: ${summary.value.tickets_count}${ticketTimePart}`)
+  const qcTimePart = summary.value.total_qc_seconds > 0 ? ` | QC time: ${fmtSecs(summary.value.total_qc_seconds)}` : ''
+  lines.push(`Total task time: ${fmtSecs(summary.value.total_task_seconds)} | Tickets: ${summary.value.tickets_count}${ticketTimePart}${qcTimePart}`)
   return lines.join('\n')
 })
 

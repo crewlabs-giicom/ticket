@@ -19,10 +19,13 @@
             {{ ticket.priority_name }}
           </span>
           <span v-if="ticket.sla_breached" class="badge bg-red-100 text-red-600 text-xs">⚠ SLA Breach</span>
+          <span v-if="ticket.source === 'qc'" class="badge bg-amber-100 text-amber-700 text-xs font-bold">QC</span>
+          <span v-if="ticket.resolution_type === 'fixed'" class="badge bg-green-100 text-green-700 text-xs">Fixed</span>
+          <span v-if="ticket.resolution_type === 'mismatch_requirement'" class="badge bg-orange-100 text-orange-700 text-xs">Mismatch Req.</span>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <template v-if="auth.isStaffOrAdmin">
-            <AppSelect v-model="editStatus" :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))" placeholder="Status" class="w-36" @update:modelValue="updateField('status_id', $event)" />
+            <AppSelect v-model="editStatus" :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))" placeholder="Status" class="w-36" @update:modelValue="onStatusChange($event)" />
             <AppSelect v-model="editPriority" :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))" placeholder="Priority" class="w-32" @update:modelValue="updateField('priority_id', $event)" />
             <AppSelect v-model="editAssigned" :options="[{ value: '', label: 'Unassigned' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Unassigned" class="w-36" @update:modelValue="updateField('assigned_to', $event)" />
             <button @click="tabs.togglePin(ticket.id)" class="btn-ghost text-xs py-1.5">
@@ -531,6 +534,36 @@
       </div>
     </div>
   </div>
+
+  <!-- Resolution Type Modal (QC tickets only) -->
+  <div v-if="showResolutionModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+      <h3 class="text-base font-semibold text-slate-900 mb-1">Tipe Resolusi Ticket QC</h3>
+      <p class="text-xs text-slate-400 mb-4">Pilih tipe resolusi sebelum menutup ticket ini.</p>
+      <div class="space-y-2">
+        <label class="flex items-start gap-3 p-3 border rounded-xl cursor-pointer hover:bg-green-50 transition-colors"
+          :class="pendingResolution.type === 'fixed' ? 'border-green-400 bg-green-50' : 'border-slate-200'">
+          <input type="radio" v-model="pendingResolution.type" value="fixed" class="mt-0.5 accent-green-600" />
+          <div>
+            <p class="text-sm font-medium text-slate-800">Fixed</p>
+            <p class="text-xs text-slate-500">Masalah valid dan sudah diperbaiki.</p>
+          </div>
+        </label>
+        <label class="flex items-start gap-3 p-3 border rounded-xl cursor-pointer hover:bg-amber-50 transition-colors"
+          :class="pendingResolution.type === 'mismatch_requirement' ? 'border-amber-400 bg-amber-50' : 'border-slate-200'">
+          <input type="radio" v-model="pendingResolution.type" value="mismatch_requirement" class="mt-0.5 accent-amber-600" />
+          <div>
+            <p class="text-sm font-medium text-slate-800">Mismatch Requirement</p>
+            <p class="text-xs text-slate-500">Bukan bug — melenceng dari requirement. Customer diminta submit request baru.</p>
+          </div>
+        </label>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button @click="cancelResolution" class="btn-secondary flex-1">Batal</button>
+        <button @click="confirmResolution" :disabled="!pendingResolution.type" class="btn-primary flex-1">Konfirmasi</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -694,9 +727,35 @@ onMounted(() => {
   timer.fetchLogs()
 })
 
-async function updateField(field: string, value: any) {
-  await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { [field]: value } })
+async function updateField(field: string, value: any, extra?: Record<string, any>) {
+  await $fetch(`/api/tickets/${id}`, { method: 'PUT', body: { [field]: value, ...extra } })
   await refresh()
+}
+
+// Resolution type modal for QC tickets
+const showResolutionModal = ref(false)
+const pendingResolution = reactive({ statusId: null as any, type: '' })
+
+async function onStatusChange(statusId: any) {
+  editStatus.value = statusId
+  const selectedStatus = statuses.value.find((s: any) => s.id === Number(statusId))
+  if (ticket.value?.source === 'qc' && selectedStatus?.is_resolved) {
+    pendingResolution.statusId = statusId
+    pendingResolution.type = ''
+    showResolutionModal.value = true
+    return
+  }
+  await updateField('status_id', statusId)
+}
+
+function cancelResolution() {
+  showResolutionModal.value = false
+  editStatus.value = ticket.value?.status_id
+}
+
+async function confirmResolution() {
+  showResolutionModal.value = false
+  await updateField('status_id', pendingResolution.statusId, { resolution_type: pendingResolution.type })
 }
 
 async function handleReplyFiles(e: Event) {

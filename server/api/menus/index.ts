@@ -7,11 +7,11 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'GET') {
     if (user.role === 'admin') {
-      const [rows] = await db.execute('SELECT * FROM menus ORDER BY order_index ASC')
+      const [rows] = await db.execute('SELECT * FROM menus ORDER BY parent_id IS NOT NULL ASC, order_index ASC')
       return { success: true, data: rows }
     }
     const [rows] = await db.execute(
-      'SELECT * FROM menus WHERE is_active=1 AND (role="all" OR role=?) ORDER BY order_index ASC',
+      'SELECT * FROM menus WHERE is_active=1 AND (role="all" OR role=?) ORDER BY parent_id IS NOT NULL ASC, order_index ASC',
       [user.role]
     )
     return { success: true, data: rows }
@@ -22,8 +22,8 @@ export default defineEventHandler(async (event) => {
   if (event.method === 'POST') {
     const body = await readBody(event)
     const [r] = await db.execute(
-      'INSERT INTO menus (name, path, icon, order_index, role) VALUES (?, ?, ?, ?, ?)',
-      [body.name, body.path, body.icon, body.order_index || 99, body.role || 'all']
+      'INSERT INTO menus (name, path, icon, order_index, role, parent_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [body.name, body.path || null, body.icon, body.order_index || 99, body.role || 'all', body.parent_id || null]
     )
     const insertId = (r as ResultSetHeader).insertId
     const [rows] = await db.execute('SELECT * FROM menus WHERE id=?', [insertId])

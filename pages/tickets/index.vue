@@ -1,5 +1,14 @@
 <template>
   <div class="space-y-3">
+    <!-- Source tabs (staff/admin only) -->
+    <div v-if="auth.isStaffOrAdmin" class="flex items-center gap-1 border-b border-slate-200 -mb-px">
+      <button
+        v-for="tab in sourceTabs" :key="tab.value"
+        @click="setSourceTab(tab.value)"
+        :class="['px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap', sourceTab === tab.value ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-900']"
+      >{{ tab.label }}</button>
+    </div>
+
     <!-- Top bar -->
     <div class="flex items-center justify-between gap-2">
       <button @click="showFilters = !showFilters" class="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 bg-white transition-colors">
@@ -10,7 +19,7 @@
       </button>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="refreshing" @click="handleRefresh" />
-        <button @click="showForm = true" class="btn-primary">
+        <button v-if="sourceTab !== 'qc'" @click="showForm = true" class="btn-primary">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
           Ticket Baru
         </button>
@@ -107,6 +116,7 @@
                       <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                       Task
                     </span>
+                    <span v-if="t.source === 'qc'" class="inline-flex items-center text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full flex-shrink-0">QC</span>
                   </div>
                     <p class="text-slate-600 text-xs mt-0.5 line-clamp-1 max-w-xs">{{ t.title }}</p>
                     <div class="flex items-center gap-2 mt-1 md:hidden">
@@ -159,6 +169,17 @@ const showForm = ref(false)
 const showFilters = ref(true)
 const loading = ref(false)
 const tickets = ref<any[]>([])
+
+const sourceTabs = [
+  { value: 'user', label: 'Ticket User' },
+  { value: 'qc', label: 'Ticket QC' },
+]
+const sourceTab = ref<'user' | 'qc'>('user')
+function setSourceTab(v: 'user' | 'qc') {
+  sourceTab.value = v
+  pagination.page = 1
+  fetchTickets()
+}
 
 const activeFilterCount = computed(() => {
   let n = 0
@@ -213,6 +234,7 @@ async function fetchTickets() {
     if (filters.assigned_to) q.assigned_to = filters.assigned_to
     if (filters.date_from) q.date_from = filters.date_from
     if (filters.date_to) q.date_to = filters.date_to
+    if (auth.isStaffOrAdmin) q.source = sourceTab.value
     const res = await $fetch('/api/tickets', { query: q }) as any
     tickets.value = res.data
     pagination.total = res.total ?? 0

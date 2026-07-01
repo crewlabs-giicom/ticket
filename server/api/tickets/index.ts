@@ -13,7 +13,8 @@ export default defineEventHandler(async (event) => {
     const params: any[] = []
 
     if (user.role === 'customer') {
-      where += ` AND (t.created_by = ? OR t.id IN (SELECT ticket_id FROM ticket_participants WHERE user_id = ?) OR t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ? AND project_role = 'admin'))`
+      // Customers never see QC tickets through the ticket list (they access them via QC form page)
+      where += ` AND t.source = 'user' AND (t.created_by = ? OR t.id IN (SELECT ticket_id FROM ticket_participants WHERE user_id = ?) OR t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ? AND project_role = 'admin'))`
       params.push(user.id, user.id, user.id)
     } else if (user.role === 'staff') {
       where += ' AND t.project_id IN (SELECT project_id FROM project_members WHERE user_id = ?)'
@@ -40,6 +41,7 @@ export default defineEventHandler(async (event) => {
     if (query.subsystem) { where += ' AND t.subsystem = ?'; params.push(query.subsystem) }
     if (query.created_by && user.role !== 'customer') { where += ' AND t.created_by = ?'; params.push(query.created_by) }
     if (query.sla_breach === '1') { where += ' AND t.sla_breached = 1' }
+    if (query.source) { where += ' AND t.source = ?'; params.push(query.source) }
 
     const maxLimit = query.export === '1' ? 9999 : 200
     const limit = Math.min(Number(query.limit) || 50, maxLimit)

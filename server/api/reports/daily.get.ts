@@ -93,13 +93,35 @@ export default defineEventHandler(async (event) => {
     ttParams
   ) as any[]
 
+  // QC timelogs for the day
+  const qcParams: any[] = [date]
+  let qcWhere = 'DATE(tl.started_at) = ? AND tl.stopped_at IS NOT NULL'
+  if (effectiveUserId) { qcWhere += ' AND tl.user_id = ?'; qcParams.push(effectiveUserId) }
+
+  const [qcTimelogs] = await db.execute(
+    `SELECT tl.id, tl.qc_form_id, tl.user_id, tl.started_at, tl.stopped_at, tl.duration_seconds,
+            qf.sequence as form_sequence, t.title as task_title,
+            p.name as project_name, u.name as user_name
+     FROM qc_timelogs tl
+     LEFT JOIN qc_forms qf ON qf.id = tl.qc_form_id
+     LEFT JOIN tasks t ON t.id = qf.task_id
+     LEFT JOIN projects p ON p.id = t.project_id
+     LEFT JOIN users u ON u.id = tl.user_id
+     WHERE ${qcWhere}
+     ORDER BY tl.started_at ASC`,
+    qcParams
+  ).catch(() => [[], []]) as any[]
+
   const tlArr = timelogs as any[]
   const taArr = ticketActivities as any[]
   const ttArr = ticketTimelogs as any[]
+  const qtArr = Array.isArray(qcTimelogs) ? qcTimelogs as any[] : []
   const totalTaskSeconds = tlArr.reduce((s: number, r: any) => s + Number(r.duration_seconds || 0), 0)
   const totalTicketSeconds = ttArr.reduce((s: number, r: any) => s + Number(r.duration_seconds || 0), 0)
+  const totalQcSeconds = qtArr.reduce((s: number, r: any) => s + Number(r.duration_seconds || 0), 0)
   const uniqueTasks = new Set(tlArr.map((r: any) => r.task_id)).size
   const uniqueTickets = taArr.length
+  const uniqueQcForms = new Set(qtArr.map((r: any) => r.qc_form_id)).size
 
   let selectedUser: any = null
   if (userId) {
@@ -113,11 +135,14 @@ export default defineEventHandler(async (event) => {
     timelogs: tlArr,
     ticket_activities: taArr,
     ticket_timelogs: ttArr,
+    qc_timelogs: qtArr,
     summary: {
       total_task_seconds: totalTaskSeconds,
       total_ticket_seconds: totalTicketSeconds,
+      total_qc_seconds: totalQcSeconds,
       tasks_count: uniqueTasks,
       tickets_count: uniqueTickets,
+      qc_forms_count: uniqueQcForms,
     }
   }
 })

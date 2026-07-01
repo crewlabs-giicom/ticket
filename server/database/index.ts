@@ -563,6 +563,129 @@ async function migrate(db: mysql.Pool) {
   // Add Requests & PRDs menu items (idempotent)
   await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Requests','/requests','inbox',3,'all' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/requests')`).catch(() => {})
   await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'PRDs','/prds','document',4,'all' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/prds')`).catch(() => {})
+
+  // === QC (Quality Control) ===
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS qc_templates (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      created_by INT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS qc_template_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      qc_template_id INT NOT NULL,
+      item_name VARCHAR(500) NOT NULL,
+      order_index INT NOT NULL DEFAULT 0,
+      FOREIGN KEY (qc_template_id) REFERENCES qc_templates(id) ON DELETE CASCADE,
+      INDEX idx_qcti_template (qc_template_id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS qc_forms (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      task_id INT NOT NULL,
+      sequence INT NOT NULL DEFAULT 1,
+      qc_template_id INT,
+      status ENUM('active','completed') NOT NULL DEFAULT 'active',
+      created_by INT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (qc_template_id) REFERENCES qc_templates(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      INDEX idx_qcf_task (task_id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS qc_form_checkers (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      qc_form_id INT NOT NULL,
+      user_id INT NOT NULL,
+      is_done TINYINT(1) NOT NULL DEFAULT 0,
+      done_at DATETIME,
+      UNIQUE KEY uk_form_checker (qc_form_id, user_id),
+      FOREIGN KEY (qc_form_id) REFERENCES qc_forms(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS qc_checklist_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      qc_form_id INT NOT NULL,
+      checker_id INT NOT NULL,
+      item_name VARCHAR(500) NOT NULL,
+      source ENUM('template','manual') NOT NULL DEFAULT 'template',
+      is_checked TINYINT(1) NOT NULL DEFAULT 0,
+      checked_at DATETIME,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (qc_form_id) REFERENCES qc_forms(id) ON DELETE CASCADE,
+      FOREIGN KEY (checker_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_qcitem_form (qc_form_id),
+      INDEX idx_qcitem_checker (checker_id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS qc_checklist_item_tickets (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      qc_checklist_item_id INT NOT NULL,
+      ticket_id INT NOT NULL,
+      FOREIGN KEY (qc_checklist_item_id) REFERENCES qc_checklist_items(id) ON DELETE CASCADE,
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+      INDEX idx_qcit_item (qc_checklist_item_id),
+      INDEX idx_qcit_ticket (ticket_id)
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS qc_timelogs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      qc_form_id INT NOT NULL,
+      user_id INT NOT NULL,
+      started_at DATETIME NOT NULL,
+      stopped_at DATETIME,
+      duration_seconds INT,
+      note VARCHAR(500),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (qc_form_id) REFERENCES qc_forms(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_qctl_form (qc_form_id)
+    )
+  `)
+
+  // Close zombie QC timelogs (> 12 hours open)
+  try {
+    await db.execute(
+      `UPDATE qc_timelogs SET stopped_at = NOW(), duration_seconds = TIMESTAMPDIFF(SECOND, started_at, NOW()) WHERE stopped_at IS NULL AND started_at < DATE_SUB(NOW(), INTERVAL 12 HOUR)`
+    )
+  } catch {}
+
+  // Menu tree: add parent_id (NULL = top-level or folder, non-NULL = child of another menu)
+  await db.execute(`ALTER TABLE menus ADD COLUMN parent_id INT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE menus MODIFY COLUMN path VARCHAR(255) NULL`).catch(() => {})
+
+  // Add QC columns to tickets
+  await db.execute(`ALTER TABLE tickets ADD COLUMN source ENUM('user','qc') NOT NULL DEFAULT 'user'`).catch(() => {})
+  await db.execute(`ALTER TABLE tickets ADD COLUMN qc_checklist_item_id INT NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tickets ADD COLUMN resolution_type ENUM('fixed','mismatch_requirement') NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE tickets ADD CONSTRAINT fk_ticket_qc_item FOREIGN KEY (qc_checklist_item_id) REFERENCES qc_checklist_items(id) ON DELETE SET NULL`).catch(() => {})
+
+  // Add in_qc to tasks status enum (safe: MySQL ALTER ENUM is non-locking for ADD)
+  await db.execute(`ALTER TABLE tasks MODIFY COLUMN status ENUM('backlog','todo','in_progress','review','in_qc','done') NOT NULL DEFAULT 'backlog'`).catch(() => {})
+
+  // QC Template menu item (admin only)
+  await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Template QC','/master/qc-templates','clipboard-check',13,'admin' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/master/qc-templates')`).catch(() => {})
 }
 
 async function seed(db: mysql.Pool) {

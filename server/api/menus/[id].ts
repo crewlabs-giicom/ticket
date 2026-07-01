@@ -9,8 +9,8 @@ export default defineEventHandler(async (event) => {
   if (event.method === 'PUT') {
     const body = await readBody(event)
     await db.execute(
-      'UPDATE menus SET name=?, path=?, icon=?, order_index=?, role=?, is_active=? WHERE id=?',
-      [body.name, body.path, body.icon, body.order_index, body.role, body.is_active ?? 1, id]
+      'UPDATE menus SET name=?, path=?, icon=?, order_index=?, role=?, is_active=?, parent_id=? WHERE id=?',
+      [body.name, body.path || null, body.icon, body.order_index, body.role, body.is_active ?? 1, body.parent_id || null, id]
     )
     return { success: true }
   }

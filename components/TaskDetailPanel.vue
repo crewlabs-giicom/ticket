@@ -110,6 +110,136 @@
         <p v-if="task.description" class="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{{ task.description }}</p>
         <p v-else class="text-sm text-gray-300 italic">Tidak ada deskripsi.</p>
 
+        <!-- QC Section -->
+        <div v-if="auth.isStaffOrAdmin || task.status === 'in_qc'">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+              <span class="inline-flex items-center justify-center w-4 h-4 rounded bg-amber-100 text-amber-600 text-[10px] font-bold">QC</span>
+              Quality Control
+            </h3>
+            <button
+              v-if="auth.isStaffOrAdmin && task.status === 'review'"
+              @click="showPushQcModal = true"
+              class="text-xs bg-amber-500 text-white px-2.5 py-1 rounded-lg hover:bg-amber-600 font-medium"
+            >Push to QC</button>
+          </div>
+
+          <!-- QC Forms list -->
+          <div v-if="qcForms.length" class="space-y-2">
+            <div v-for="form in qcForms" :key="form.id"
+              class="border border-slate-200 rounded-lg p-3 text-xs hover:bg-slate-50 transition-colors">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-slate-700">Form #{{ form.sequence }}</span>
+                  <span :class="['badge text-[10px]', form.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700']">
+                    {{ form.status === 'completed' ? 'Selesai' : 'Aktif' }}
+                  </span>
+                </div>
+                <NuxtLink :to="`/qc-forms/${form.id}`" @click="$emit('close')"
+                  class="text-indigo-600 hover:text-indigo-800 font-medium">Lihat →</NuxtLink>
+              </div>
+              <p class="text-slate-400 mt-1">{{ form.done_count }}/{{ form.checker_count }} checker selesai</p>
+            </div>
+          </div>
+          <p v-else-if="task.status !== 'review'" class="text-xs text-slate-400">Belum ada QC form.</p>
+
+          <!-- Loop QC button (if active form exists and all tickets resolved) -->
+          <div v-if="auth.isStaffOrAdmin && qcForms.some((f: any) => f.status === 'active') && task.status === 'in_qc'" class="mt-2">
+            <button @click="showLoopQcModal = true" class="text-xs text-slate-500 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50">
+              + Ajukan QC Ulang
+            </button>
+          </div>
+        </div>
+
+        <!-- Push to QC Modal -->
+        <div v-if="showPushQcModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-base font-semibold text-slate-900 mb-4">Push to QC — Task: {{ task.title }}</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="label">Template QC <span class="text-slate-400 font-normal">(opsional)</span></label>
+                <AppSelect v-model="pushQcForm.template_id"
+                  :options="[{ value: '', label: 'Tanpa template' }, ...qcTemplates.map((t: any) => ({ value: t.id, label: t.name }))]"
+                  placeholder="Pilih template" @update:modelValue="onTemplateSelect" />
+              </div>
+
+              <!-- Checklist preview from template -->
+              <div v-if="pushQcForm.items.filter((i: any) => i.source === 'template').length">
+                <label class="label">Items dari Template</label>
+                <div class="space-y-1">
+                  <div v-for="(item, idx) in pushQcForm.items.filter((i: any) => i.source === 'template')" :key="idx"
+                    class="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0"></span>
+                    {{ item.name }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Manual items -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="label mb-0">Tambah Item Manual</label>
+                  <button @click="addManualItem" class="text-xs text-indigo-600 hover:text-indigo-800">+ Item</button>
+                </div>
+                <div class="space-y-2">
+                  <div v-for="(item, idx) in pushQcForm.items.filter((i: any) => i.source === 'manual')" :key="idx" class="flex items-center gap-2">
+                    <input v-model="item.name" class="input flex-1 text-sm" placeholder="Nama item..." />
+                    <button @click="removeManualItem(idx)" class="text-slate-300 hover:text-red-500">✕</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Checkers -->
+              <div>
+                <label class="label">Checker <span class="text-red-500">*</span></label>
+                <div class="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2">
+                  <label v-for="u in allUsers" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
+                    <input type="checkbox" :value="u.id" v-model="pushQcForm.checker_ids" class="rounded accent-indigo-600" />
+                    <div class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <img v-if="u.avatar" :src="`/uploads/${u.avatar}`" class="w-full h-full object-cover" />
+                      <span v-else>{{ u.name?.charAt(0) }}</span>
+                    </div>
+                    <span>{{ u.name }}</span>
+                    <span class="text-[10px] text-slate-400 ml-auto">{{ u.role }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <p v-if="pushQcError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{{ pushQcError }}</p>
+            <div class="flex gap-2 mt-5">
+              <button @click="showPushQcModal = false" class="btn-secondary flex-1">Batal</button>
+              <button @click="submitPushQc" :disabled="pushingQc" class="btn-primary flex-1">
+                {{ pushingQc ? 'Memproses...' : 'Push to QC' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loop QC Modal -->
+        <div v-if="showLoopQcModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-base font-semibold text-slate-900 mb-4">Ajukan QC Ulang</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="label">Checker <span class="text-red-500">*</span></label>
+                <div class="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2">
+                  <label v-for="u in allUsers" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
+                    <input type="checkbox" :value="u.id" v-model="loopQcForm.checker_ids" class="rounded accent-indigo-600" />
+                    <span>{{ u.name }}</span>
+                    <span class="text-[10px] text-slate-400 ml-auto">{{ u.role }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-2 mt-5">
+              <button @click="showLoopQcModal = false" class="btn-secondary flex-1">Batal</button>
+              <button @click="submitLoopQc" :disabled="loopingQc" class="btn-primary flex-1">
+                {{ loopingQc ? 'Memproses...' : 'Ajukan QC Ulang' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Linked Tickets -->
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -398,13 +528,103 @@ async function updateAssigned(value: any) {
   task.history = hist.data
 }
 
+const auth = useAuthStore()
+
 const COLUMNS = [
   { status: 'backlog',     label: 'Backlog',     color: '#94a3b8' },
   { status: 'todo',        label: 'To Do',       color: '#6366f1' },
   { status: 'in_progress', label: 'In Progress', color: '#3b82f6' },
   { status: 'review',      label: 'Review',      color: '#f59e0b' },
+  { status: 'in_qc',       label: 'In QC',       color: '#f97316' },
   { status: 'done',        label: 'Done',        color: '#22c55e' },
 ]
+
+// QC
+const qcForms = ref<any[]>([])
+const qcTemplates = ref<any[]>([])
+const allUsers = ref<any[]>([])
+const showPushQcModal = ref(false)
+const showLoopQcModal = ref(false)
+const pushingQc = ref(false)
+const loopingQc = ref(false)
+const pushQcError = ref('')
+
+const pushQcForm = reactive({
+  template_id: '' as any,
+  checker_ids: [] as number[],
+  items: [] as { name: string; source: string }[],
+})
+
+const loopQcForm = reactive({ checker_ids: [] as number[] })
+
+async function loadQcData() {
+  const [forms, templates, users] = await Promise.all([
+    $fetch<any[]>(`/api/tasks/${task.id}/qc-forms`).catch(() => []),
+    $fetch<any[]>('/api/qc-templates').catch(() => []),
+    $fetch<any>('/api/users', { query: { limit: 500 } }).catch(() => null),
+  ])
+  qcForms.value = forms
+  qcTemplates.value = templates
+  allUsers.value = (users?.data || []).filter((u: any) => u.is_active)
+}
+
+async function onTemplateSelect(templateId: any) {
+  // Remove old template items, keep manual
+  pushQcForm.items = pushQcForm.items.filter(i => i.source === 'manual')
+  if (!templateId) return
+  const items = await $fetch<any[]>(`/api/qc-templates/${templateId}/items`).catch(() => [])
+  const templateItems = items.map((i: any) => ({ name: i.item_name, source: 'template' }))
+  pushQcForm.items = [...templateItems, ...pushQcForm.items]
+}
+
+function addManualItem() { pushQcForm.items.push({ name: '', source: 'manual' }) }
+function removeManualItem(idx: number) {
+  const manualItems = pushQcForm.items.filter(i => i.source === 'manual')
+  const globalIdx = pushQcForm.items.indexOf(manualItems[idx])
+  if (globalIdx !== -1) pushQcForm.items.splice(globalIdx, 1)
+}
+
+async function submitPushQc() {
+  pushQcError.value = ''
+  if (!pushQcForm.checker_ids.length) { pushQcError.value = 'Pilih minimal 1 checker'; return }
+  pushingQc.value = true
+  try {
+    await $fetch(`/api/tasks/${task.id}/qc-forms`, {
+      method: 'POST',
+      body: {
+        qc_template_id: pushQcForm.template_id || null,
+        checker_ids: pushQcForm.checker_ids,
+        manual_items: pushQcForm.items.filter(i => i.source === 'manual').map(i => i.name).filter(Boolean),
+      },
+    })
+    task.status = 'in_qc'
+    showPushQcModal.value = false
+    await loadQcData()
+  } catch (e: any) {
+    pushQcError.value = e?.data?.message || 'Gagal push to QC'
+  } finally {
+    pushingQc.value = false
+  }
+}
+
+async function submitLoopQc() {
+  if (!loopQcForm.checker_ids.length) return
+  loopingQc.value = true
+  try {
+    const activeForm = qcForms.value.find(f => f.status === 'active')
+    if (!activeForm) return
+    await $fetch(`/api/qc-forms/${activeForm.id}/loop`, {
+      method: 'POST',
+      body: { checker_ids: loopQcForm.checker_ids },
+    })
+    showLoopQcModal.value = false
+    await loadQcData()
+  } finally {
+    loopingQc.value = false
+  }
+}
+
+onMounted(() => { if (auth.isStaffOrAdmin || task.status === 'in_qc') loadQcData() })
 
 const lb = useLightbox()
 const taskIdRef = computed(() => task.id)
