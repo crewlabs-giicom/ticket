@@ -12,7 +12,13 @@ export default defineEventHandler(async (event) => {
     const [forms] = await db.execute(
       `SELECT qf.*, u.name as created_by_name,
         (SELECT COUNT(*) FROM qc_form_checkers WHERE qc_form_id = qf.id) as checker_count,
-        (SELECT COUNT(*) FROM qc_form_checkers WHERE qc_form_id = qf.id AND is_done = 1) as done_count
+        (SELECT COUNT(*) FROM qc_form_checkers WHERE qc_form_id = qf.id AND is_done = 1) as done_count,
+        (SELECT COUNT(*)
+         FROM tickets tk
+         JOIN qc_checklist_item_tickets qcit ON qcit.ticket_id = tk.id
+         JOIN qc_checklist_items qci ON qci.id = qcit.qc_checklist_item_id
+         JOIN ticket_statuses ts ON ts.id = tk.status_id
+         WHERE qci.qc_form_id = qf.id AND ts.is_resolved = 0) as open_ticket_count
        FROM qc_forms qf
        JOIN users u ON u.id = qf.created_by
        WHERE qf.task_id = ?

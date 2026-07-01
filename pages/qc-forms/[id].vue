@@ -186,6 +186,37 @@
       </div>
     </div>
 
+    <!-- Loop QC — only once every ticket linked to this form's checklist is resolved -->
+    <div v-if="auth.isStaffOrAdmin && !hasOpenQcTickets && form.task_status === 'in_qc'" class="card p-4 flex items-center justify-between">
+      <div>
+        <p class="text-sm font-semibold text-slate-700">Semua ticket QC sudah selesai</p>
+        <p class="text-xs text-slate-400">Ajukan pemeriksaan QC ulang untuk verifikasi.</p>
+      </div>
+      <button @click="checkerSearchLoop = ''; showLoopQcModal = true" class="btn-primary text-sm flex-shrink-0">+ Ajukan QC Ulang</button>
+    </div>
+
+    <!-- Loop QC Modal -->
+    <div v-if="showLoopQcModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <h3 class="text-base font-semibold text-slate-900 mb-4">Ajukan QC Ulang — Form #{{ (form.sequence || 0) + 1 }}</h3>
+        <label class="text-xs font-medium text-slate-500 mb-1 block">Pilih Checker</label>
+        <input v-model="checkerSearchLoop" placeholder="Cari checker..." class="input text-sm mb-2 w-full" />
+        <div class="max-h-52 overflow-y-auto border border-slate-200 rounded-lg mb-4">
+          <div v-if="!filteredUsersLoop.length" class="text-sm text-slate-400 px-2 py-2">Tidak ditemukan</div>
+          <label v-for="u in filteredUsersLoop" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
+            <input type="checkbox" :value="u.id" v-model="loopCheckerIds" class="rounded accent-indigo-600" />
+            {{ u.name }}
+          </label>
+        </div>
+        <div class="flex gap-2">
+          <button @click="showLoopQcModal = false" class="btn-secondary flex-1">Batal</button>
+          <button @click="submitLoopQc" :disabled="!loopCheckerIds.length || loopingQc" class="btn-primary flex-1">
+            {{ loopingQc ? 'Memproses...' : 'Ajukan QC Ulang' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Add manual item (staff only) -->
     <div v-if="auth.isStaffOrAdmin && form.status === 'active'" class="card p-4">
       <h3 class="text-sm font-semibold text-slate-700 mb-3">Tambah Item Checklist Manual</h3>
@@ -339,6 +370,36 @@ const newItemCheckerIds = ref<number[]>([])
 
 const { data: pd } = await useFetch('/api/priorities')
 const priorities = computed(() => (pd.value as any)?.data || [])
+
+// Loop QC
+const allUsers = ref<any[]>([])
+const showLoopQcModal = ref(false)
+const loopingQc = ref(false)
+const loopCheckerIds = ref<number[]>([])
+const checkerSearchLoop = ref('')
+const filteredUsersLoop = computed(() =>
+  checkerSearchLoop.value
+    ? allUsers.value.filter((u: any) => u.name.toLowerCase().includes(checkerSearchLoop.value.toLowerCase()))
+    : allUsers.value
+)
+const hasOpenQcTickets = computed(() => {
+  const allTickets = (form.value?.items || []).flatMap((i: any) => i.tickets || [])
+  return allTickets.some((t: any) => !t.is_resolved)
+})
+async function submitLoopQc() {
+  if (!loopCheckerIds.value.length) return
+  loopingQc.value = true
+  try {
+    const created = await $fetch<any>(`/api/qc-forms/${id}/loop`, {
+      method: 'POST',
+      body: { checker_ids: loopCheckerIds.value },
+    })
+    showLoopQcModal.value = false
+    await navigateTo(`/qc-forms/${created.id}`)
+  } finally {
+    loopingQc.value = false
+  }
+}
 
 // Timer helpers
 function formatSeconds(s: number) {
@@ -579,6 +640,12 @@ onMounted(async () => {
     try {
       const res = await $fetch<any>('/api/system-menus', { query: { project_id: form.value.project_id } })
       systemMenus.value = res?.data || res || []
+    } catch {}
+  }
+  if (auth.isStaffOrAdmin) {
+    try {
+      const res = await $fetch<any>('/api/users', { query: { limit: 500 } })
+      allUsers.value = res?.data || res || []
     } catch {}
   }
 })

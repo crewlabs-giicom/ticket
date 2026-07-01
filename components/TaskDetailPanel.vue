@@ -193,8 +193,8 @@
           </div>
           <p v-else-if="task.status !== 'review'" class="text-xs text-slate-400">Belum ada QC form.</p>
 
-          <!-- Loop QC button (if active form exists and all tickets resolved) -->
-          <div v-if="auth.isStaffOrAdmin && qcForms.some((f: any) => f.status === 'active') && task.status === 'in_qc'" class="mt-2">
+          <!-- Loop QC button — only once the latest form's linked tickets are all resolved -->
+          <div v-if="auth.isStaffOrAdmin && latestQcForm && latestQcForm.open_ticket_count === 0 && task.status === 'in_qc'" class="mt-2">
             <button @click="checkerSearchLoop = ''; showLoopQcModal = true" class="text-xs text-slate-500 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50">
               + Ajukan QC Ulang
             </button>
@@ -700,6 +700,9 @@ const filteredUsersLoop = computed(() =>
     ? allUsers.value.filter((u: any) => u.name.toLowerCase().includes(checkerSearchLoop.value.toLowerCase()))
     : allUsers.value
 )
+const latestQcForm = computed(() =>
+  qcForms.value.length ? qcForms.value.reduce((a: any, b: any) => (b.sequence > a.sequence ? b : a)) : null
+)
 
 async function loadQcData() {
   const [forms, templates, users] = await Promise.all([
@@ -756,9 +759,8 @@ async function submitLoopQc() {
   if (!loopQcForm.checker_ids.length) return
   loopingQc.value = true
   try {
-    const activeForm = qcForms.value.find(f => f.status === 'active')
-    if (!activeForm) return
-    await $fetch(`/api/qc-forms/${activeForm.id}/loop`, {
+    if (!latestQcForm.value) return
+    await $fetch(`/api/qc-forms/${latestQcForm.value.id}/loop`, {
       method: 'POST',
       body: { checker_ids: loopQcForm.checker_ids },
     })
