@@ -23,14 +23,18 @@
 
     <!-- Filters -->
     <div class="flex items-center gap-3 mb-4 flex-wrap">
-      <select v-model="filterStatus" class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <option value="">All Status</option>
-        <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-      </select>
-      <select v-model="filterProject" class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <option value="">All Projects</option>
-        <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-      </select>
+      <AppSelect
+        v-model="filterStatus"
+        :options="[{ value: '', label: 'All Status' }, ...statuses]"
+        placeholder="All Status"
+        class="w-40"
+      />
+      <AppSelect
+        v-model="filterProject"
+        :options="[{ value: '', label: 'All Projects' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+        placeholder="All Projects"
+        class="w-44"
+      />
       <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
         <input type="checkbox" v-model="filterUnassigned" class="rounded accent-indigo-600" />
         Unassigned to PRD
@@ -141,18 +145,19 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Project <span class="text-red-500">*</span></label>
-              <select v-model="form.project_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="">Select project</option>
-                <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-              </select>
+              <AppSelect
+                v-model="form.project_id"
+                :options="[{ value: '', label: 'Select project' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+                placeholder="Select project"
+              />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
-              <select v-model="form.urgency" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+              <AppSelect
+                v-model="form.urgency"
+                :options="[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]"
+                placeholder="Urgency"
+              />
             </div>
           </div>
         </div>
@@ -182,10 +187,11 @@
 
           <div v-if="groupMode === 'existing'">
             <label class="block text-sm font-medium text-gray-700 mb-1">Select PRD</label>
-            <select v-model="groupPrdId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="">Select a PRD...</option>
-              <option v-for="p in availablePrds" :key="p.id" :value="p.id">PRD-{{ p.id }}: {{ p.title }}</option>
-            </select>
+            <AppSelect
+              v-model="groupPrdId"
+              :options="[{ value: '', label: 'Select a PRD...' }, ...availablePrds.map(p => ({ value: p.id, label: `PRD-${p.id}: ${p.title}` }))]"
+              placeholder="Select a PRD..."
+            />
           </div>
 
           <div v-else class="space-y-3">
@@ -195,10 +201,11 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Project <span class="text-red-500">*</span></label>
-              <select v-model="newPrdForm.project_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="">Select project</option>
-                <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-              </select>
+              <AppSelect
+                v-model="newPrdForm.project_id"
+                :options="[{ value: '', label: 'Select project' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+                placeholder="Select project"
+              />
             </div>
           </div>
         </div>

@@ -13,14 +13,18 @@
 
     <!-- Filters -->
     <div class="flex items-center gap-3 mb-4 flex-wrap">
-      <select v-model="filterStatus" class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <option value="">All Status</option>
-        <option v-for="s in prdStatuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-      </select>
-      <select v-model="filterProject" class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <option value="">All Projects</option>
-        <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-      </select>
+      <AppSelect
+        v-model="filterStatus"
+        :options="[{ value: '', label: 'All Status' }, ...prdStatuses]"
+        placeholder="All Status"
+        class="w-40"
+      />
+      <AppSelect
+        v-model="filterProject"
+        :options="[{ value: '', label: 'All Projects' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+        placeholder="All Projects"
+        class="w-44"
+      />
       <input v-model="filterSearch" type="text" placeholder="Search..." class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48" />
     </div>
 
@@ -74,10 +78,11 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Project <span class="text-red-500">*</span></label>
-            <select v-model="form.project_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="">Select project</option>
-              <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
+            <AppSelect
+              v-model="form.project_id"
+              :options="[{ value: '', label: 'Select project' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+              placeholder="Select project"
+            />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Background</label>

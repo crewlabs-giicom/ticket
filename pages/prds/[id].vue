@@ -15,23 +15,21 @@
         </div>
         <div class="flex items-center gap-3 flex-shrink-0">
           <!-- Version selector -->
-          <select
+          <AppSelect
             v-model="selectedVersionId"
-            class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option v-for="v in prd.versions" :key="v.id" :value="v.id">
-              v{{ v.version_number }}{{ v.id === prd.current_version_id ? ' (active)' : '' }}
-            </option>
-          </select>
+            :options="prd.versions.map((v: any) => ({ value: v.id, label: `v${v.version_number}${v.id === prd.current_version_id ? ' (active)' : ''}` }))"
+            placeholder="Pilih versi"
+            class="w-36"
+          />
           <!-- Status -->
-          <select
+          <AppSelect
             v-if="authStore.isStaffOrAdmin"
-            :value="prd.status"
-            @change="updateStatus(($event.target as HTMLSelectElement).value)"
-            class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option v-for="s in prdStatuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-          </select>
+            :model-value="prd.status"
+            :options="prdStatuses"
+            placeholder="Status"
+            class="w-36"
+            @update:model-value="updateStatus($event)"
+          />
           <span v-else :class="prdStatusClass(prd.status)" class="px-3 py-1 rounded-full text-sm font-medium">{{ prd.status.replace('_', ' ') }}</span>
           <button
             v-if="authStore.isStaffOrAdmin"
@@ -282,10 +280,11 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
-              <select v-model="genTaskForm.assigned_to" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="">Unassigned</option>
-                <option v-for="u in staffUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
-              </select>
+              <AppSelect
+                v-model="genTaskForm.assigned_to"
+                :options="[{ value: '', label: 'Unassigned' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+                placeholder="Unassigned"
+              />
             </div>
           </div>
         </div>
