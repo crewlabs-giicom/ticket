@@ -671,6 +671,20 @@ async function migrate(db: mysql.Pool) {
     )
   } catch {}
 
+  // PRD participants
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS prd_participants (
+      prd_id INT NOT NULL,
+      user_id INT NOT NULL,
+      invited_by INT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (prd_id, user_id),
+      FOREIGN KEY (prd_id) REFERENCES prds(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+
   // Menu tree: add parent_id (NULL = top-level or folder, non-NULL = child of another menu)
   await db.execute(`ALTER TABLE menus ADD COLUMN parent_id INT NULL`).catch(() => {})
   await db.execute(`ALTER TABLE menus MODIFY COLUMN path VARCHAR(255) NULL`).catch(() => {})

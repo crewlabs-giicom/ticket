@@ -57,7 +57,7 @@
             <th class="px-4 py-3 text-left font-medium text-gray-600">Status</th>
             <th class="px-4 py-3 text-left font-medium text-gray-600">PRD</th>
             <th class="px-4 py-3 text-left font-medium text-gray-600">Created</th>
-            <th v-if="authStore.isStaffOrAdmin" class="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -96,18 +96,25 @@
               <span v-else class="text-gray-300 text-xs">—</span>
             </td>
             <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{{ fmtDate(r.created_at) }}</td>
-            <td v-if="authStore.isStaffOrAdmin" class="px-4 py-3">
+            <td class="px-4 py-3">
               <div class="flex items-center gap-1">
                 <button
-                  v-if="r.status !== 'rejected'"
-                  @click="setStatus(r, 'reject')"
-                  class="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"
-                >Reject</button>
-                <button
-                  v-if="r.status !== 'standalone'"
-                  @click="setStatus(r, 'standalone')"
-                  class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
-                >Standalone</button>
+                  v-if="canEdit(r)"
+                  @click="openEditModal(r)"
+                  class="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                >Edit</button>
+                <template v-if="authStore.isStaffOrAdmin">
+                  <button
+                    v-if="r.status !== 'rejected'"
+                    @click="setStatus(r, 'reject')"
+                    class="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"
+                  >Reject</button>
+                  <button
+                    v-if="r.status !== 'standalone'"
+                    @click="setStatus(r, 'standalone')"
+                    class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  >Standalone</button>
+                </template>
               </div>
             </td>
           </tr>
@@ -217,6 +224,51 @@
         </div>
       </div>
     </div>
+    <!-- Edit Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold">Edit Request</h2>
+          <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-red-500">*</span></label>
+            <input v-model="editForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Request title" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea v-model="editForm.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Describe the request..." />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Project <span class="text-red-500">*</span></label>
+              <AppSelect
+                v-model="editForm.project_id"
+                :options="[{ value: '', label: 'Select project' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+                placeholder="Select project"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
+              <AppSelect
+                v-model="editForm.urgency"
+                :options="[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]"
+                placeholder="Urgency"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t">
+          <button @click="showEditModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button @click="saveEdit" :disabled="saving" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            {{ saving ? 'Menyimpan...' : 'Simpan' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -241,8 +293,12 @@ const filterSearch = ref('')
 const selectedIds = ref<number[]>([])
 const showCreateModal = ref(false)
 const showGroupModal = ref(false)
+const showEditModal = ref(false)
 const creating = ref(false)
 const grouping = ref(false)
+const saving = ref(false)
+const editingRequest = ref<any>(null)
+const editForm = ref({ title: '', description: '', project_id: '' as any, urgency: 'medium' })
 const groupMode = ref<'existing'|'new'>('existing')
 const groupPrdId = ref('')
 
@@ -326,6 +382,28 @@ async function createRequest() {
     await loadRequests()
   } finally {
     creating.value = false
+  }
+}
+
+function canEdit(r: any) {
+  return !r.prd_id && r.status !== 'rejected' && r.status !== 'standalone'
+}
+
+function openEditModal(r: any) {
+  editingRequest.value = r
+  editForm.value = { title: r.title, description: r.description || '', project_id: r.project_id, urgency: r.urgency }
+  showEditModal.value = true
+}
+
+async function saveEdit() {
+  if (!editForm.value.title.trim() || !editingRequest.value) return
+  saving.value = true
+  try {
+    await $fetch(`/api/requests/${editingRequest.value.id}`, { method: 'PATCH', body: editForm.value })
+    showEditModal.value = false
+    await loadRequests()
+  } finally {
+    saving.value = false
   }
 }
 

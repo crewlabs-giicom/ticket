@@ -39,6 +39,66 @@
         </div>
       </div>
 
+      <!-- Participants -->
+      <div class="flex items-center gap-3 mb-5 flex-wrap">
+        <span class="text-xs font-medium text-gray-500 flex-shrink-0">Peserta</span>
+        <div class="flex flex-wrap gap-1.5 flex-1">
+          <div v-for="p in prdParticipants" :key="p.user_id" class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5 text-xs text-slate-700">
+            <div class="w-4 h-4 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-700 overflow-hidden flex-shrink-0">
+              <img v-if="p.avatar" :src="`/uploads/${p.avatar}`" class="w-full h-full object-cover" />
+              <span v-else>{{ p.name?.charAt(0) }}</span>
+            </div>
+            <span>{{ p.name }}</span>
+            <button v-if="authStore.isStaffOrAdmin" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-500 transition-colors ml-0.5">✕</button>
+          </div>
+          <span v-if="!prdParticipants.length" class="text-xs text-gray-400 italic">Belum ada peserta</span>
+        </div>
+        <button v-if="authStore.isStaffOrAdmin" @click="showInviteModal = true" class="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 flex-shrink-0">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Undang
+        </button>
+      </div>
+
+      <!-- Invite Modal -->
+      <div v-if="showInviteModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm">
+          <div class="flex items-center justify-between px-5 py-4 border-b">
+            <h3 class="text-sm font-semibold text-slate-900">Undang Peserta</h3>
+            <button @click="showInviteModal = false; inviteSearch = ''; inviteResults = []" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="p-4 space-y-3">
+            <input
+              v-model="inviteSearch"
+              @input="searchUsers"
+              type="text"
+              placeholder="Cari nama atau email..."
+              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <div class="max-h-52 overflow-y-auto space-y-1">
+              <div v-if="!inviteResults.length && inviteSearch.length >= 2" class="text-xs text-center text-gray-400 py-4">Tidak ada user ditemukan</div>
+              <div v-for="u in inviteResults" :key="u.id" class="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50">
+                <div class="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700 overflow-hidden flex-shrink-0">
+                  <img v-if="u.avatar" :src="`/uploads/${u.avatar}`" class="w-full h-full object-cover" />
+                  <span v-else>{{ u.name?.charAt(0) }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-slate-800 truncate">{{ u.name }}</p>
+                  <p class="text-xs text-slate-400 truncate">{{ u.email }} · {{ u.role }}</p>
+                </div>
+                <button
+                  v-if="!isAlreadyParticipant(u.id)"
+                  @click="addParticipant(u)"
+                  class="text-xs px-2.5 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex-shrink-0"
+                >+ Undang</button>
+                <span v-else class="text-xs text-slate-400 flex-shrink-0">Sudah</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Tabs -->
       <div class="flex border-b border-gray-200 mb-6">
         <button
@@ -512,10 +572,46 @@ async function loadStaffUsers() {
   staffUsers.value = res.data || res
 }
 
+// Participants
+const prdParticipants = ref<any[]>([])
+const showInviteModal = ref(false)
+const inviteSearch = ref('')
+const inviteResults = ref<any[]>([])
+let inviteDebounce: ReturnType<typeof setTimeout> | null = null
+
+async function loadParticipants() {
+  const res = await $fetch<any>(`/api/prds/${prdId.value}/participants`)
+  prdParticipants.value = res.data || []
+}
+
+function isAlreadyParticipant(userId: number) {
+  return prdParticipants.value.some(p => p.user_id === userId)
+}
+
+async function addParticipant(u: any) {
+  if (isAlreadyParticipant(u.id)) return
+  await $fetch(`/api/prds/${prdId.value}/participants`, { method: 'POST', body: { user_id: u.id } })
+  await loadParticipants()
+}
+
+async function removeParticipant(userId: number) {
+  await $fetch(`/api/prds/${prdId.value}/participants`, { method: 'DELETE', body: { user_id: userId } })
+  prdParticipants.value = prdParticipants.value.filter(p => p.user_id !== userId)
+}
+
+function searchUsers() {
+  if (inviteDebounce) clearTimeout(inviteDebounce)
+  if (inviteSearch.value.length < 2) { inviteResults.value = []; return }
+  inviteDebounce = setTimeout(async () => {
+    const res = await $fetch<any>('/api/users', { query: { search: inviteSearch.value, limit: 20 } })
+    inviteResults.value = res.data || []
+  }, 300)
+}
+
 onMounted(async () => {
   try {
     await loadPrd()
-    await loadStaffUsers()
+    await Promise.all([loadStaffUsers(), loadParticipants()])
   } finally {
     loading.value = false
   }
