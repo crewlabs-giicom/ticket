@@ -67,8 +67,8 @@
           <tr v-else-if="!requests.length">
             <td :colspan="authStore.isStaffOrAdmin ? 9 : 7" class="px-4 py-8 text-center text-gray-400">No requests found</td>
           </tr>
-          <tr v-for="r in requests" :key="r.id" class="border-t border-gray-100 hover:bg-gray-50">
-            <td v-if="authStore.isStaffOrAdmin" class="px-4 py-3">
+          <tr v-for="r in requests" :key="r.id" class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer" @click.stop="openViewModal(r)">
+            <td v-if="authStore.isStaffOrAdmin" class="px-4 py-3" @click.stop>
               <input
                 type="checkbox"
                 :value="r.id"
@@ -96,7 +96,7 @@
               <span v-else class="text-gray-300 text-xs">—</span>
             </td>
             <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{{ fmtDate(r.created_at) }}</td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3" @click.stop>
               <div class="flex items-center gap-1">
                 <button
                   v-if="canEdit(r)"
@@ -224,6 +224,62 @@
         </div>
       </div>
     </div>
+    <!-- View Modal -->
+    <div v-if="showViewModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showViewModal = false">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold">Detail Request</h2>
+          <button @click="showViewModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div v-if="viewingRequest" class="p-6 space-y-4">
+          <div>
+            <p class="text-xs text-gray-400 mb-1">Title</p>
+            <p class="font-semibold text-gray-900">{{ viewingRequest.title }}</p>
+          </div>
+          <div v-if="viewingRequest.description">
+            <p class="text-xs text-gray-400 mb-1">Description</p>
+            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ viewingRequest.description }}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Project</p>
+              <p class="text-sm text-gray-700">{{ viewingRequest.project_name || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Requester</p>
+              <p class="text-sm text-gray-700">{{ viewingRequest.requester_name || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Urgency</p>
+              <span :class="urgencyClass(viewingRequest.urgency)" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ viewingRequest.urgency }}</span>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Status</p>
+              <span :class="statusClass(viewingRequest.status)" class="px-2 py-0.5 rounded-full text-xs font-medium">{{ viewingRequest.status.replace('_', ' ') }}</span>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">PRD</p>
+              <NuxtLink v-if="viewingRequest.prd_id" :to="`/prds/${viewingRequest.prd_id}`" class="text-indigo-600 hover:underline text-sm" @click="showViewModal = false">
+                PRD-{{ viewingRequest.prd_id }}
+              </NuxtLink>
+              <span v-else class="text-sm text-gray-400">—</span>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400 mb-1">Dibuat</p>
+              <p class="text-sm text-gray-700">{{ fmtDate(viewingRequest.created_at) }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t">
+          <button @click="showViewModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Tutup</button>
+          <button v-if="canEdit(viewingRequest)" @click="showViewModal = false; openEditModal(viewingRequest)"
+            class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Edit</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Edit Modal -->
     <div v-if="showEditModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
@@ -294,6 +350,8 @@ const selectedIds = ref<number[]>([])
 const showCreateModal = ref(false)
 const showGroupModal = ref(false)
 const showEditModal = ref(false)
+const showViewModal = ref(false)
+const viewingRequest = ref<any>(null)
 const creating = ref(false)
 const grouping = ref(false)
 const saving = ref(false)
@@ -383,6 +441,11 @@ async function createRequest() {
   } finally {
     creating.value = false
   }
+}
+
+function openViewModal(r: any) {
+  viewingRequest.value = r
+  showViewModal.value = true
 }
 
 function canEdit(r: any) {

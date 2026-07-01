@@ -71,4 +71,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isStaffOrAdmin = computed(() => ['admin', 'staff'].includes(user.value?.role))
 
   return { user, loading, fetchMe, login, logout, isAdmin, isStaff, isCustomer, isStaffOrAdmin }
+}, {
+  persist: {
+    key: 'auth',
+    pick: ['user'],
+  },
 })
