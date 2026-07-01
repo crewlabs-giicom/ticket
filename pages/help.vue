@@ -746,6 +746,108 @@ const staffSections = [
     ],
   },
   {
+    icon: '📅',
+    title: 'Timeline & Gantt Chart',
+    adminOnly: false,
+    items: [
+      {
+        q: 'Apa itu Timeline?',
+        a: 'Timeline adalah visualisasi Gantt chart yang menampilkan jadwal pengerjaan PRD, Task, dan QC secara horizontal berdasarkan tanggal. Ada dua tampilan: <strong>Timeline per Project</strong> (di halaman detail proyek) dan <strong>Master Timeline</strong> (lintas semua project, di menu sidebar).',
+      },
+      {
+        q: 'Kolom tanggal apa saja yang digunakan di Timeline?',
+        a: `<ul class="space-y-1.5">
+          <li><strong>Due Date Awal (original_due_date)</strong> — Tanggal target awal, diisi saat task atau QC dibuat. Bersifat permanen, tidak bisa diubah.</li>
+          <li><strong>Due Date Revisi (revised_due_date)</strong> — Tanggal target baru jika ada perubahan jadwal. Bisa direvisi berkali-kali dengan catatan alasan.</li>
+          <li><strong>Tanggal Mulai Rencana (planned_start_date)</strong> — Kapan item direncanakan mulai dikerjakan.</li>
+          <li><strong>Mulai Aktual (actual_start_date)</strong> — Otomatis terisi saat task diubah ke status <em>In Progress</em>.</li>
+          <li><strong>Selesai Aktual (actual_end_date)</strong> — Otomatis terisi saat task diubah ke status <em>Review</em>.</li>
+        </ul>`,
+      },
+      {
+        q: 'Cara mengatur Timeline dari alur PRD',
+        a: `<ol class="list-decimal list-inside space-y-1.5">
+          <li>Buka detail <strong>PRD</strong> yang ingin diatur jadwalnya</li>
+          <li>Di bagian <strong>Due Dates</strong>, isi <strong>Tanggal Mulai Rencana (planned_start_date)</strong> — klik ikon pensil lalu simpan</li>
+          <li>Isi <strong>Due Date Awal (original_due_date)</strong> — ini hanya bisa diisi sekali, tidak bisa diubah setelah tersimpan</li>
+          <li>Saat membuat task dari PRD (Generate Task di Milestone), isi field <strong>Estimasi Durasi (jam)</strong> — task akan mewarisi <em>original_due_date</em> PRD secara otomatis</li>
+          <li>Bar di Gantt chart PRD akan muncul otomatis berdasarkan <em>planned_start_date</em> sampai <em>original_due_date</em></li>
+        </ol>`,
+      },
+      {
+        q: 'Cara mengatur Timeline dari alur Task langsung (tanpa PRD)',
+        a: `<ol class="list-decimal list-inside space-y-1.5">
+          <li>Buka atau buat task baru</li>
+          <li>Di panel detail task, isi <strong>Due Date</strong> (tanggal target pengerjaan)</li>
+          <li>Isi field <strong>Estimasi (jam)</strong> di bagian timeline info — akan tampil di Gantt</li>
+          <li>Saat task diubah ke <strong>In Progress</strong>, <em>Mulai Aktual</em> otomatis terisi</li>
+          <li>Saat task diubah ke <strong>Review</strong>, <em>Selesai Aktual</em> otomatis terisi</li>
+          <li>Bar task akan muncul di Gantt chart berdasarkan tanggal-tanggal tersebut</li>
+        </ol>`,
+      },
+      {
+        q: 'Tanggal QC di Timeline diambil dari mana?',
+        a: `<ul class="space-y-1">
+          <li><strong>Due Date Awal QC</strong> — otomatis diwarisi dari <em>original_due_date</em> PRD saat task di-push ke QC</li>
+          <li><strong>Mulai Aktual QC</strong> — otomatis terisi saat Push to QC dilakukan</li>
+          <li><strong>Selesai Aktual QC</strong> — otomatis terisi saat semua checker menyelesaikan form QC</li>
+          <li><strong>Estimasi Durasi QC</strong> — bisa diisi di modal Push to QC (dalam jam)</li>
+        </ul>`,
+      },
+      {
+        q: 'Cara merevisi Due Date jika jadwal berubah',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Buka detail <strong>PRD</strong>, <strong>Task</strong>, atau <strong>Form QC</strong> yang ingin direvisi</li>
+          <li>Klik tombol <strong>"Revisi Due Date"</strong> (tombol amber)</li>
+          <li>Isi tanggal baru dan <strong>alasan revisi</strong> (wajib diisi)</li>
+          <li>Klik <strong>Simpan Revisi</strong> — tanggal revisi akan tampil di Gantt dengan warna berbeda</li>
+          <li>Riwayat semua revisi tersimpan dan bisa dilihat di bagian Timeline</li>
+        </ol>`,
+      },
+      {
+        q: 'Cara melihat Timeline di halaman Project',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Buka halaman <strong>Project</strong> yang ingin dilihat</li>
+          <li>Klik tab <strong>Timeline</strong></li>
+          <li>Pilih skala tampilan: <strong>Mingguan</strong> atau <strong>Bulanan</strong></li>
+          <li>Bar PRD (ungu), Task (biru), dan QC (amber) akan muncul sesuai tanggal masing-masing</li>
+          <li>Hover bar untuk melihat rentang tanggal detail</li>
+          <li>Bar <span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px"></span> hijau = sudah selesai; <span style="display:inline-block;width:10px;height:10px;background:#f87171;border-radius:2px"></span> merah = overdue</li>
+        </ol>`,
+      },
+      {
+        q: 'Cara menggunakan Master Timeline (lintas project)',
+        a: `<ol class="list-decimal list-inside space-y-1">
+          <li>Klik menu <strong>Master Timeline</strong> di sidebar (ikon kalender)</li>
+          <li>Semua project dengan tanggal terisi akan tampil di satu Gantt chart</li>
+          <li>Gunakan filter <strong>Project</strong> untuk fokus ke project tertentu</li>
+          <li>Gunakan filter <strong>Assignee</strong> untuk melihat beban kerja per orang</li>
+          <li>Centang/hilangkan centang <strong>PRD / Task / QC</strong> untuk menyesuaikan tampilan</li>
+          <li>Kartu <strong>Ringkasan Assignee</strong> di bagian bawah menampilkan jumlah item per orang</li>
+        </ol>`,
+      },
+      {
+        q: 'Kenapa item tidak muncul di Gantt chart?',
+        a: `<ul class="space-y-1">
+          <li>Bar PRD tidak muncul → pastikan sudah ada <em>planned_start_date</em> atau <em>original_due_date</em> di PRD</li>
+          <li>Bar Task tidak muncul → isi minimal satu tanggal: <em>due_date</em>, <em>original_due_date</em>, atau <em>planned_start_date</em></li>
+          <li>Bar QC tidak muncul → QC mewarisi <em>original_due_date</em> dari PRD; jika PRD tidak ada tanggal, QC juga tidak tampil</li>
+          <li>Jika tidak ada tanggal sama sekali, timeline menampilkan tanda <strong>—</strong> di baris item tersebut</li>
+        </ul>`,
+      },
+      {
+        q: 'Bagaimana warna bar di Gantt chart?',
+        a: `<ul class="space-y-1">
+          <li><span class="inline-block w-3 h-3 rounded mr-1" style="background:#6366f1;vertical-align:middle"></span><strong>Ungu</strong> — PRD (aktif)</li>
+          <li><span class="inline-block w-3 h-3 rounded mr-1" style="background:#60a5fa;vertical-align:middle"></span><strong>Biru</strong> — Task (aktif)</li>
+          <li><span class="inline-block w-3 h-3 rounded mr-1" style="background:#fbbf24;vertical-align:middle"></span><strong>Amber</strong> — QC Form (aktif)</li>
+          <li><span class="inline-block w-3 h-3 rounded mr-1" style="background:#10b981;vertical-align:middle"></span><strong>Hijau</strong> — Semua tipe yang sudah selesai (Done/Completed)</li>
+          <li><span class="inline-block w-3 h-3 rounded mr-1" style="background:#f87171;vertical-align:middle"></span><strong>Merah</strong> — Item yang overdue (due date sudah lewat, belum selesai)</li>
+        </ul>`,
+      },
+    ],
+  },
+  {
     icon: '📊',
     title: 'Laporan & Workload (Admin)',
     adminOnly: true,

@@ -1050,9 +1050,9 @@ const timelineHasData = computed(() => tlData.value.prds.length || tlData.value.
 const tlDateRange = computed(() => {
   const dates: Date[] = []
   const push = (d: string | null) => { if (d) dates.push(new Date(d)) }
-  for (const p of tlData.value.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date) }
-  for (const t of tlData.value.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date) }
-  for (const q of tlData.value.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date) }
+  for (const p of tlData.value.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date); push(p.actual_start_date); push(p.actual_end_date) }
+  for (const t of tlData.value.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date); push(t.actual_end_date) }
+  for (const q of tlData.value.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date); push(q.actual_end_date) }
   if (!dates.length) {
     const now = new Date()
     return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 2, 0) }

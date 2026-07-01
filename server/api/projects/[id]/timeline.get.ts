@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
             p.planned_start_date, p.original_due_date, p.revised_due_date,
             p.actual_start_date, p.actual_end_date
      FROM prds p
-     WHERE p.project_id = ? AND p.is_archived = 0
+     WHERE p.project_id = ?
      ORDER BY COALESCE(p.planned_start_date, p.created_at) ASC`,
     [projectId]
   ) as any[]
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   // QC Forms with dates
   const [qcForms] = await db.execute(
     `SELECT qf.id, qf.task_id, qf.sequence, qf.status,
-            qf.original_due_date, qf.revised_due_date,
+            qf.planned_start_date, qf.original_due_date, qf.revised_due_date,
             qf.actual_start_date, qf.actual_end_date, qf.estimated_duration,
             t.title as task_title
      FROM qc_forms qf

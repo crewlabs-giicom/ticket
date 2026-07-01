@@ -297,9 +297,9 @@ const tlDateRange = computed(() => {
   const dates: Date[] = []
   const push = (d: string | null) => { if (d) dates.push(new Date(d)) }
   for (const proj of allData.value) {
-    for (const p of proj.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date) }
-    for (const t of proj.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date) }
-    for (const q of proj.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date) }
+    for (const p of proj.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date); push(p.actual_start_date); push(p.actual_end_date) }
+    for (const t of proj.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date); push(t.actual_end_date) }
+    for (const q of proj.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date); push(q.actual_end_date) }
   }
   if (!dates.length) {
     const now = new Date()
