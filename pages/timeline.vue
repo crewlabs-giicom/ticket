@@ -258,6 +258,14 @@ const milestonesByPrd = computed(() => {
   return map
 })
 
+// A task's "effective" sort date: earliest known date, falling back to created_at.
+function effectiveDateMs(t: any): number {
+  const d = t.planned_start_date || t.due_date || t.original_due_date || t.revised_due_date || t.actual_start_date || t.created_at
+  if (!d) return Infinity
+  const ms = parseWib(d).getTime()
+  return Number.isNaN(ms) ? Infinity : ms
+}
+
 interface GanttGroup {
   projectId: number
   projectName: string
@@ -288,7 +296,7 @@ const filteredGroups = computed((): GanttGroup[] => {
       const tasks = (tasksByPrd[String(prd.id)] || []).filter((t: any) => {
         if (filterAssignee.value && (t.assigned_to == null || String(t.assigned_to) !== String(filterAssignee.value))) return false
         return true
-      })
+      }).sort((a, b) => effectiveDateMs(a) - effectiveDateMs(b))
       const showProjectLabel = firstInProject && proj.project_id !== lastProjectId
       if (showProjectLabel) { lastProjectId = proj.project_id; firstInProject = false }
       groups.push({ projectId: proj.project_id, projectName: proj.project_name, prdId: prd.id, prd, tasks, showProjectLabel })
@@ -298,7 +306,7 @@ const filteredGroups = computed((): GanttGroup[] => {
     const orphans = (tasksByPrd['none'] || []).filter((t: any) => {
       if (filterAssignee.value && (t.assigned_to == null || String(t.assigned_to) !== String(filterAssignee.value))) return false
       return true
-    })
+    }).sort((a, b) => effectiveDateMs(a) - effectiveDateMs(b))
     if (orphans.length) {
       const showProjectLabel = firstInProject && proj.project_id !== lastProjectId
       if (showProjectLabel) { lastProjectId = proj.project_id; firstInProject = false }
@@ -310,20 +318,20 @@ const filteredGroups = computed((): GanttGroup[] => {
 
 // Date range across all data
 const tlDateRange = computed(() => {
-  const dates: Date[] = [new Date()] // always include today so tasks defaulted to "today" stay in range
-  const push = (d: string | null) => { if (d) dates.push(parseWib(d)) }
+  const msList: number[] = [Date.now()] // always include today so undated items stay in range
+  const push = (d: string | null) => {
+    if (!d) return
+    const ms = parseWib(d).getTime()
+    if (!Number.isNaN(ms)) msList.push(ms)
+  }
   for (const proj of allData.value) {
-    for (const p of proj.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date); push(p.actual_start_date); push(p.actual_end_date) }
-    for (const t of proj.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date); push(t.actual_end_date) }
-    for (const q of proj.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date); push(q.actual_end_date) }
+    for (const p of proj.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date); push(p.actual_start_date); push(p.actual_end_date); push(p.created_at) }
+    for (const t of proj.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date); push(t.actual_end_date); push(t.created_at) }
+    for (const q of proj.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date); push(q.actual_end_date); push(q.created_at) }
     for (const m of proj.milestones) { push(m.due_date) }
   }
-  if (!dates.length) {
-    const now = new Date()
-    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 3, 0) }
-  }
-  const minMs = Math.min(...dates.map(d => d.getTime()))
-  const maxMs = Math.max(...dates.map(d => d.getTime()))
+  const minMs = Math.min(...msList)
+  const maxMs = Math.max(...msList)
   const pad = 7 * 86400000
   return { start: new Date(minMs - pad), end: new Date(maxMs + pad) }
 })

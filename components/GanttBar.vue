@@ -30,8 +30,9 @@ const props = defineProps<{
 }>()
 
 const startDate = computed(() => {
-  const d = props.item.planned_start_date || props.item.actual_start_date
-  // Default to today when no start date is set, so the item still gets a visible bar.
+  const d = props.item.planned_start_date || props.item.actual_start_date || props.item.created_at
+  // Default to the item's creation date when no start date is set, so it still gets a
+  // visible bar without every undated item piling up on today's column.
   return d ? parseWib(d) : new Date()
 })
 

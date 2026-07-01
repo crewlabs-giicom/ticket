@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   // PRDs with dates
   const [prds] = await db.execute(
-    `SELECT p.id, p.title, p.status,
+    `SELECT p.id, p.title, p.status, p.created_at,
             p.planned_start_date, p.original_due_date, p.revised_due_date,
             p.actual_start_date, p.actual_end_date
      FROM prds p
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
   // Tasks with dates
   const [tasks] = await db.execute(
-    `SELECT t.id, t.title, t.status, t.prd_id, t.assigned_to,
+    `SELECT t.id, t.title, t.status, t.prd_id, t.assigned_to, t.created_at,
             t.planned_start_date, t.original_due_date, t.due_date,
             t.actual_start_date, t.actual_end_date, t.estimated_duration,
             u.name as assigned_to_name
@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
 
   // QC Forms with dates
   const [qcForms] = await db.execute(
-    `SELECT qf.id, qf.task_id, qf.sequence, qf.status,
+    `SELECT qf.id, qf.task_id, qf.sequence, qf.status, qf.created_at,
             qf.planned_start_date, qf.original_due_date, qf.revised_due_date,
             qf.actual_start_date, qf.actual_end_date, qf.estimated_duration,
             t.title as task_title
