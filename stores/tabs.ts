@@ -121,4 +121,9 @@ export const useTabStore = defineStore('tabs', () => {
   }
 
   return { tabs, activeTabId, openTab, addTab, closeTab, togglePin, loadPinnedTabs, markUnread, clearUnread, pageTabs, openPageTab, closePageTab, togglePagePin, loadPinnedPageTabs }
+}, {
+  persist: {
+    key: 'tabs',
+    pick: ['tabs', 'activeTabId'] as string[],
+  },
 })
