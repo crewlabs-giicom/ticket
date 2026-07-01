@@ -700,6 +700,21 @@ async function migrate(db: mysql.Pool) {
 
   // QC Template menu item (admin only)
   await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Template QC','/master/qc-templates','clipboard-check',13,'admin' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/master/qc-templates')`).catch(() => {})
+
+  // Pinned QC form tabs
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS user_pinned_qc_tabs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      qc_form_id INT NOT NULL,
+      task_title VARCHAR(500) NOT NULL DEFAULT '',
+      sequence INT NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_user_qc (user_id, qc_form_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (qc_form_id) REFERENCES qc_forms(id) ON DELETE CASCADE
+    )
+  `)
 }
 
 async function seed(db: mysql.Pool) {

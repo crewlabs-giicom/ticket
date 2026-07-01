@@ -10,12 +10,15 @@ export default defineEventHandler(async (event) => {
   const [[form]] = await db.execute(
     `SELECT qf.*,
        t.title as task_title, t.status as task_status, t.project_id,
+       t.description as task_description,
        t.assigned_to as task_assignee_id,
        ua.name as task_assignee_name,
+       p.name as project_name,
        qt.name as template_name,
        uc.name as created_by_name
      FROM qc_forms qf
      JOIN tasks t ON t.id = qf.task_id
+     LEFT JOIN projects p ON p.id = t.project_id
      LEFT JOIN users ua ON ua.id = t.assigned_to
      LEFT JOIN qc_templates qt ON qt.id = qf.qc_template_id
      JOIN users uc ON uc.id = qf.created_by

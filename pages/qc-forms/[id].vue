@@ -31,6 +31,32 @@
       </div>
     </div>
 
+    <!-- Task Info Card -->
+    <div class="card p-4">
+      <button class="flex items-center justify-between w-full" @click="showTaskInfo = !showTaskInfo">
+        <span class="text-sm font-semibold text-slate-700">Info Task</span>
+        <svg :class="['w-4 h-4 text-slate-400 transition-transform', showTaskInfo ? '' : '-rotate-90']" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div v-if="showTaskInfo" class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div>
+          <p class="text-xs text-slate-400 mb-0.5">Project</p>
+          <p class="text-slate-700 font-medium">{{ form.project_name || '—' }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-0.5">Status Task</p>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">{{ form.task_status }}</span>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 mb-0.5">Assignee</p>
+          <p class="text-slate-700">{{ form.task_assignee_name || '—' }}</p>
+        </div>
+        <div v-if="form.task_description" class="col-span-2">
+          <p class="text-xs text-slate-400 mb-0.5">Deskripsi</p>
+          <p class="text-slate-600 whitespace-pre-wrap text-xs leading-relaxed">{{ form.task_description }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Time Tracker (only visible to checkers + staff/admin) -->
     <div v-if="isChecker" class="card p-4">
       <div class="flex items-center justify-between">
@@ -212,6 +238,7 @@ const timer = useQcTimer(qcFormIdRef)
 
 const form = ref<any>(null)
 const loading = ref(false)
+const showTaskInfo = ref(true)
 const markingDone = ref<number | null>(null)
 const newItemName = ref('')
 const newItemCheckerIds = ref<number[]>([])
@@ -343,8 +370,18 @@ async function submitOpenTicket() {
   }
 }
 
+const tabStore = useTabStore()
+
 onMounted(async () => {
   await fetchForm()
   if (isChecker.value) timer.fetchLogs()
+  if (form.value) {
+    tabStore.addQcTab({ id, task_title: form.value.task_title, sequence: form.value.sequence }, false)
+    tabStore.activeQcTabId = id
+  }
+})
+
+onUnmounted(() => {
+  if (tabStore.activeQcTabId === id) tabStore.activeQcTabId = null
 })
 </script>

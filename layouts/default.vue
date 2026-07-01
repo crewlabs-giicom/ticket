@@ -209,10 +209,35 @@
         <div v-for="tab in tabs.tabs" :key="tab.id" :class="['tab-item group', tab.id === tabs.activeTabId && 'active']" @click="tabs.openTab(tab)">
           <span v-if="tab.hasUnread" class="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
           <span class="max-w-[120px] truncate">{{ tab.ticket_number || tab.title }}</span>
-          <button v-if="!tab.pinned" @click.stop="tabs.closeTab(tab.id)" class="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-1 p-0.5 rounded hover:bg-slate-200 transition-all">
+          <button v-if="!tab.pinned" @click.stop="tabs.togglePin(tab.id)" class="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-0.5 p-0.5 rounded hover:bg-slate-200 transition-all" title="Pin">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </button>
+          <button v-else @click.stop="tabs.togglePin(tab.id)" class="ml-0.5 p-0.5 rounded hover:bg-slate-200 transition-all" title="Unpin">
+            <svg class="w-3 h-3 text-primary-500" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </button>
+          <button v-if="!tab.pinned" @click.stop="tabs.closeTab(tab.id)" class="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-0.5 p-0.5 rounded hover:bg-slate-200 transition-all">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
-          <svg v-else class="w-3 h-3 text-primary-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+        </div>
+      </div>
+
+      <!-- Row 3: QC Tabs -->
+      <div v-if="tabs.qcTabs.length" class="sticky z-10 bg-amber-50 border-b border-amber-100 px-4 py-2 flex items-center gap-1.5 overflow-x-auto"
+        :style="{ top: qcTabTop }">
+        <span class="text-xs text-amber-400 mr-1 flex-shrink-0 font-medium">QC</span>
+        <div v-for="tab in tabs.qcTabs" :key="tab.id"
+          :class="['tab-item group', tab.id === tabs.activeQcTabId && 'active']"
+          @click="tabs.openQcTab(tab)">
+          <span class="max-w-[120px] truncate">#{{ tab.id }} · {{ tab.task_title }}</span>
+          <button v-if="!tab.pinned" @click.stop="tabs.toggleQcPin(tab.id)" class="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-all" title="Pin">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </button>
+          <button v-else @click.stop="tabs.toggleQcPin(tab.id)" class="ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-all" title="Unpin">
+            <svg class="w-3 h-3 text-amber-600" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+          </button>
+          <button v-if="!tab.pinned" @click.stop="tabs.closeQcTab(tab.id)" class="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-0.5 p-0.5 rounded hover:bg-amber-200 transition-all">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
       </div>
 
@@ -355,7 +380,15 @@ const currentPageIcon = computed(() => {
   return menus.value.find((m: any) => m.path === route.path)?.icon || 'grid'
 })
 
-const PAGE_TAB_EXCLUDE = /^\/tickets\/\d+|^\/login|^\/profile/
+const PAGE_TAB_EXCLUDE = /^\/tickets\/\d+|^\/qc-forms\/\d+|^\/login|^\/profile/
+
+// Sticky top offset for QC tabs (below page tabs row 1 + ticket tabs row 2)
+const qcTabTop = computed(() => {
+  let top = 4 // 4rem = header
+  if (tabs.pageTabs.length) top += 2 // ~2rem for page tab row
+  if (tabs.tabs.length) top += 2.5 // ~2.5rem for ticket tab row
+  return `${top}rem`
+})
 watch(() => route.path, (path) => {
   if (PAGE_TAB_EXCLUDE.test(path)) return
   tabs.openPageTab({ path, label: pageTitle.value, icon: currentPageIcon.value })
@@ -413,6 +446,7 @@ onMounted(async () => {
   if (auth.user) {
     await tabs.loadPinnedTabs()
     await tabs.loadPinnedPageTabs()
+    await tabs.loadPinnedQcTabs()
     wishlist.fetchNotes()
   }
 })

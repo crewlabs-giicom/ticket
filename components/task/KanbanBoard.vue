@@ -46,8 +46,9 @@
           <ClientOnly>
             <draggable
               :list="buckets[proj.project_id]?.[col.status] ?? []"
-              :group="`proj-${proj.project_id}`"
+              :group="col.readonly ? { name: `proj-${proj.project_id}`, pull: true, put: false } : `proj-${proj.project_id}`"
               item-key="id"
+              :disabled="col.readonly"
               class="min-h-12 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-0.5"
               ghost-class="opacity-40"
               chosen-class="ring-2 ring-indigo-400"
@@ -155,11 +156,12 @@ const props = defineProps<{
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const COLUMNS = [
-  { status: 'backlog',     label: 'Backlog',      color: '#94a3b8' },
-  { status: 'todo',        label: 'To Do',         color: '#6366f1' },
-  { status: 'in_progress', label: 'In Progress',   color: '#3b82f6' },
-  { status: 'review',      label: 'Review',        color: '#f59e0b' },
-  { status: 'done',        label: 'Done',           color: '#22c55e' },
+  { status: 'backlog',     label: 'Backlog',      color: '#94a3b8', readonly: false },
+  { status: 'todo',        label: 'To Do',         color: '#6366f1', readonly: false },
+  { status: 'in_progress', label: 'In Progress',   color: '#3b82f6', readonly: false },
+  { status: 'review',      label: 'Review',        color: '#f59e0b', readonly: false },
+  { status: 'in_qc',       label: 'In QC',         color: '#a855f7', readonly: true },
+  { status: 'done',        label: 'Done',           color: '#22c55e', readonly: false },
 ]
 
 // ─── State ───────────────────────────────────────────────────────────────────

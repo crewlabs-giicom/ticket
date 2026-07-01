@@ -2,11 +2,14 @@ import { defineStore } from 'pinia'
 
 interface Tab { id: number; ticket_number: string; title: string; hasUnread: boolean; pinned: boolean }
 interface PageTab { path: string; label: string; icon: string; pinned: boolean }
+interface QcTab { id: number; task_title: string; sequence: number; pinned: boolean }
 
 export const useTabStore = defineStore('tabs', () => {
   const tabs = ref<Tab[]>([])
   const activeTabId = ref<number | null>(null)
   const pageTabs = ref<PageTab[]>([])
+  const qcTabs = ref<QcTab[]>([])
+  const activeQcTabId = ref<number | null>(null)
 
   function openTab(ticket: { id: number; ticket_number: string; title: string }) {
     const exists = tabs.value.find(t => t.id === ticket.id)
@@ -57,7 +60,6 @@ export const useTabStore = defineStore('tabs', () => {
         await $fetch('/api/me/pins', { method: 'DELETE', body: { ticket_id: id } })
       }
     } catch {
-      // Revert on error
       t.pinned = !willPin
     }
   }
@@ -110,6 +112,64 @@ export const useTabStore = defineStore('tabs', () => {
     } catch {}
   }
 
+  // QC Tabs
+  function openQcTab(form: { id: number; task_title: string; sequence: number }) {
+    const existing = qcTabs.value.find(t => t.id === form.id)
+    if (!existing) {
+      qcTabs.value.push({ id: form.id, task_title: form.task_title, sequence: form.sequence, pinned: false })
+    } else {
+      existing.task_title = form.task_title
+      existing.sequence = form.sequence
+    }
+    activeQcTabId.value = form.id
+    navigateTo(`/qc-forms/${form.id}`)
+  }
+
+  function addQcTab(form: { id: number; task_title: string; sequence: number }, pinned = false) {
+    const existing = qcTabs.value.find(t => t.id === form.id)
+    if (existing) {
+      if (pinned) existing.pinned = true
+      return
+    }
+    qcTabs.value.push({ id: form.id, task_title: form.task_title, sequence: form.sequence, pinned })
+  }
+
+  function closeQcTab(id: number) {
+    const idx = qcTabs.value.findIndex(t => t.id === id)
+    if (idx === -1) return
+    if (qcTabs.value[idx].pinned) return
+    qcTabs.value.splice(idx, 1)
+    if (activeQcTabId.value === id) {
+      const next = qcTabs.value[idx]?.id || qcTabs.value[idx - 1]?.id || null
+      activeQcTabId.value = next
+      if (next) navigateTo(`/qc-forms/${next}`)
+      else navigateTo('/qc-forms')
+    }
+  }
+
+  async function toggleQcPin(id: number) {
+    const t = qcTabs.value.find(t => t.id === id)
+    if (!t) return
+    const willPin = !t.pinned
+    t.pinned = willPin
+    try {
+      if (willPin) {
+        await $fetch('/api/me/qc-pins', { method: 'POST', body: { qc_form_id: id, task_title: t.task_title, sequence: t.sequence } })
+      } else {
+        await $fetch('/api/me/qc-pins', { method: 'DELETE', body: { qc_form_id: id } })
+      }
+    } catch { t.pinned = !willPin }
+  }
+
+  async function loadPinnedQcTabs() {
+    try {
+      const res = await $fetch<any>('/api/me/qc-pins')
+      for (const p of res?.data ?? []) {
+        addQcTab({ id: p.qc_form_id, task_title: p.task_title, sequence: p.sequence }, true)
+      }
+    } catch {}
+  }
+
   function markUnread(ticketId: number) {
     const t = tabs.value.find(t => t.id === ticketId)
     if (t && t.id !== activeTabId.value) t.hasUnread = true
@@ -120,10 +180,14 @@ export const useTabStore = defineStore('tabs', () => {
     if (t) t.hasUnread = false
   }
 
-  return { tabs, activeTabId, openTab, addTab, closeTab, togglePin, loadPinnedTabs, markUnread, clearUnread, pageTabs, openPageTab, closePageTab, togglePagePin, loadPinnedPageTabs }
+  return {
+    tabs, activeTabId, openTab, addTab, closeTab, togglePin, loadPinnedTabs, markUnread, clearUnread,
+    pageTabs, openPageTab, closePageTab, togglePagePin, loadPinnedPageTabs,
+    qcTabs, activeQcTabId, openQcTab, addQcTab, closeQcTab, toggleQcPin, loadPinnedQcTabs,
+  }
 }, {
   persist: {
     key: 'tabs',
-    pick: ['tabs', 'activeTabId'] as string[],
+    pick: ['tabs', 'activeTabId', 'qcTabs', 'activeQcTabId'] as string[],
   },
 })

@@ -14,6 +14,7 @@
           <p class="text-sm text-gray-500 mt-1">{{ prd.project_name }} · by {{ prd.created_by_name }} · {{ fmtDate(prd.created_at) }}</p>
         </div>
         <div class="flex items-center gap-3 flex-shrink-0">
+          <AppRefreshButton :loading="loading" @click="loadPrd" />
           <!-- Version selector -->
           <AppSelect
             v-model="selectedVersionId"
