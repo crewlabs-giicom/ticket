@@ -10,7 +10,9 @@
               {{ form.status === 'completed' ? 'Selesai' : 'Aktif' }}
             </span>
           </div>
-          <h1 class="text-lg font-bold text-slate-900">{{ form.task_title }}</h1>
+          <button @click="openTaskPanel" :disabled="taskPanelLoading" class="text-left hover:underline disabled:opacity-60" title="Buka detail task">
+            <h1 class="text-lg font-bold text-slate-900">{{ taskPanelLoading ? 'Memuat...' : form.task_title }}</h1>
+          </button>
           <p class="text-xs text-slate-400 mt-0.5">Template: {{ form.template_name || 'Tanpa template' }} · Dibuat oleh {{ form.created_by_name }}</p>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
@@ -30,32 +32,6 @@
           <span class="font-medium">{{ c.name }}</span>
           <span v-if="c.is_done" class="text-green-600 font-bold">✓</span>
           <span v-else class="text-slate-400">—</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Task Info Card -->
-    <div class="card p-4">
-      <button class="flex items-center justify-between w-full" @click="showTaskInfo = !showTaskInfo">
-        <span class="text-sm font-semibold text-slate-700">Info Task</span>
-        <svg :class="['w-4 h-4 text-slate-400 transition-transform', showTaskInfo ? '' : '-rotate-90']" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-      </button>
-      <div v-if="showTaskInfo" class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-        <div>
-          <p class="text-xs text-slate-400 mb-0.5">Project</p>
-          <p class="text-slate-700 font-medium">{{ form.project_name || '—' }}</p>
-        </div>
-        <div>
-          <p class="text-xs text-slate-400 mb-0.5">Status Task</p>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">{{ form.task_status }}</span>
-        </div>
-        <div>
-          <p class="text-xs text-slate-400 mb-0.5">Assignee</p>
-          <p class="text-slate-700">{{ form.task_assignee_name || '—' }}</p>
-        </div>
-        <div v-if="form.task_description" class="col-span-2">
-          <p class="text-xs text-slate-400 mb-0.5">Deskripsi</p>
-          <p class="text-slate-600 whitespace-pre-wrap text-xs leading-relaxed">{{ form.task_description }}</p>
         </div>
       </div>
     </div>
@@ -309,6 +285,8 @@
         </div>
       </div>
     </div>
+
+    <TaskDetailPanel v-if="showTaskPanel && taskPanelData" :task="taskPanelData" @close="showTaskPanel = false" @deleted="showTaskPanel = false" />
   </div>
   <div v-else-if="loading" class="text-center py-16 text-slate-400">Memuat QC Form...</div>
   <div v-else class="text-center py-16 text-slate-400">QC Form tidak ditemukan.</div>
@@ -325,7 +303,6 @@ const timer = useQcTimer(qcFormIdRef)
 
 const form = ref<any>(null)
 const loading = ref(false)
-const showTaskInfo = ref(true)
 const markingDone = ref<number | null>(null)
 const newItemName = ref('')
 const newItemCheckerIds = ref<number[]>([])
@@ -368,6 +345,22 @@ async function fetchForm() {
     form.value = null
   } finally {
     loading.value = false
+  }
+}
+
+// Task Detail Panel
+const showTaskPanel = ref(false)
+const taskPanelData = ref<any>(null)
+const taskPanelLoading = ref(false)
+
+async function openTaskPanel() {
+  if (!form.value?.task_id) return
+  taskPanelLoading.value = true
+  try {
+    taskPanelData.value = await $fetch<any>(`/api/tasks/${form.value.task_id}`)
+    showTaskPanel.value = true
+  } finally {
+    taskPanelLoading.value = false
   }
 }
 
