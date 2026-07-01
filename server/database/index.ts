@@ -33,6 +33,34 @@ async function initDb() {
   }
 }
 
+/**
+ * Ensures a real, enforced foreign key with the given ON DELETE rule exists on (table.column).
+ * Needed because some earlier migrations used the column-level `REFERENCES` shorthand, which
+ * MySQL parses but never actually enforces — leaving orphaned rows behind on delete instead of
+ * cascading/nulling them. Safe to re-run: no-ops once the constraint is already correct.
+ */
+async function ensureCascadeFk(db: mysql.Pool, table: string, column: string, refTable: string, rule: 'CASCADE' | 'SET NULL') {
+  const dbName = process.env.DB_NAME || 'ticketing'
+  const [rows] = await db.execute(
+    `SELECT rc.CONSTRAINT_NAME, rc.DELETE_RULE
+     FROM information_schema.REFERENTIAL_CONSTRAINTS rc
+     JOIN information_schema.KEY_COLUMN_USAGE kcu
+       ON kcu.CONSTRAINT_NAME = rc.CONSTRAINT_NAME AND kcu.TABLE_SCHEMA = rc.CONSTRAINT_SCHEMA
+     WHERE rc.CONSTRAINT_SCHEMA = ? AND rc.TABLE_NAME = ? AND kcu.COLUMN_NAME = ? AND kcu.REFERENCED_TABLE_NAME = ?`,
+    [dbName, table, column, refTable]
+  ) as any[]
+  const existing = (rows as any[])[0]
+  if (existing && existing.DELETE_RULE === rule) return
+
+  if (existing) {
+    await db.execute(`ALTER TABLE ${table} DROP FOREIGN KEY ${existing.CONSTRAINT_NAME}`).catch(() => {})
+  }
+  const constraintName = `fk_${table}_${column}_cascade`
+  await db.execute(
+    `ALTER TABLE ${table} ADD CONSTRAINT ${constraintName} FOREIGN KEY (${column}) REFERENCES ${refTable}(id) ON DELETE ${rule}`
+  ).catch(() => {})
+}
+
 async function migrate(db: mysql.Pool) {
   await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
@@ -756,6 +784,11 @@ async function migrate(db: mysql.Pool) {
       FOREIGN KEY (qc_form_id) REFERENCES qc_forms(id) ON DELETE CASCADE
     )
   `)
+
+  // Fix constraints that were never enforced (column-level REFERENCES shorthand) or
+  // that block deletes (default RESTRICT) so ticket/task/prd/qc deletes clean up properly.
+  await ensureCascadeFk(db, 'tickets', 'task_id', 'tasks', 'SET NULL')
+  await ensureCascadeFk(db, 'notifications', 'ticket_id', 'tickets', 'CASCADE')
 }
 
 async function seed(db: mysql.Pool) {

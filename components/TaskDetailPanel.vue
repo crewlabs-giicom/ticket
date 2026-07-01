@@ -553,7 +553,8 @@
 
       <!-- Footer -->
       <div class="p-5 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-        <button @click="deleteTask" class="text-xs text-red-500 hover:text-red-700">Hapus task</button>
+        <button v-if="auth.isAdmin" @click="deleteTask" class="text-xs text-red-500 hover:text-red-700">Hapus task</button>
+        <span v-else></span>
         <button @click="$emit('close')" class="text-xs text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">Tutup</button>
       </div>
     </div>

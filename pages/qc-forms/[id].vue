@@ -13,7 +13,10 @@
           <h1 class="text-lg font-bold text-slate-900">{{ form.task_title }}</h1>
           <p class="text-xs text-slate-400 mt-0.5">Template: {{ form.template_name || 'Tanpa template' }} · Dibuat oleh {{ form.created_by_name }}</p>
         </div>
-        <AppRefreshButton :loading="loading" @click="fetchForm" />
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <AppRefreshButton :loading="loading" @click="fetchForm" />
+          <button v-if="auth.isAdmin" @click="deleteQcForm" class="btn-ghost text-xs py-1.5 text-red-500 hover:text-red-700">Hapus</button>
+        </div>
       </div>
 
       <!-- Checker progress -->
@@ -349,6 +352,13 @@ const isChecker = computed(() => {
   if (auth.isStaffOrAdmin) return true
   return (form.value?.checkers || []).some((c: any) => c.user_id === auth.user?.id)
 })
+
+const { confirmDelete } = useConfirm()
+async function deleteQcForm() {
+  if (!await confirmDelete('QC form ini akan dihapus permanen. Jika ini form aktif satu-satunya, task akan dikembalikan ke status Review.', 'Hapus QC form?')) return
+  await $fetch(`/api/qc-forms/${id}`, { method: 'DELETE' })
+  await navigateTo('/tasks')
+}
 
 async function fetchForm() {
   loading.value = true

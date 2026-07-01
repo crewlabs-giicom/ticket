@@ -4,8 +4,11 @@
  */
 function _parse(str: string): Date {
   if (/[TZ+\-]\d{2}:\d{2}$/.test(str) || str.endsWith('Z')) return new Date(str)
-  // "2026-06-22 15:00:00" or "2026-06-22" → treat as WIB
-  return new Date(str.replace(' ', 'T') + '+07:00')
+  // "2026-06-22 15:00:00" → treat as WIB
+  if (str.includes(' ')) return new Date(str.replace(' ', 'T') + '+07:00')
+  // "2026-06-22" (date-only, no time part) → needs an explicit T00:00:00 before the offset,
+  // otherwise "2026-06-22+07:00" is not valid ISO and Date() silently returns Invalid Date.
+  return new Date(str + 'T00:00:00+07:00')
 }
 export { _parse as parseWib }
 

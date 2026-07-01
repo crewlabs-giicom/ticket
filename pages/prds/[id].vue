@@ -37,6 +37,11 @@
             @click="showNewVersionModal = true"
             class="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50"
           >New Version</button>
+          <button
+            v-if="authStore.isAdmin"
+            @click="deletePrd"
+            class="px-4 py-2 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+          >Hapus</button>
         </div>
       </div>
 
@@ -655,6 +660,13 @@ async function saveField(key: string) {
 async function updateStatus(status: string) {
   await $fetch(`/api/prds/${prdId.value}/status`, { method: 'PATCH', body: { status } })
   prd.value.status = status
+}
+
+const { confirmDelete } = useConfirm()
+async function deletePrd() {
+  if (!await confirmDelete('PRD ini akan dihapus permanen beserta seluruh versi dan milestone-nya. Task yang terkait tidak akan terhapus, hanya dilepas dari PRD ini.', 'Hapus PRD?')) return
+  await $fetch(`/api/prds/${prdId.value}`, { method: 'DELETE' })
+  await navigateTo('/prds')
 }
 
 async function createNewVersion() {

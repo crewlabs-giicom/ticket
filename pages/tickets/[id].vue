@@ -52,6 +52,9 @@
             </svg>
             Chat
           </button>
+          <button v-if="auth.isAdmin" @click="deleteTicket" class="btn-ghost text-xs py-1.5 text-red-500 hover:text-red-700">
+            Hapus
+          </button>
         </div>
       </div>
 
@@ -628,6 +631,13 @@ const editAssigned = ref(ticket.value?.assigned_to || '')
 
 const resolvedStatuses = computed(() => statuses.value.filter((s: any) => s.is_resolved))
 const closingTicket = ref(false)
+
+const { confirmDelete } = useConfirm()
+async function deleteTicket() {
+  if (!await confirmDelete('Ticket ini akan dihapus permanen beserta seluruh riwayatnya.', 'Hapus ticket?')) return
+  await $fetch(`/api/tickets/${id}`, { method: 'DELETE' })
+  await navigateTo('/tickets')
+}
 
 async function customerCloseTicket(status: any) {
   const ok = await useConfirm(`Tandai ticket sebagai "${status.name}"? Tindakan ini tidak dapat dibatalkan.`)
