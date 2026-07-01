@@ -394,6 +394,7 @@ async function migrate(db: mysql.Pool) {
       INDEX idx_entity (entity_type, entity_id)
     )
   `)
+  await db.execute(`ALTER TABLE activity_logs MODIFY COLUMN entity_type ENUM('ticket','task','request','prd','qc_form') NOT NULL`).catch(() => {})
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS user_pinned_tabs (

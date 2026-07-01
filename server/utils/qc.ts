@@ -1,5 +1,6 @@
 import type mysql from 'mysql2/promise'
 import { broadcastToUser } from './sse'
+import { logActivity } from './activity'
 
 /**
  * Called whenever a checker marks Done or a QC ticket is resolved/closed.
@@ -44,6 +45,19 @@ export async function checkQcFormCompletion(db: mysql.Pool, qcFormId: number) {
     `UPDATE tasks SET status = 'done', completed_at = NOW() WHERE id = ? AND status = 'in_qc'`,
     [form.task_id]
   )
+
+  await logActivity(db, {
+    entity_type: 'qc_form', entity_id: qcFormId,
+    action: 'status_changed',
+    from_value: 'active', to_value: 'completed',
+    label: `QC untuk task "${form.task_title}" selesai, task otomatis menjadi Done`,
+  })
+  await logActivity(db, {
+    entity_type: 'task', entity_id: form.task_id,
+    action: 'status_changed',
+    from_value: 'in_qc', to_value: 'done',
+    label: `Task "${form.task_title}" otomatis menjadi Done setelah lulus QC`,
+  })
 
   // Notify task assignee
   if (form.task_assignee) {

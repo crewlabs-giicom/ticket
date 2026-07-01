@@ -47,6 +47,7 @@
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-400 inline-block"></span>QC Form</span>
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-400 inline-block"></span>Overdue</span>
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-400 inline-block"></span>Selesai</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rotate-45 bg-fuchsia-500 inline-block"></span>Milestone</span>
     </div>
 
     <div v-if="loading" class="text-center py-16 text-slate-400">Memuat…</div>
@@ -96,6 +97,7 @@
               </div>
               <div class="flex-1 relative h-10">
                 <GanttBar :item="group.prd" type="prd" :columns="tlColumns" :col-width="tlColWidth" />
+                <GanttMilestone v-for="m in milestonesByPrd[group.prd.id]" :key="'m'+m.id" :milestone="m" :columns="tlColumns" :col-width="tlColWidth" />
               </div>
             </div>
 
@@ -193,6 +195,7 @@ interface TimelineData {
   prds: any[]
   tasks: any[]
   qcForms: any[]
+  milestones: any[]
 }
 
 const allData = ref<TimelineData[]>([])
@@ -221,6 +224,7 @@ async function load() {
           prds: d.prds || [],
           tasks: d.tasks || [],
           qcForms: d.qcForms || [],
+          milestones: d.milestones || [],
         })).catch(() => null)
       )
     )
@@ -237,6 +241,18 @@ const qcByTask = computed(() => {
     for (const qc of proj.qcForms) {
       if (!map[qc.task_id]) map[qc.task_id] = []
       map[qc.task_id].push(qc)
+    }
+  }
+  return map
+})
+
+// Milestones by PRD id (global)
+const milestonesByPrd = computed(() => {
+  const map: Record<number, any[]> = {}
+  for (const proj of allData.value) {
+    for (const m of proj.milestones) {
+      if (!map[m.prd_id]) map[m.prd_id] = []
+      map[m.prd_id].push(m)
     }
   }
   return map
@@ -270,7 +286,7 @@ const filteredGroups = computed((): GanttGroup[] => {
     // PRD groups
     for (const prd of proj.prds) {
       const tasks = (tasksByPrd[String(prd.id)] || []).filter((t: any) => {
-        if (filterAssignee.value && String(t.assigned_to) !== String(filterAssignee.value)) return false
+        if (filterAssignee.value && (t.assigned_to == null || String(t.assigned_to) !== String(filterAssignee.value))) return false
         return true
       })
       const showProjectLabel = firstInProject && proj.project_id !== lastProjectId
@@ -280,7 +296,7 @@ const filteredGroups = computed((): GanttGroup[] => {
 
     // Orphan tasks
     const orphans = (tasksByPrd['none'] || []).filter((t: any) => {
-      if (filterAssignee.value && String(t.assigned_to) !== String(filterAssignee.value)) return false
+      if (filterAssignee.value && (t.assigned_to == null || String(t.assigned_to) !== String(filterAssignee.value))) return false
       return true
     })
     if (orphans.length) {
@@ -300,6 +316,7 @@ const tlDateRange = computed(() => {
     for (const p of proj.prds) { push(p.planned_start_date); push(p.original_due_date); push(p.revised_due_date); push(p.actual_start_date); push(p.actual_end_date) }
     for (const t of proj.tasks) { push(t.planned_start_date); push(t.original_due_date); push(t.due_date); push(t.actual_start_date); push(t.actual_end_date) }
     for (const q of proj.qcForms) { push(q.original_due_date); push(q.revised_due_date); push(q.actual_start_date); push(q.actual_end_date) }
+    for (const m of proj.milestones) { push(m.due_date) }
   }
   if (!dates.length) {
     const now = new Date()
@@ -338,10 +355,10 @@ const tlColumns = computed(() => {
   return cols
 })
 
-// Summary per assignee
+// Summary per assignee — uses the same isOverdue() logic as GanttBar for consistency
+const { isOverdue } = useDate()
 const assigneeSummary = computed(() => {
   const map: Record<string, { name: string; total: number; done: number; overdue: number }> = {}
-  const today = new Date()
   for (const proj of allData.value) {
     for (const t of proj.tasks) {
       const name = t.assigned_to_name
@@ -349,7 +366,10 @@ const assigneeSummary = computed(() => {
       if (!map[name]) map[name] = { name, total: 0, done: 0, overdue: 0 }
       map[name].total++
       if (t.status === 'done') map[name].done++
-      else if (t.due_date && new Date(t.due_date) < today) map[name].overdue++
+      else {
+        const end = t.revised_due_date || t.original_due_date || t.due_date
+        if (isOverdue(end)) map[name].overdue++
+      }
     }
   }
   return Object.values(map).sort((a, b) => b.total - a.total)
@@ -375,5 +395,21 @@ function taskStatusClass(s: string) {
 
 watch(filterProjectId, () => load())
 
-onMounted(() => load())
+// Timeline data can go stale when a task/PRD/QC form is updated from another
+// page/tab (e.g. reassigned), so refresh periodically and when the tab regains focus.
+let refreshInterval: ReturnType<typeof setInterval> | null = null
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') load()
+}
+
+onMounted(() => {
+  load()
+  refreshInterval = setInterval(load, 60000)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) clearInterval(refreshInterval)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+})
 </script>

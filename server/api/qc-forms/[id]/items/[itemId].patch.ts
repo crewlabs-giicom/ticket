@@ -2,6 +2,7 @@ import { getDb } from '../../../../database/index'
 import { requireAuth } from '../../../../utils/rbac'
 import { checkQcFormCompletion } from '../../../../utils/qc'
 import { broadcastToUser } from '../../../../utils/sse'
+import { nextTicketNumber } from '../../../../utils/ticketNumber'
 import type { ResultSetHeader } from 'mysql2'
 
 export default defineEventHandler(async (event) => {
@@ -47,15 +48,6 @@ export default defineEventHandler(async (event) => {
     ) as any[]
     if (!openStatus) throw createError({ statusCode: 500, message: 'Status Open tidak ditemukan' })
 
-    // Generate ticket number
-    const [[lastTicket]] = await db.execute('SELECT ticket_number FROM tickets ORDER BY id DESC LIMIT 1') as any[]
-    let nextNum = 1
-    if (lastTicket) {
-      const match = lastTicket.ticket_number.match(/(\d+)$/)
-      if (match) nextNum = parseInt(match[1]) + 1
-    }
-    const ticketNumber = `TKT-${String(nextNum).padStart(4, '0')}`
-
     const [[priRow]] = await db.execute(
       `SELECT DATE_ADD(NOW(), INTERVAL sla_hours HOUR) as due FROM priorities WHERE id = ?`, [priority_id]
     ) as any[]
@@ -63,35 +55,51 @@ export default defineEventHandler(async (event) => {
 
     const ticketTitle = title || `[QC] ${item.item_name}`
 
-    const [r] = await db.execute(
-      `INSERT INTO tickets
-         (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, source, qc_checklist_item_id, system_menu_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'qc', ?, ?)`,
-      [ticketNumber, ticketTitle, description || '', item.project_id, priority_id, openStatus.id,
-       user.id, item.task_assignee || null, dueDate, itemId, system_menu_id || null]
-    ) as any[]
-    const ticketId = (r as ResultSetHeader).insertId
+    const conn = await db.getConnection()
+    let ticketId: number
+    let ticketNumber: string
+    try {
+      await conn.beginTransaction()
 
-    // Insert attachments if any
-    if (Array.isArray(attachments) && attachments.length) {
-      for (const att of attachments) {
-        await db.execute(
-          `INSERT INTO ticket_attachments (ticket_id, filename, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)`,
-          [ticketId, att.filename, att.original_name, att.mime_type, att.size || 0, user.id]
-        )
+      ticketNumber = await nextTicketNumber(conn)
+
+      const [r] = await conn.execute(
+        `INSERT INTO tickets
+           (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, source, qc_checklist_item_id, system_menu_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'qc', ?, ?)`,
+        [ticketNumber, ticketTitle, description || '', item.project_id, priority_id, openStatus.id,
+         user.id, item.task_assignee || null, dueDate, itemId, system_menu_id || null]
+      ) as any[]
+      ticketId = (r as ResultSetHeader).insertId
+
+      // Insert attachments if any
+      if (Array.isArray(attachments) && attachments.length) {
+        for (const att of attachments) {
+          await conn.execute(
+            `INSERT INTO ticket_attachments (ticket_id, filename, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)`,
+            [ticketId, att.filename, att.original_name, att.mime_type, att.size || 0, user.id]
+          )
+        }
       }
+
+      // Link to pivot table
+      await conn.execute(
+        `INSERT INTO qc_checklist_item_tickets (qc_checklist_item_id, ticket_id) VALUES (?, ?)`,
+        [itemId, ticketId]
+      )
+
+      // Auto-check the item
+      await conn.execute(
+        `UPDATE qc_checklist_items SET is_checked = 1, checked_at = NOW() WHERE id = ?`, [itemId]
+      )
+
+      await conn.commit()
+    } catch (e) {
+      await conn.rollback()
+      throw e
+    } finally {
+      conn.release()
     }
-
-    // Link to pivot table
-    await db.execute(
-      `INSERT INTO qc_checklist_item_tickets (qc_checklist_item_id, ticket_id) VALUES (?, ?)`,
-      [itemId, ticketId]
-    )
-
-    // Auto-check the item
-    await db.execute(
-      `UPDATE qc_checklist_items SET is_checked = 1, checked_at = NOW() WHERE id = ?`, [itemId]
-    )
 
     // Notify task assignee
     if (item.task_assignee && item.task_assignee !== user.id) {

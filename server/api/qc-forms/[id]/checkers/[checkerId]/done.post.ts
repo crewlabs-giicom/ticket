@@ -1,6 +1,7 @@
 import { getDb } from '../../../../../database/index'
 import { requireAuth } from '../../../../../utils/rbac'
 import { checkQcFormCompletion } from '../../../../../utils/qc'
+import { logActivity } from '../../../../../utils/activity'
 
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event)
@@ -33,6 +34,13 @@ export default defineEventHandler(async (event) => {
     `UPDATE qc_form_checkers SET is_done = 1, done_at = NOW() WHERE qc_form_id = ? AND user_id = ?`,
     [formId, checkerId]
   )
+
+  await logActivity(db, {
+    entity_type: 'qc_form', entity_id: formId,
+    action: 'checker_done',
+    label: `${user.name} menandai checklist QC selesai`,
+    user_id: user.id,
+  })
 
   // Trigger auto-transition check
   await checkQcFormCompletion(db, formId)

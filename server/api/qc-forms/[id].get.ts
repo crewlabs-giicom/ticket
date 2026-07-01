@@ -28,12 +28,17 @@ export default defineEventHandler(async (event) => {
   ) as any[]
   if (!form) throw createError({ statusCode: 404, message: 'QC Form tidak ditemukan' })
 
-  // Permission: staff/admin can see all; customer only if they're a checker
+  // Permission: admin can see all; staff must be a member of the task's project; customer only if they're a checker
   if (user.role === 'customer') {
     const [[isMember]] = await db.execute(
       `SELECT 1 FROM qc_form_checkers WHERE qc_form_id = ? AND user_id = ?`, [id, user.id]
     ) as any[]
     if (!isMember) throw createError({ statusCode: 403, message: 'Forbidden' })
+  } else if (user.role === 'staff') {
+    const [[isProjectMember]] = await db.execute(
+      `SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?`, [form.project_id, user.id]
+    ) as any[]
+    if (!isProjectMember) throw createError({ statusCode: 403, message: 'Forbidden' })
   }
 
   // Load checkers with their done status

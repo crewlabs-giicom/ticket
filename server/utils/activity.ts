@@ -1,7 +1,7 @@
 import type mysql from 'mysql2/promise'
 
 interface LogActivityParams {
-  entity_type: 'ticket' | 'task'
+  entity_type: 'ticket' | 'task' | 'request' | 'prd' | 'qc_form'
   entity_id: number
   action: string
   from_value?: string | null

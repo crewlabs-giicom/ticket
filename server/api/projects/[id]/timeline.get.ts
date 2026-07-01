@@ -43,5 +43,15 @@ export default defineEventHandler(async (event) => {
     [projectId]
   ) as any[]
 
-  return { prds, tasks, qcForms }
+  // Milestones (marker points) per PRD
+  const [milestones] = await db.execute(
+    `SELECT m.id, m.prd_id, m.name, m.due_date, m.\`order\`
+     FROM prd_milestones m
+     JOIN prds p ON p.id = m.prd_id
+     WHERE p.project_id = ?
+     ORDER BY m.prd_id ASC, m.due_date ASC, m.\`order\` ASC`,
+    [projectId]
+  ) as any[]
+
+  return { prds, tasks, qcForms, milestones }
 })

@@ -46,11 +46,11 @@ const isCompleted = computed(() => {
   return false
 })
 
+const { isOverdue: dateIsOverdue } = useDate()
 const isOverdue = computed(() => {
   if (isCompleted.value) return false
-  const end = endDate.value
-  if (!end) return false
-  return end < new Date()
+  const raw = props.item.revised_due_date || props.item.original_due_date || props.item.due_date || props.item.actual_end_date
+  return dateIsOverdue(raw)
 })
 
 const barColor = computed(() => {

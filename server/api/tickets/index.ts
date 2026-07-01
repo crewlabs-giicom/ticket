@@ -1,6 +1,7 @@
 import { getDb } from '../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../utils/sse'
 import { logActivity } from '../../utils/activity'
+import { nextTicketNumber } from '../../utils/ticketNumber'
 import type { ResultSetHeader } from 'mysql2'
 
 export default defineEventHandler(async (event) => {
@@ -116,15 +117,6 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Field tidak lengkap' })
     }
 
-    const [lastRows] = await db.execute('SELECT ticket_number FROM tickets ORDER BY id DESC LIMIT 1')
-    const last = (lastRows as any[])[0]
-    let nextNum = 1
-    if (last) {
-      const match = last.ticket_number.match(/(\d+)$/)
-      if (match) nextNum = parseInt(match[1]) + 1
-    }
-    const ticketNumber = `TKT-${String(nextNum).padStart(4, '0')}`
-
     let finalDueDate = due_date
     if (!finalDueDate) {
       const [priRows] = await db.execute('SELECT DATE_ADD(NOW(), INTERVAL sla_hours HOUR) as due FROM priorities WHERE id = ?', [priority_id])
@@ -134,8 +126,11 @@ export default defineEventHandler(async (event) => {
 
     const conn = await db.getConnection()
     let ticketId: number
+    let ticketNumber: string
     try {
       await conn.beginTransaction()
+
+      ticketNumber = await nextTicketNumber(conn)
 
       const [r] = await conn.execute(
         `INSERT INTO tickets (ticket_number, title, description, project_id, priority_id, status_id, created_by, assigned_to, due_date, task_id, subsystem, system_menu_id)
