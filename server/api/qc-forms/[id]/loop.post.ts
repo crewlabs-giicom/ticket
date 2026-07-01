@@ -76,6 +76,12 @@ export default defineEventHandler(async (event) => {
     ) as any[]
     newFormId = (formResult as any).insertId
 
+    // Old form's cycle is over now that it has been re-submitted into a new loop
+    await conn.execute(
+      `UPDATE qc_forms SET status = 'completed', actual_end_date = NOW() WHERE id = ?`,
+      [prevFormId]
+    )
+
     const checkerIdNums = checker_ids.map(Number).filter(Boolean)
     for (const checkerId of checkerIdNums) {
       await conn.execute(
