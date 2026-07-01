@@ -67,8 +67,6 @@ const barVisible = computed(() => !!(startDate.value || endDate.value))
 
 const barStyle = computed(() => {
   if (!props.columns.length) return {}
-  const firstDate = props.columns[0].date
-  const msPerPx = (86400000) / props.colWidth
 
   let start = startDate.value
   let end = endDate.value
@@ -77,11 +75,11 @@ const barStyle = computed(() => {
   if (!start && end) start = end
   if (!end && start) end = start
 
-  const startMs = start!.getTime() - firstDate.getTime()
-  const endMs = end!.getTime() - firstDate.getTime()
+  const leftRaw = dateToOffsetPx(start!, props.columns, props.colWidth)
+  const rightRaw = dateToOffsetPx(end!, props.columns, props.colWidth)
 
-  const left = Math.max(0, startMs / msPerPx)
-  const width = Math.max(props.colWidth * 0.8, (endMs - startMs) / msPerPx + props.colWidth)
+  const left = Math.max(0, leftRaw)
+  const width = Math.max(props.colWidth * 0.8, (rightRaw - leftRaw) + props.colWidth)
 
   return {
     left: left + 'px',
