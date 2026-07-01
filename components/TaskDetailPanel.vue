@@ -119,7 +119,7 @@
             </h3>
             <button
               v-if="auth.isStaffOrAdmin && task.status === 'review'"
-              @click="showPushQcModal = true"
+              @click="checkerSearchPush = ''; showPushQcModal = true"
               class="text-xs bg-amber-500 text-white px-2.5 py-1 rounded-lg hover:bg-amber-600 font-medium"
             >Push to QC</button>
           </div>
@@ -145,7 +145,7 @@
 
           <!-- Loop QC button (if active form exists and all tickets resolved) -->
           <div v-if="auth.isStaffOrAdmin && qcForms.some((f: any) => f.status === 'active') && task.status === 'in_qc'" class="mt-2">
-            <button @click="showLoopQcModal = true" class="text-xs text-slate-500 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50">
+            <button @click="checkerSearchLoop = ''; showLoopQcModal = true" class="text-xs text-slate-500 border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-slate-50">
               + Ajukan QC Ulang
             </button>
           </div>
@@ -192,8 +192,10 @@
               <!-- Checkers -->
               <div>
                 <label class="label">Checker <span class="text-red-500">*</span></label>
+                <input v-model="checkerSearchPush" placeholder="Cari checker..." class="input text-sm mb-2 w-full" />
                 <div class="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2">
-                  <label v-for="u in allUsers" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
+                  <div v-if="!filteredUsersPush.length" class="text-sm text-slate-400 px-2 py-2">Tidak ditemukan</div>
+                  <label v-for="u in filteredUsersPush" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
                     <input type="checkbox" :value="u.id" v-model="pushQcForm.checker_ids" class="rounded accent-indigo-600" />
                     <div class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 overflow-hidden">
                       <img v-if="u.avatar" :src="`/uploads/${u.avatar}`" class="w-full h-full object-cover" />
@@ -222,8 +224,10 @@
             <div class="space-y-4">
               <div>
                 <label class="label">Checker <span class="text-red-500">*</span></label>
+                <input v-model="checkerSearchLoop" placeholder="Cari checker..." class="input text-sm mb-2 w-full" />
                 <div class="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2">
-                  <label v-for="u in allUsers" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
+                  <div v-if="!filteredUsersLoop.length" class="text-sm text-slate-400 px-2 py-2">Tidak ditemukan</div>
+                  <label v-for="u in filteredUsersLoop" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
                     <input type="checkbox" :value="u.id" v-model="loopQcForm.checker_ids" class="rounded accent-indigo-600" />
                     <span>{{ u.name }}</span>
                     <span class="text-[10px] text-slate-400 ml-auto">{{ u.role }}</span>
@@ -556,6 +560,19 @@ const pushQcForm = reactive({
 })
 
 const loopQcForm = reactive({ checker_ids: [] as number[] })
+
+const checkerSearchPush = ref('')
+const checkerSearchLoop = ref('')
+const filteredUsersPush = computed(() =>
+  checkerSearchPush.value
+    ? allUsers.value.filter((u: any) => u.name.toLowerCase().includes(checkerSearchPush.value.toLowerCase()))
+    : allUsers.value
+)
+const filteredUsersLoop = computed(() =>
+  checkerSearchLoop.value
+    ? allUsers.value.filter((u: any) => u.name.toLowerCase().includes(checkerSearchLoop.value.toLowerCase()))
+    : allUsers.value
+)
 
 async function loadQcData() {
   const [forms, templates, users] = await Promise.all([

@@ -295,6 +295,7 @@ function fallbackMenus(role?: string) {
     { id: 'f4n', name: 'Notifikasi', path: '/notifications', icon: 'bell', parent_id: null },
     { id: 'f5', name: 'Kalender', path: '/calendar', icon: 'calendar', parent_id: null },
     { id: 'f-wishlist', name: 'Catatan', path: '/wishlist', icon: 'clipboard', parent_id: null },
+    { id: 'f-qcforms', name: 'Form QC', path: '/qc-forms', icon: 'check-square', parent_id: null },
   ]
   if (role === 'admin') {
     return [
