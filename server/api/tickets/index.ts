@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
     if (query.subsystem) { where += ' AND t.subsystem = ?'; params.push(query.subsystem) }
     if (query.created_by && user.role !== 'customer') { where += ' AND t.created_by = ?'; params.push(query.created_by) }
     if (query.sla_breach === '1') { where += ' AND t.sla_breached = 1' }
+    if (query.extended === '1') { where += ` AND EXISTS (SELECT 1 FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended')` }
     if (query.source) { where += ' AND t.source = ?'; params.push(query.source) }
 
     const maxLimit = query.export === '1' ? 9999 : 200

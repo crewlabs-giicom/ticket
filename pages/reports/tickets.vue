@@ -81,6 +81,14 @@
           </label>
         </div>
 
+        <div class="flex flex-col gap-1 justify-end">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Due Date</label>
+          <label class="flex items-center gap-2 cursor-pointer h-9 px-3 border border-slate-200 rounded-lg bg-white hover:border-slate-300 transition-colors w-fit">
+            <input v-model="filters.extended" type="checkbox" class="w-3.5 h-3.5 rounded accent-purple-500" />
+            <span class="text-sm text-slate-600">Hanya yang pernah diperpanjang</span>
+          </label>
+        </div>
+
         <div class="flex flex-col gap-1 justify-end sm:col-span-2 lg:col-span-1">
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">Aksi</label>
           <div class="flex items-center gap-2">
@@ -216,6 +224,7 @@ const filters = reactive({
   created_by: '',
   project_id: '',
   sla_breach: false,
+  extended: false,
 })
 
 const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
@@ -246,6 +255,7 @@ function buildQuery(extra: Record<string, any> = {}) {
   if (filters.created_by) q.created_by = filters.created_by
   if (filters.project_id) q.project_id = filters.project_id
   if (filters.sla_breach) q.sla_breach = '1'
+  if (filters.extended) q.extended = '1'
   return { ...q, ...extra }
 }
 

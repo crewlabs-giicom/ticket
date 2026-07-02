@@ -84,6 +84,15 @@
             <input v-model="filters.date_to" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
           </div>
         </div>
+
+        <!-- Due Date Extended -->
+        <div class="flex flex-col gap-1 justify-end">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Due Date</label>
+          <label class="flex items-center gap-2 cursor-pointer h-9 px-3 border border-slate-200 rounded-lg bg-white hover:border-slate-300 transition-colors w-fit">
+            <input v-model="filters.extended" type="checkbox" class="w-3.5 h-3.5 rounded accent-purple-500" />
+            <span class="text-sm text-slate-600">Pernah diperpanjang</span>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -192,6 +201,7 @@ const activeFilterCount = computed(() => {
   if (filters.priority_ids.length) n++
   if (filters.project_id) n++
   if (filters.assigned_to) n++
+  if (filters.extended) n++
   return n
 })
 
@@ -208,6 +218,7 @@ const filters = reactive({
   assigned_to: '',
   date_from: toDateStr(oneMonthAgo),
   date_to: toDateStr(today),
+  extended: false,
 })
 const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 
@@ -238,6 +249,7 @@ async function fetchTickets() {
     if (filters.assigned_to) q.assigned_to = filters.assigned_to
     if (filters.date_from) q.date_from = filters.date_from
     if (filters.date_to) q.date_to = filters.date_to
+    if (filters.extended) q.extended = '1'
     if (auth.isStaffOrAdmin) q.source = sourceTab.value
     const res = await $fetch('/api/tickets', { query: q }) as any
     tickets.value = res.data
