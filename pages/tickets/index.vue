@@ -117,7 +117,7 @@
                       Task
                     </span>
                     <span v-if="t.source === 'qc'" class="inline-flex items-center text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full flex-shrink-0">QC</span>
-                    <span v-if="t.has_extended_due_date" class="inline-flex items-center text-[9px] font-medium bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full flex-shrink-0" title="Due date pernah diperpanjang">⏱ Extended</span>
+                    <span v-if="t.extended_due_date_history?.length" class="inline-flex items-center text-[9px] font-medium bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full flex-shrink-0 cursor-help" :title="extendedTooltip(t)">⏱ Extended ({{ t.extended_due_date_history.length }}x)</span>
                   </div>
                     <p class="text-slate-600 text-xs mt-0.5 line-clamp-1 max-w-xs">{{ t.title }}</p>
                     <div class="flex items-center gap-2 mt-1 md:hidden">
@@ -164,6 +164,9 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 const { fmtDate } = useDate()
+function extendedTooltip(t: any) {
+  return (t.extended_due_date_history || []).map((h: any) => h.label).join('\n')
+}
 const tabs = useTabStore()
 const auth = useAuthStore()
 const showForm = ref(false)

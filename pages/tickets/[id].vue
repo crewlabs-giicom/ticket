@@ -22,7 +22,15 @@
           <span v-if="ticket.source === 'qc'" class="badge bg-amber-100 text-amber-700 text-xs font-bold">QC</span>
           <span v-if="ticket.resolution_type === 'fixed'" class="badge bg-green-100 text-green-700 text-xs">Fixed</span>
           <span v-if="ticket.resolution_type === 'mismatch_requirement'" class="badge bg-orange-100 text-orange-700 text-xs">Mismatch Req.</span>
-          <span v-if="ticket.has_extended_due_date" class="badge bg-purple-100 text-purple-700 text-xs">⏱ Due Date Extended</span>
+          <div v-if="ticket.extended_due_date_history?.length" class="relative group">
+            <span class="badge bg-purple-100 text-purple-700 text-xs cursor-help">⏱ Due Date Extended ({{ ticket.extended_due_date_history.length }}x)</span>
+            <div class="hidden group-hover:block absolute z-20 top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-2.5 space-y-2">
+              <div v-for="(h, idx) in [...ticket.extended_due_date_history].reverse()" :key="idx" class="text-[11px] text-slate-600 border-b border-slate-100 last:border-0 pb-1.5 last:pb-0">
+                <p class="text-slate-400 font-mono text-[10px]">{{ fmtDateTime(h.created_at) }}</p>
+                <p>{{ h.label }}</p>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <template v-if="auth.isStaffOrAdmin">

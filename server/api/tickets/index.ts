@@ -76,7 +76,9 @@ export default defineEventHandler(async (event) => {
         sm.name as system_menu_name,
         (SELECT COUNT(*) FROM ticket_responses r WHERE r.ticket_id = t.id AND r.is_internal = 0) as response_count,
         (SELECT COUNT(*) FROM ticket_attachments a WHERE a.ticket_id = t.id) as attachment_count,
-        EXISTS(SELECT 1 FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended') as has_extended_due_date
+        (SELECT JSON_ARRAYAGG(JSON_OBJECT('label', al.label, 'created_at', al.created_at) ORDER BY al.created_at ASC)
+          FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended'
+        ) as extended_due_date_history
       FROM tickets t
       LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN priorities pr ON pr.id = t.priority_id
@@ -88,6 +90,10 @@ export default defineEventHandler(async (event) => {
       ORDER BY t.created_at DESC
       LIMIT ? OFFSET ?
     `, [...params, limit, offset])
+
+    for (const t of tickets as any[]) {
+      t.extended_due_date_history = t.extended_due_date_history ? JSON.parse(t.extended_due_date_history) : []
+    }
 
     const mins = Number(aggStats?.avg_resolution_minutes)
     const avgSla = mins > 0

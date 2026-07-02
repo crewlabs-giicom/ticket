@@ -136,7 +136,7 @@
               <td class="px-4 py-2.5">
                 <div class="flex items-center gap-1 flex-wrap">
                   <span class="badge text-white text-[10px] whitespace-nowrap" :style="{ background: t.status_color }">{{ t.status_name }}</span>
-                  <span v-if="t.has_extended_due_date" class="badge bg-purple-100 text-purple-700 text-[10px] whitespace-nowrap" title="Due date pernah diperpanjang">⏱ Extended</span>
+                  <span v-if="t.extended_due_date_history?.length" class="badge bg-purple-100 text-purple-700 text-[10px] whitespace-nowrap cursor-help" :title="extendedTooltip(t)">⏱ Extended ({{ t.extended_due_date_history.length }}x)</span>
                 </div>
               </td>
               <td class="px-4 py-2.5 hidden xl:table-cell"><span class="text-xs text-slate-500 whitespace-nowrap">{{ fmtDate(t.created_at) }}</span></td>
@@ -195,6 +195,9 @@ definePageMeta({ middleware: 'auth' })
 const auth = useAuthStore()
 const tabs = useTabStore()
 const { fmtDate } = useDate()
+function extendedTooltip(t: any) {
+  return (t.extended_due_date_history || []).map((h: any) => h.label).join('\n')
+}
 
 if (!auth.isStaffOrAdmin) {
   await navigateTo('/')

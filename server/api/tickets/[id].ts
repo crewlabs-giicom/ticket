@@ -19,7 +19,9 @@ export default defineEventHandler(async (event) => {
         tk.title as task_title,
         sm.name as system_menu_name,
         qci.qc_form_id as qc_form_id,
-        EXISTS(SELECT 1 FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended') as has_extended_due_date
+        (SELECT JSON_ARRAYAGG(JSON_OBJECT('label', al.label, 'created_at', al.created_at) ORDER BY al.created_at ASC)
+          FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended'
+        ) as extended_due_date_history
       FROM tickets t
       LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN priorities pr ON pr.id = t.priority_id
@@ -33,6 +35,7 @@ export default defineEventHandler(async (event) => {
     `, [id])
     const ticket = (ticketRows as any[])[0]
     if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
+    ticket.extended_due_date_history = ticket.extended_due_date_history ? JSON.parse(ticket.extended_due_date_history) : []
 
     if (user.role === 'customer' && Number(ticket.created_by) !== Number(user.id)) {
       let isParticipant = false
