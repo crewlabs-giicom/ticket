@@ -134,7 +134,10 @@
                 <p class="text-xs text-slate-700 line-clamp-2">{{ t.title }}</p>
               </td>
               <td class="px-4 py-2.5">
-                <span class="badge text-white text-[10px] whitespace-nowrap" :style="{ background: t.status_color }">{{ t.status_name }}</span>
+                <div class="flex items-center gap-1 flex-wrap">
+                  <span class="badge text-white text-[10px] whitespace-nowrap" :style="{ background: t.status_color }">{{ t.status_name }}</span>
+                  <span v-if="t.has_extended_due_date" class="badge bg-purple-100 text-purple-700 text-[10px] whitespace-nowrap" title="Due date pernah diperpanjang">⏱ Extended</span>
+                </div>
               </td>
               <td class="px-4 py-2.5 hidden xl:table-cell"><span class="text-xs text-slate-500 whitespace-nowrap">{{ fmtDate(t.created_at) }}</span></td>
               <td class="px-4 py-2.5 hidden xl:table-cell"><span class="text-xs text-slate-500 whitespace-nowrap">{{ fmtDate(t.resolved_at || t.closed_at) || '—' }}</span></td>

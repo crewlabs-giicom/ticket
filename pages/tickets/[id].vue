@@ -22,6 +22,7 @@
           <span v-if="ticket.source === 'qc'" class="badge bg-amber-100 text-amber-700 text-xs font-bold">QC</span>
           <span v-if="ticket.resolution_type === 'fixed'" class="badge bg-green-100 text-green-700 text-xs">Fixed</span>
           <span v-if="ticket.resolution_type === 'mismatch_requirement'" class="badge bg-orange-100 text-orange-700 text-xs">Mismatch Req.</span>
+          <span v-if="ticket.has_extended_due_date" class="badge bg-purple-100 text-purple-700 text-xs">⏱ Due Date Extended</span>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <template v-if="auth.isStaffOrAdmin">

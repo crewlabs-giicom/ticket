@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
         u2.name as assigned_to_name, u2.email as assigned_to_email,
         tk.title as task_title,
         sm.name as system_menu_name,
-        qci.qc_form_id as qc_form_id
+        qci.qc_form_id as qc_form_id,
+        EXISTS(SELECT 1 FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended') as has_extended_due_date
       FROM tickets t
       LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN priorities pr ON pr.id = t.priority_id
