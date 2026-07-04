@@ -22,7 +22,15 @@
           />
         </div>
 
-        <div class="flex flex-col gap-1 justify-end sm:col-span-2 lg:col-span-2">
+        <div class="flex flex-col gap-1 justify-end">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">Aktivitas</label>
+          <label class="flex items-center gap-2 cursor-pointer h-9 px-3 border border-slate-200 rounded-lg bg-white hover:border-slate-300 transition-colors w-fit">
+            <input v-model="filters.only_active" type="checkbox" class="w-3.5 h-3.5 rounded accent-indigo-500" />
+            <span class="text-sm text-slate-600">Hanya yang ada aktivitas (response/timelog)</span>
+          </label>
+        </div>
+
+        <div class="flex flex-col gap-1 justify-end sm:col-span-2 lg:col-span-4">
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">Aksi</label>
           <div class="flex items-center gap-2 flex-wrap">
             <AppRefreshButton :loading="loading" @click="handleRefresh" />
@@ -93,6 +101,7 @@ const filters = reactive({
   date_from: '',
   date_to: '',
   project_id: '',
+  only_active: false,
 })
 
 const loading = ref(false)
@@ -168,6 +177,7 @@ const groupedProjects = computed(() => {
 function buildQuery() {
   const q: Record<string, any> = { from: filters.date_from, to: filters.date_to }
   if (filters.project_id) q.project_id = filters.project_id
+  if (filters.only_active) q.only_active = '1'
   return q
 }
 
