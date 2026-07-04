@@ -14,8 +14,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  // Tidak bisa edit kalau sudah rejected, standalone, atau sudah masuk PRD
-  if (row.status === 'rejected' || row.status === 'standalone' || row.prd_id) {
+  // Tidak bisa edit kalau sudah rejected, standalone, done, atau sudah masuk PRD
+  if (row.status === 'rejected' || row.status === 'standalone' || row.status === 'done' || row.prd_id) {
     throw createError({ statusCode: 422, statusMessage: 'Request tidak dapat diedit pada status ini' })
   }
 

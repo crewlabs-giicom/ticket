@@ -74,7 +74,7 @@
                 type="checkbox"
                 :value="r.id"
                 v-model="selectedIds"
-                :disabled="r.status === 'rejected' || r.status === 'standalone'"
+                :disabled="r.status === 'rejected' || r.status === 'standalone' || r.status === 'done'"
                 class="rounded accent-indigo-600"
               />
             </td>
@@ -104,7 +104,7 @@
                   @click="openEditModal(r)"
                   class="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
                 >Edit</button>
-                <template v-if="authStore.isStaffOrAdmin">
+                <template v-if="authStore.isStaffOrAdmin && r.status !== 'done' && r.status !== 'rejected'">
                   <button
                     v-if="r.status !== 'rejected'"
                     @click="setStatus(r, 'reject')"
@@ -374,11 +374,11 @@ const statuses = [
 ]
 
 const allSelected = computed(() =>
-  requests.value.filter(r => r.status !== 'rejected' && r.status !== 'standalone').every(r => selectedIds.value.includes(r.id))
+  requests.value.filter(r => r.status !== 'rejected' && r.status !== 'standalone' && r.status !== 'done').every(r => selectedIds.value.includes(r.id))
 )
 
 function toggleSelectAll() {
-  const eligible = requests.value.filter(r => r.status !== 'rejected' && r.status !== 'standalone').map(r => r.id)
+  const eligible = requests.value.filter(r => r.status !== 'rejected' && r.status !== 'standalone' && r.status !== 'done').map(r => r.id)
   if (allSelected.value) selectedIds.value = []
   else selectedIds.value = eligible
 }
@@ -450,7 +450,7 @@ function openViewModal(r: any) {
 }
 
 function canEdit(r: any) {
-  return !r.prd_id && r.status !== 'rejected' && r.status !== 'standalone'
+  return !r.prd_id && r.status !== 'rejected' && r.status !== 'standalone' && r.status !== 'done'
 }
 
 function openEditModal(r: any) {

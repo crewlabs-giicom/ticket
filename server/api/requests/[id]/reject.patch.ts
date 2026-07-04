@@ -9,6 +9,9 @@ export default defineEventHandler(async (event) => {
 
   const [[row]] = await db.execute('SELECT id, status, title FROM requests WHERE id = ?', [id]) as any[]
   if (!row) throw createError({ statusCode: 404, statusMessage: 'Request not found' })
+  if (row.status === 'done' || row.status === 'rejected') {
+    throw createError({ statusCode: 400, statusMessage: 'Status sudah final dan tidak dapat diubah' })
+  }
 
   await db.execute(`UPDATE requests SET status = 'rejected' WHERE id = ?`, [id])
 
