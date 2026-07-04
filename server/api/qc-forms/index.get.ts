@@ -14,7 +14,21 @@ export default defineEventHandler(async (event) => {
     params.push(user.id)
   }
 
-  if (q.status) {
+  const allCheckersDone = `(SELECT COUNT(*) FROM qc_form_checkers fcx WHERE fcx.qc_form_id = qf.id) > 0
+     AND (SELECT COUNT(*) FROM qc_form_checkers fcx WHERE fcx.qc_form_id = qf.id AND fcx.is_done = 0) = 0`
+  const openTicketExists = `EXISTS (
+     SELECT 1 FROM tickets tk
+     JOIN qc_checklist_item_tickets qcit ON qcit.ticket_id = tk.id
+     JOIN qc_checklist_items qci ON qci.id = qcit.qc_checklist_item_id
+     JOIN ticket_statuses ts ON ts.id = tk.status_id
+     WHERE qci.qc_form_id = qf.id AND ts.is_resolved = 0
+   )`
+
+  if (q.status === 'waiting_resolve') {
+    wheres.push(`qf.status = 'active' AND ${allCheckersDone} AND ${openTicketExists}`)
+  } else if (q.status === 'active') {
+    wheres.push(`qf.status = 'active' AND NOT (${allCheckersDone} AND ${openTicketExists})`)
+  } else if (q.status) {
     wheres.push('qf.status = ?')
     params.push(q.status)
   }
@@ -62,6 +76,8 @@ export default defineEventHandler(async (event) => {
 
   const [rows] = await db.execute(
     `SELECT qf.id, qf.sequence, qf.status, qf.created_at,
+       CASE WHEN qf.status = 'active' AND ${allCheckersDone} AND ${openTicketExists}
+         THEN 'waiting_resolve' ELSE qf.status END as effective_status,
        t.id as task_id, t.title as task_title,
        p.name as project_name, p.id as project_id,
        qt.name as template_name, qt.id as template_id,

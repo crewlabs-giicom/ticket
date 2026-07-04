@@ -36,8 +36,9 @@
             :options="[
               { value: '', label: 'Semua Status' },
               { value: 'active', label: 'Active' },
-              { value: 'approved', label: 'Approved' },
-              { value: 'looped', label: 'Looped' },
+              { value: 'waiting_resolve', label: 'Waiting Resolve' },
+              { value: 'waiting_resubmit', label: 'Waiting Resubmit' },
+              { value: 'completed', label: 'Completed' },
             ]"
             placeholder="Semua Status" />
         </div>
@@ -134,9 +135,9 @@
               </div>
             </td>
             <td class="px-4 py-3">
-              <span :class="statusClass(f.status)"
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize">
-                {{ f.status }}
+              <span :class="statusClass(f.effective_status)"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+                {{ statusLabel(f.effective_status) }}
               </span>
             </td>
             <td class="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">{{ formatDate(f.created_at) }}</td>
@@ -214,9 +215,18 @@ function resetFilters() {
 
 function statusClass(s: string) {
   if (s === 'active') return 'bg-blue-100 text-blue-700'
-  if (s === 'approved') return 'bg-emerald-100 text-emerald-700'
-  if (s === 'looped') return 'bg-orange-100 text-orange-700'
+  if (s === 'waiting_resolve') return 'bg-amber-100 text-amber-700'
+  if (s === 'waiting_resubmit') return 'bg-orange-100 text-orange-700'
+  if (s === 'completed') return 'bg-emerald-100 text-emerald-700'
   return 'bg-slate-100 text-slate-600'
+}
+
+function statusLabel(s: string) {
+  if (s === 'active') return 'Active'
+  if (s === 'waiting_resolve') return 'Waiting Resolve'
+  if (s === 'waiting_resubmit') return 'Waiting Resubmit'
+  if (s === 'completed') return 'Completed'
+  return s
 }
 
 function formatDate(d: string) {
