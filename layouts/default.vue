@@ -331,6 +331,7 @@ function fallbackMenus(role?: string) {
       { id: 'f7b', name: 'Report Ticket', path: '/reports/tickets', icon: 'chart-bar', parent_id: 'fg-reports' },
       { id: 'f7c', name: 'Report Task', path: '/reports/tasks', icon: 'chart-bar', parent_id: 'fg-reports' },
       { id: 'f7d', name: 'Daily Report', path: '/reports/daily', icon: 'chart-bar', parent_id: 'fg-reports' },
+      { id: 'f7e', name: 'Weekly Report', path: '/reports/weekly', icon: 'chart-bar', parent_id: 'fg-reports' },
       { id: 'f6', name: 'Workload', path: '/workload', icon: 'users', parent_id: null },
       { id: 'fg-master', name: 'Master Data', path: null, icon: 'menu', parent_id: null },
       { id: 'f8', name: 'Users', path: '/master/users', icon: 'users', parent_id: 'fg-master' },
@@ -365,7 +366,7 @@ const pageTitle = computed(() => {
   if (dynamicTitle.value) return dynamicTitle.value
   const titles: Record<string, string> = {
     '/': 'Dashboard', '/tickets': 'Tickets', '/tasks': 'Tasks', '/projects': 'Projects',
-    '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Recapitulation', '/reports/tickets': 'Report Ticket', '/reports/tasks': 'Report Task', '/reports/daily': 'Daily Report',
+    '/workload': 'Workload', '/calendar': 'Kalender', '/reports': 'Recapitulation', '/reports/tickets': 'Report Ticket', '/reports/tasks': 'Report Task', '/reports/daily': 'Daily Report', '/reports/weekly': 'Weekly Report',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
     '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
     '/notifications': 'Notifikasi', '/profile': 'Profil Saya', '/wishlist': 'Catatan',
