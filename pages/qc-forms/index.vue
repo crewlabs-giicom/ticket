@@ -144,14 +144,8 @@
         </tbody>
       </table>
     </div>
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4">
-      <span class="text-sm text-slate-500">Page {{ page }} of {{ totalPages }} ({{ total }} total)</span>
-      <div class="flex gap-2">
-        <button :disabled="page <= 1" @click="page--; load()" class="px-3 py-1 text-sm border rounded-lg disabled:opacity-40">Prev</button>
-        <button :disabled="page >= totalPages" @click="page++; load()" class="px-3 py-1 text-sm border rounded-lg disabled:opacity-40">Next</button>
-      </div>
-    </div>
+    <AppPagination :page="page" :total-pages="totalPages" :total="total" :limit="limit"
+      @page-change="onPageChange" @limit-change="onLimitChange" />
   </div>
 </template>
 
@@ -161,6 +155,7 @@ const forms = ref<any[]>([])
 const loading = ref(false)
 const total = ref(0)
 const page = ref(1)
+const limit = ref(50)
 const totalPages = ref(1)
 const projects = ref<any[]>([])
 const staffUsers = ref<any[]>([])
@@ -192,7 +187,7 @@ const activeFilterCount = computed(() => {
 async function load() {
   loading.value = true
   try {
-    const params: any = { page: page.value, limit: 50 }
+    const params: any = { page: page.value, limit: limit.value }
     if (filters.search) params.search = filters.search
     if (filters.status) params.status = filters.status
     if (filters.project_id) params.project_id = filters.project_id
@@ -209,6 +204,9 @@ async function load() {
     loading.value = false
   }
 }
+
+function onPageChange(p: number) { page.value = p; load() }
+function onLimitChange(l: number) { limit.value = l; page.value = 1; load() }
 
 function resetFilters() {
   Object.assign(filters, { search: '', status: '', project_id: '', checker_id: '', template_id: '', date_from: '', date_to: '', loop_only: false })
