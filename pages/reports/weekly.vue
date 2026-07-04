@@ -128,7 +128,7 @@ function ticketBucket(row: any): 'done' | 'progress' | 'open' {
 }
 function taskBucket(row: any): 'done' | 'progress' | 'open' {
   if (row.status === 'done') return 'done'
-  if (row.status === 'in_progress' || row.status === 'review') return 'progress'
+  if (row.status === 'in_progress' || row.status === 'review' || row.status === 'in_qc') return 'progress'
   return 'open'
 }
 function qcBucket(row: any): 'done' | 'progress' | 'open' {
