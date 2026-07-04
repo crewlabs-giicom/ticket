@@ -123,8 +123,8 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
 
 function ticketBucket(row: any): 'done' | 'progress' | 'open' {
   if (row.is_resolved) return 'done'
-  if (/progress|proses/i.test(row.status_name || '')) return 'progress'
-  return 'open'
+  if (/^open$/i.test((row.status_name || '').trim())) return 'open'
+  return 'progress'
 }
 function taskBucket(row: any): 'done' | 'progress' | 'open' {
   if (row.status === 'done') return 'done'
