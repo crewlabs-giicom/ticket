@@ -75,6 +75,16 @@
           />
         </div>
 
+        <!-- Creator (staff only) -->
+        <div v-if="auth.isStaffOrAdmin" class="flex flex-col gap-1">
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Creator</label>
+          <AppSelect
+            v-model="filters.created_by"
+            :options="[{ value: '', label: 'Semua Creator' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            placeholder="Semua Creator"
+          />
+        </div>
+
         <!-- Tanggal -->
         <div class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Tanggal Dibuat</label>
@@ -102,13 +112,13 @@
         <table class="w-full text-sm">
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ticket</th>
+              <th @click="toggleSort('ticket_number')" class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-slate-900">Ticket{{ sortArrow('ticket_number') }}</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Project</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell">Menu</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Priority</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Assigned</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell">Due</th>
+              <th @click="toggleSort('status_id')" class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-slate-900">Status{{ sortArrow('status_id') }}</th>
+              <th @click="toggleSort('priority_id')" class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell cursor-pointer select-none hover:text-slate-900">Priority{{ sortArrow('priority_id') }}</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden lg:table-cell">Creator / Assigned</th>
+              <th @click="toggleSort('due_date')" class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden xl:table-cell cursor-pointer select-none hover:text-slate-900">Created / Due{{ sortArrow('due_date') }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -154,9 +164,17 @@
                   <span class="text-xs text-slate-600">{{ t.priority_name }}</span>
                 </div>
               </td>
-              <td class="px-4 py-3 hidden lg:table-cell"><span class="text-xs text-slate-500">{{ t.assigned_to_name || '—' }}</span></td>
+              <td class="px-4 py-3 hidden lg:table-cell">
+                <div class="text-xs text-slate-500 leading-tight">
+                  <div>{{ t.created_by_name || '—' }}</div>
+                  <div class="text-slate-400">→ {{ t.assigned_to_name || '—' }}</div>
+                </div>
+              </td>
               <td class="px-4 py-3 hidden xl:table-cell">
-                <span class="text-xs" :class="t.sla_breached ? 'text-red-600 font-medium' : 'text-slate-500'">{{ fmtDate(t.due_date) }}</span>
+                <div class="text-xs leading-tight">
+                  <div class="text-slate-400">{{ fmtDateTime(t.created_at) }}</div>
+                  <div :class="t.sla_breached ? 'text-red-600 font-medium' : 'text-slate-500'">{{ fmtDate(t.due_date) }}</div>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -172,7 +190,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
-const { fmtDate } = useDate()
+const { fmtDate, fmtDateTime } = useDate()
 function extendedTooltip(t: any) {
   return (t.extended_due_date_history || []).map((h: any) => h.label).join('\n')
 }
@@ -201,9 +219,26 @@ const activeFilterCount = computed(() => {
   if (filters.priority_ids.length) n++
   if (filters.project_id) n++
   if (filters.assigned_to) n++
+  if (filters.created_by) n++
   if (filters.extended) n++
   return n
 })
+
+const sortBy = ref('created_at')
+const sortDir = ref<'asc' | 'desc'>('desc')
+function toggleSort(column: string) {
+  if (sortBy.value === column) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = column
+    sortDir.value = 'desc'
+  }
+  fetchTickets()
+}
+function sortArrow(column: string) {
+  if (sortBy.value !== column) return ''
+  return sortDir.value === 'asc' ? ' ▲' : ' ▼'
+}
 
 const today = new Date()
 const oneMonthAgo = new Date(today)
@@ -216,6 +251,7 @@ const filters = reactive({
   priority_ids: [] as number[],
   project_id: '',
   assigned_to: '',
+  created_by: '',
   date_from: toDateStr(oneMonthAgo),
   date_to: toDateStr(today),
   extended: false,
@@ -225,7 +261,7 @@ const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 const { data: sd } = await useFetch('/api/statuses')
 const { data: pd } = await useFetch('/api/priorities')
 const { data: prd } = await useFetch('/api/projects')
-const { data: ud } = await useFetch('/api/users', { query: { role: 'staff', limit: 200 } })
+const { data: ud } = await useFetch('/api/users', { query: { role: 'staff,admin', limit: 200 } })
 const statuses = computed(() => (sd.value as any)?.data || [])
 const priorities = computed(() => (pd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data || [])
@@ -247,10 +283,13 @@ async function fetchTickets() {
     if (filters.priority_ids.length) q.priority_ids = filters.priority_ids.join(',')
     if (filters.project_id) q.project_id = filters.project_id
     if (filters.assigned_to) q.assigned_to = filters.assigned_to
+    if (filters.created_by) q.created_by = filters.created_by
     if (filters.date_from) q.date_from = filters.date_from
     if (filters.date_to) q.date_to = filters.date_to
     if (filters.extended) q.extended = '1'
     if (auth.isStaffOrAdmin) q.source = sourceTab.value
+    q.sort_by = sortBy.value
+    q.sort_dir = sortDir.value
     const res = await $fetch('/api/tickets', { query: q }) as any
     tickets.value = res.data
     pagination.total = res.total ?? 0

@@ -45,6 +45,16 @@ export default defineEventHandler(async (event) => {
     if (query.extended === '1') { where += ` AND EXISTS (SELECT 1 FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended')` }
     if (query.source) { where += ' AND t.source = ?'; params.push(query.source) }
 
+    const SORTABLE_COLUMNS: Record<string, string> = {
+      created_at: 't.created_at',
+      due_date: 't.due_date',
+      ticket_number: 't.ticket_number',
+      priority_id: 't.priority_id',
+      status_id: 't.status_id',
+    }
+    const sortCol = SORTABLE_COLUMNS[String(query.sort_by)] || SORTABLE_COLUMNS.created_at
+    const sortDir = String(query.sort_dir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+
     const maxLimit = query.export === '1' ? 9999 : 200
     const limit = Math.min(Number(query.limit) || 50, maxLimit)
     const page = Math.max(Number(query.page) || 1, 1)
@@ -88,7 +98,7 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN users u2 ON u2.id = t.assigned_to
       LEFT JOIN system_menus sm ON sm.id = t.system_menu_id
       WHERE ${where}
-      ORDER BY t.created_at DESC
+      ORDER BY ${sortCol} ${sortDir}
       LIMIT ? OFFSET ?
     `, [...params, limit, offset])
 
