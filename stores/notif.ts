@@ -138,6 +138,20 @@ export const useNotifStore = defineStore('notif', () => {
     es.addEventListener('ticket_response', (e) => {
       const data = JSON.parse(e.data)
       addToast({ title: 'Response baru', message: `Ticket ${data.ticket_number} dibalas`, type: 'new_response', ticket_id: data.ticket_id })
+
+      const auth = useAuthStore()
+      const userId = auth.user?.id
+      const role = auth.user?.role
+      if (!userId || data.sender_id === userId) return
+      if (data.is_internal && role === 'customer') return
+
+      const isRelevant = role === 'customer'
+        ? (data.created_by === userId || data.assigned_to === userId)
+        : (role === 'staff' || role === 'admin')
+      if (isRelevant) {
+        const ticketUnread = useTicketUnreadStore()
+        ticketUnread.markUnread(data.ticket_id)
+      }
     })
 
     es.onerror = () => {

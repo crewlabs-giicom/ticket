@@ -89,7 +89,19 @@ export default defineEventHandler(async (event) => {
         (SELECT COUNT(*) FROM ticket_attachments a WHERE a.ticket_id = t.id) as attachment_count,
         (SELECT JSON_ARRAYAGG(JSON_OBJECT('label', al.label, 'created_at', al.created_at) ORDER BY al.created_at ASC)
           FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended'
-        ) as extended_due_date_history
+        ) as extended_due_date_history,
+        EXISTS (
+          SELECT 1 FROM ticket_responses r
+          WHERE r.ticket_id = t.id
+            AND r.user_id != ?
+            AND r.id > COALESCE(
+              (SELECT last_read_response_id FROM ticket_response_reads trr WHERE trr.ticket_id = t.id AND trr.user_id = ?), 0)
+            AND (
+              (? = 'customer' AND r.is_internal = 0 AND (t.created_by = ? OR EXISTS (
+                SELECT 1 FROM ticket_participants tp WHERE tp.ticket_id = t.id AND tp.user_id = ?)))
+              OR (? IN ('staff','admin'))
+            )
+        ) as has_unread_response
       FROM tickets t
       LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN priorities pr ON pr.id = t.priority_id
@@ -100,7 +112,7 @@ export default defineEventHandler(async (event) => {
       WHERE ${where}
       ORDER BY ${sortCol} ${sortDir}
       LIMIT ? OFFSET ?
-    `, [...params, limit, offset])
+    `, [user.id, user.id, user.role, user.id, user.id, user.role, ...params, limit, offset])
 
     for (const t of tickets as any[]) {
       t.extended_due_date_history = t.extended_due_date_history ? JSON.parse(t.extended_due_date_history) : []

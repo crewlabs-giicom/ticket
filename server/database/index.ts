@@ -786,6 +786,20 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  // Per-user read tracking for ticket Diskusi (ticket_responses)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ticket_response_reads (
+      ticket_id INT NOT NULL,
+      user_id INT NOT NULL,
+      last_read_response_id INT NOT NULL DEFAULT 0,
+      last_read_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (ticket_id, user_id),
+      KEY idx_user (user_id),
+      FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `)
+
   // Fix constraints that were never enforced (column-level REFERENCES shorthand) or
   // that block deletes (default RESTRICT) so ticket/task/prd/qc deletes clean up properly.
   await ensureCascadeFk(db, 'tickets', 'task_id', 'tasks', 'SET NULL')

@@ -111,7 +111,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    broadcastToAll('ticket_response', { ticket_id: Number(ticketId), ticket_number: ticket.ticket_number })
+    broadcastToAll('ticket_response', {
+      ticket_id: Number(ticketId),
+      ticket_number: ticket.ticket_number,
+      sender_id: user.id,
+      sender_role: user.role,
+      is_internal: !!isInternal,
+      created_by: ticket.created_by,
+      assigned_to: ticket.assigned_to,
+    })
 
     return { success: true, data: response }
   }

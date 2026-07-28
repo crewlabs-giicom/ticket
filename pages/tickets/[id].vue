@@ -70,7 +70,10 @@
       <!-- Body -->
       <div class="p-5">
         <!-- Title & meta -->
-        <h2 class="text-lg font-semibold text-slate-900 leading-snug">{{ ticket.title }}</h2>
+        <div class="flex items-center gap-2">
+          <h2 class="text-lg font-semibold text-slate-900 leading-snug">{{ ticket.title }}</h2>
+          <UnreadReplyPill :show="!!ticket.has_unread_response || ticketUnread.has(ticket.id)" />
+        </div>
         <p class="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-1.5">
           <span>{{ ticket.project_name }}</span>
           <template v-if="ticket.system_menu_name">
@@ -589,6 +592,7 @@ const { fmtDateTime } = useDate()
 const auth = useAuthStore()
 const tabs = useTabStore()
 const chatWidget = useChatWidgetStore()
+const ticketUnread = useTicketUnreadStore()
 const lb = useLightbox()
 
 function isImage(mime?: string) { return !!mime?.startsWith('image/') }
@@ -629,6 +633,11 @@ const id = route.params.id
 
 const { data: res, refresh, pending: ticketPending } = await useFetch(`/api/tickets/${id}`)
 const ticket = computed(() => (res.value as any)?.data)
+
+if (ticket.value) {
+  ticketUnread.clear(ticket.value.id)
+  $fetch(`/api/tickets/${id}/responses/read`, { method: 'POST' }).catch(() => {})
+}
 
 const { data: sd } = await useFetch('/api/statuses')
 const { data: pd } = await useFetch('/api/priorities')

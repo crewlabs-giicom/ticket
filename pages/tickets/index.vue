@@ -138,7 +138,10 @@
                     <span v-if="t.source === 'qc'" class="inline-flex items-center text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full flex-shrink-0">QC</span>
                     <span v-if="t.extended_due_date_history?.length" class="inline-flex items-center text-[9px] font-medium bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full flex-shrink-0 cursor-help" :title="extendedTooltip(t)">⏱ Extended ({{ t.extended_due_date_history.length }}x)</span>
                   </div>
-                    <p class="text-slate-600 text-xs mt-0.5 line-clamp-1 max-w-xs">{{ t.title }}</p>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <p class="text-slate-600 text-xs line-clamp-1 max-w-xs">{{ t.title }}</p>
+                      <UnreadReplyPill :show="!!t.has_unread_response || ticketUnread.has(t.id)" />
+                    </div>
                     <div class="flex items-center gap-2 mt-1 md:hidden">
                       <span class="badge text-white text-[10px]" :style="{ background: t.status_color }">{{ t.status_name }}</span>
                     </div>
@@ -196,6 +199,7 @@ function extendedTooltip(t: any) {
 }
 const tabs = useTabStore()
 const auth = useAuthStore()
+const ticketUnread = useTicketUnreadStore()
 const showForm = ref(false)
 const showFilters = ref(true)
 const loading = ref(false)

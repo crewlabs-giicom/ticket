@@ -21,7 +21,19 @@ export default defineEventHandler(async (event) => {
         qci.qc_form_id as qc_form_id,
         (SELECT JSON_ARRAYAGG(JSON_OBJECT('label', al.label, 'created_at', al.created_at) ORDER BY al.created_at ASC)
           FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended'
-        ) as extended_due_date_history
+        ) as extended_due_date_history,
+        EXISTS (
+          SELECT 1 FROM ticket_responses r
+          WHERE r.ticket_id = t.id
+            AND r.user_id != ?
+            AND r.id > COALESCE(
+              (SELECT last_read_response_id FROM ticket_response_reads trr WHERE trr.ticket_id = t.id AND trr.user_id = ?), 0)
+            AND (
+              (? = 'customer' AND r.is_internal = 0 AND (t.created_by = ? OR EXISTS (
+                SELECT 1 FROM ticket_participants tp WHERE tp.ticket_id = t.id AND tp.user_id = ?)))
+              OR (? IN ('staff','admin'))
+            )
+        ) as has_unread_response
       FROM tickets t
       LEFT JOIN projects p ON p.id = t.project_id
       LEFT JOIN priorities pr ON pr.id = t.priority_id
@@ -32,7 +44,7 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN system_menus sm ON sm.id = t.system_menu_id
       LEFT JOIN qc_checklist_items qci ON qci.id = t.qc_checklist_item_id
       WHERE t.id = ?
-    `, [id])
+    `, [user.id, user.id, user.role, user.id, user.id, user.role, id])
     const ticket = (ticketRows as any[])[0]
     if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
     ticket.extended_due_date_history = ticket.extended_due_date_history ? JSON.parse(ticket.extended_due_date_history) : []
