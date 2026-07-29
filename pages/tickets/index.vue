@@ -80,7 +80,7 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Creator</label>
           <AppSelect
             v-model="filters.created_by"
-            :options="[{ value: '', label: 'Semua Creator' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :options="[{ value: '', label: 'Semua Creator' }, ...customerUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
             placeholder="Semua Creator"
           />
         </div>
@@ -266,10 +266,12 @@ const { data: sd } = await useFetch('/api/statuses')
 const { data: pd } = await useFetch('/api/priorities')
 const { data: prd } = await useFetch('/api/projects')
 const { data: ud } = await useFetch('/api/users', { query: { role: 'staff,admin', limit: 200 } })
+const { data: cud } = await useFetch('/api/users', { query: { role: 'customer', limit: 200 } })
 const statuses = computed(() => (sd.value as any)?.data || [])
 const priorities = computed(() => (pd.value as any)?.data || [])
 const projects = computed(() => (prd.value as any)?.data || [])
 const staffUsers = computed(() => (ud.value as any)?.data || [])
+const customerUsers = computed(() => (cud.value as any)?.data || [])
 
 // Default: all statuses except closed
 watch(statuses, (val) => {
