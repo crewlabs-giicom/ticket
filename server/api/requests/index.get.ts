@@ -9,8 +9,14 @@ export default defineEventHandler(async (event) => {
   const conditions: string[] = []
   const params: any[] = []
 
-  if (q.status) { conditions.push('r.status = ?'); params.push(q.status) }
-  if (q.project_id) { conditions.push('r.project_id = ?'); params.push(Number(q.project_id)) }
+  if (q.status_ids) {
+    const statuses = String(q.status_ids).split(',').filter(Boolean)
+    if (statuses.length) { conditions.push(`r.status IN (${statuses.map(() => '?').join(',')})`); params.push(...statuses) }
+  } else if (q.status) { conditions.push('r.status = ?'); params.push(q.status) }
+  if (q.project_ids) {
+    const ids = String(q.project_ids).split(',').map(Number).filter(Boolean)
+    if (ids.length) { conditions.push(`r.project_id IN (${ids.map(() => '?').join(',')})`); params.push(...ids) }
+  } else if (q.project_id) { conditions.push('r.project_id = ?'); params.push(Number(q.project_id)) }
   if (q.requester_id) { conditions.push('r.requester_id = ?'); params.push(Number(q.requester_id)) }
   if (q.prd_id) { conditions.push('r.prd_id = ?'); params.push(Number(q.prd_id)) }
   if (q.unassigned === '1') conditions.push('r.prd_id IS NULL')

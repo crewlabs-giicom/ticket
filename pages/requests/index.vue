@@ -24,15 +24,15 @@
 
     <!-- Filters -->
     <div class="flex items-center gap-3 mb-4 flex-wrap">
-      <AppSelect
+      <AppMultiSelect
         v-model="filterStatus"
-        :options="[{ value: '', label: 'All Status' }, ...statuses]"
+        :options="statuses"
         placeholder="All Status"
         class="w-40"
       />
-      <AppSelect
+      <AppMultiSelect
         v-model="filterProject"
-        :options="[{ value: '', label: 'All Projects' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+        :options="projects.map(p => ({ value: p.id, label: p.name }))"
         placeholder="All Projects"
         class="w-44"
       />
@@ -124,13 +124,14 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-4">
-      <span class="text-sm text-gray-500">Page {{ page }} of {{ totalPages }} ({{ total }} total)</span>
-      <div class="flex gap-2">
-        <button :disabled="page <= 1" @click="page--" class="px-3 py-1 text-sm border rounded-lg disabled:opacity-40">Prev</button>
-        <button :disabled="page >= totalPages" @click="page++" class="px-3 py-1 text-sm border rounded-lg disabled:opacity-40">Next</button>
-      </div>
-    </div>
+    <AppPagination
+      :page="pagination.page"
+      :total-pages="pagination.totalPages"
+      :total="pagination.total"
+      :limit="pagination.limit"
+      @page-change="onPageChange"
+      @limit-change="onLimitChange"
+    />
 
     <!-- Create Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -338,12 +339,10 @@ const requests = ref<any[]>([])
 const projects = ref<any[]>([])
 const availablePrds = ref<any[]>([])
 const loading = ref(false)
-const total = ref(0)
-const page = ref(1)
-const totalPages = ref(1)
+const pagination = reactive({ page: 1, totalPages: 1, total: 0, limit: 10 })
 
-const filterStatus = ref('')
-const filterProject = ref('')
+const filterStatus = ref<any[]>([])
+const filterProject = ref<any[]>([])
 const filterUnassigned = ref(false)
 const filterSearch = ref('')
 
@@ -407,18 +406,30 @@ function fmtDate(d: string) {
 async function loadRequests() {
   loading.value = true
   try {
-    const q: any = { page: page.value, limit: 50 }
-    if (filterStatus.value) q.status = filterStatus.value
-    if (filterProject.value) q.project_id = filterProject.value
+    const q: any = { page: pagination.page, limit: pagination.limit }
+    if (filterStatus.value.length) q.status_ids = filterStatus.value.join(',')
+    if (filterProject.value.length) q.project_ids = filterProject.value.join(',')
     if (filterUnassigned.value) q.unassigned = '1'
     if (filterSearch.value) q.search = filterSearch.value
     const res = await $fetch<any>('/api/requests', { query: q })
     requests.value = res.data
-    total.value = res.total
-    totalPages.value = res.totalPages
+    pagination.total = res.total ?? 0
+    pagination.totalPages = res.totalPages ?? 1
+    pagination.page = res.page ?? pagination.page
   } finally {
     loading.value = false
   }
+}
+
+function onPageChange(p: number) {
+  pagination.page = p
+  loadRequests()
+}
+
+function onLimitChange(l: number) {
+  pagination.limit = l
+  pagination.page = 1
+  loadRequests()
 }
 
 async function loadProjects() {
@@ -499,7 +510,10 @@ async function doGroup() {
   }
 }
 
-watch([filterStatus, filterProject, filterUnassigned, filterSearch, page], loadRequests)
+watchDebounced([filterStatus, filterProject, filterUnassigned, filterSearch], () => {
+  pagination.page = 1
+  loadRequests()
+}, { debounce: 300, maxWait: 1000 })
 watch(showGroupModal, (v) => { if (v) loadPrds() })
 
 onMounted(() => {
