@@ -273,10 +273,10 @@ const projects = computed(() => (prd.value as any)?.data || [])
 const staffUsers = computed(() => (ud.value as any)?.data || [])
 const customerUsers = computed(() => (cud.value as any)?.data || [])
 
-// Default: all statuses except closed
+// Default: all statuses except resolved and closed
 watch(statuses, (val) => {
   if (val.length && !filters.status_ids.length) {
-    filters.status_ids = val.filter((s: any) => !/closed/i.test(s.name)).map((s: any) => s.id)
+    filters.status_ids = val.filter((s: any) => !/resolved|closed/i.test(s.name)).map((s: any) => s.id)
   }
 }, { immediate: true, once: true })
 
