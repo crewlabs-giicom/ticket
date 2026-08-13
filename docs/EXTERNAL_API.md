@@ -194,6 +194,106 @@ curl -X POST https://ticketing.example.com/api/external/tickets/123/close \
 | 403 | Ticket bukan milik project tempat sistem ini terdaftar, atau sistem/project nonaktif |
 | 404 | Ticket tidak ditemukan |
 
+## 4. List Ticket
+
+```
+GET /api/external/tickets
+```
+
+Mengembalikan daftar ticket milik project tempat sistem ini terdaftar (otomatis di-scope by project, tidak perlu kirim `project_id`).
+
+| Query param | Wajib | Tipe | Keterangan |
+|---|---|---|---|
+| `status_id` / `status_ids` | tidak | number / comma-separated | Filter status |
+| `priority_id` / `priority_ids` | tidak | number / comma-separated | Filter priority |
+| `search` | tidak | string | Cari di `title` atau `ticket_number` |
+| `date_from` / `date_to` | tidak | string (`YYYY-MM-DD`) | Filter rentang `created_at` |
+| `created_by_email` | tidak | string | Filter ticket yang dibuat email tsb |
+| `sort_by` | tidak | string | `created_at` (default), `due_date`, `ticket_number`, `priority_id`, `status_id` |
+| `sort_dir` | tidak | string | `asc`/`desc` (default `desc`) |
+| `page` | tidak | number | Default `1` |
+| `limit` | tidak | number | Default `50`, maksimal `200` |
+
+```bash
+curl -X GET "https://ticketing.example.com/api/external/tickets?status_id=1&page=1&limit=20" \
+  -H "X-API-Key: <api_key>"
+```
+
+### Contoh response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 123,
+      "ticket_number": "TKT-0123",
+      "title": "Pembayaran gagal diproses",
+      "status_id": 1,
+      "status_name": "Open",
+      "priority_id": 2,
+      "priority_name": "High",
+      "created_by_name": "Budi",
+      "created_by_email": "integrasi@partner.com",
+      "response_count": 2,
+      "attachment_count": 0,
+      "created_at": "2026-08-13 10:00:00"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 50,
+  "totalPages": 1
+}
+```
+
+### Error
+
+| Status | Penyebab |
+|---|---|
+| 401 | API key kosong/invalid |
+| 403 | Sistem atau project nonaktif |
+
+## 5. Detail Ticket
+
+```
+GET /api/external/tickets/{id}
+```
+
+Mengembalikan detail 1 ticket beserta komentar (`responses`, hanya yang customer-facing / `is_internal = 0`) dan `attachments`. Menolak akses (`403`) kalau ticket bukan milik project tempat sistem ini terdaftar.
+
+```bash
+curl -X GET https://ticketing.example.com/api/external/tickets/123 \
+  -H "X-API-Key: <api_key>"
+```
+
+### Contoh response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 123,
+    "ticket_number": "TKT-0123",
+    "title": "Pembayaran gagal diproses",
+    "status_id": 1,
+    "status_name": "Open",
+    "responses": [
+      { "id": 1, "message": "Update: sudah kami cek", "is_internal": 0, "user_name": "Support", "created_at": "2026-08-13 11:00:00", "attachments": [] }
+    ],
+    "attachments": []
+  }
+}
+```
+
+### Error
+
+| Status | Penyebab |
+|---|---|
+| 401 | API key kosong/invalid |
+| 403 | Ticket bukan milik project tempat sistem ini terdaftar, atau sistem/project nonaktif |
+| 404 | Ticket tidak ditemukan |
+
 ## Webhook
 
 Webhook URL & secret diatur **per sistem terdaftar** (bukan per project), diisi saat mendaftarkan sistem atau lewat tombol **Edit** di tab Integrasi API project. Saat sebuah event ticket terjadi di suatu project, ticketing mengirim POST ke webhook URL **semua sistem aktif** yang terdaftar pada project itu dan subscribe event tersebut — bukan cuma sistem yang memicu aksinya. Jadi kalau ada 2 sistem terdaftar untuk project yang sama, keduanya bisa menerima notifikasi yang sama.
