@@ -1,5 +1,5 @@
 import { getDb } from '../../../database/index'
-import { resolveRegisteredSystemByApiKey } from '../../../utils/externalAuth'
+import { resolveRegisteredSystemByApiKey, resolveUserByEmail } from '../../../utils/externalAuth'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -31,6 +31,15 @@ export default defineEventHandler(async (event) => {
     where += ' AND t.created_by IN (SELECT id FROM users WHERE email = ?)'
     params.push(query.created_by_email)
   }
+  if (query.extended === '1') {
+    where += ` AND EXISTS (SELECT 1 FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended')`
+  }
+
+  let viewerId: number | null = null
+  if (query.viewer_email) {
+    const viewer = await resolveUserByEmail(db, String(query.viewer_email))
+    viewerId = viewer?.id ?? null
+  }
 
   const SORTABLE_COLUMNS: Record<string, string> = {
     created_at: 't.created_at',
@@ -56,17 +65,31 @@ export default defineEventHandler(async (event) => {
       s.name as status_name, s.color as status_color, s.is_resolved as status_is_resolved,
       u1.name as created_by_name, u1.email as created_by_email,
       u2.name as assigned_to_name,
+      sm.name as system_menu_name,
       (SELECT COUNT(*) FROM ticket_responses r WHERE r.ticket_id = t.id AND r.is_internal = 0) as response_count,
-      (SELECT COUNT(*) FROM ticket_attachments a WHERE a.ticket_id = t.id) as attachment_count
+      (SELECT COUNT(*) FROM ticket_attachments a WHERE a.ticket_id = t.id) as attachment_count,
+      EXISTS (
+        SELECT 1 FROM ticket_responses r
+        WHERE r.ticket_id = t.id
+          AND r.is_internal = 0
+          AND r.user_id != ?
+          AND r.id > COALESCE(
+            (SELECT last_read_response_id FROM ticket_response_reads trr WHERE trr.ticket_id = t.id AND trr.user_id = ?), 0)
+      ) as has_unread_response
     FROM tickets t
     LEFT JOIN priorities pr ON pr.id = t.priority_id
     LEFT JOIN ticket_statuses s ON s.id = t.status_id
     LEFT JOIN users u1 ON u1.id = t.created_by
     LEFT JOIN users u2 ON u2.id = t.assigned_to
+    LEFT JOIN system_menus sm ON sm.id = t.system_menu_id
     WHERE ${where}
     ORDER BY ${sortCol} ${sortDir}
     LIMIT ? OFFSET ?
-  `, [...params, limit, offset])
+  `, [viewerId ?? 0, viewerId ?? 0, ...params, limit, offset])
+
+  if (!viewerId) {
+    for (const t of tickets as any[]) t.has_unread_response = false
+  }
 
   return { success: true, data: tickets, total, page, limit, totalPages: Math.ceil(total / limit) }
 })

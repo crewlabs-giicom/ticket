@@ -1,5 +1,5 @@
 import { getDb } from '../../../../database/index'
-import { resolveRegisteredSystemByApiKey } from '../../../../utils/externalAuth'
+import { resolveRegisteredSystemByApiKey, resolveUserByEmail } from '../../../../utils/externalAuth'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -12,21 +12,39 @@ export default defineEventHandler(async (event) => {
   if (!system.project_is_active) throw createError({ statusCode: 403, statusMessage: 'Project tidak aktif' })
 
   const id = Number(getRouterParam(event, 'id'))
+  const query = getQuery(event)
+
+  let viewerId: number | null = null
+  if (query.viewer_email) {
+    const viewer = await resolveUserByEmail(db, String(query.viewer_email))
+    viewerId = viewer?.id ?? null
+  }
 
   const [ticketRows] = await db.execute(`
     SELECT t.*,
       pr.name as priority_name, pr.color as priority_color,
       s.name as status_name, s.color as status_color, s.is_resolved as status_is_resolved,
       u1.name as created_by_name, u1.email as created_by_email,
-      u2.name as assigned_to_name, u2.email as assigned_to_email
+      u2.name as assigned_to_name, u2.email as assigned_to_email,
+      sm.name as system_menu_name,
+      EXISTS (
+        SELECT 1 FROM ticket_responses r
+        WHERE r.ticket_id = t.id
+          AND r.is_internal = 0
+          AND r.user_id != ?
+          AND r.id > COALESCE(
+            (SELECT last_read_response_id FROM ticket_response_reads trr WHERE trr.ticket_id = t.id AND trr.user_id = ?), 0)
+      ) as has_unread_response
     FROM tickets t
     LEFT JOIN priorities pr ON pr.id = t.priority_id
     LEFT JOIN ticket_statuses s ON s.id = t.status_id
     LEFT JOIN users u1 ON u1.id = t.created_by
     LEFT JOIN users u2 ON u2.id = t.assigned_to
+    LEFT JOIN system_menus sm ON sm.id = t.system_menu_id
     WHERE t.id = ?
-  `, [id])
+  `, [viewerId ?? 0, viewerId ?? 0, id])
   const ticket = (ticketRows as any[])[0]
+  if (ticket && !viewerId) ticket.has_unread_response = false
   if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
   if (ticket.project_id !== system.project_id) throw createError({ statusCode: 403, statusMessage: 'Ticket bukan milik project ini' })
 

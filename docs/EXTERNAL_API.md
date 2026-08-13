@@ -209,6 +209,8 @@ Mengembalikan daftar ticket milik project tempat sistem ini terdaftar (otomatis 
 | `search` | tidak | string | Cari di `title` atau `ticket_number` |
 | `date_from` / `date_to` | tidak | string (`YYYY-MM-DD`) | Filter rentang `created_at` |
 | `created_by_email` | tidak | string | Filter ticket yang dibuat email tsb |
+| `extended` | tidak | `1` | Kalau `1`, cuma tampilkan ticket yang due date-nya pernah diperpanjang |
+| `viewer_email` | tidak | string | Kalau diisi (dan email-nya terdaftar & aktif), setiap ticket dapat field `has_unread_response` — `true` kalau ada komentar customer-facing baru yang belum ditandai dibaca oleh user ini (lihat [6. Mark Ticket as Read](#6-mark-ticket-as-read)). Kalau kosong/tidak ketemu, selalu `false`. |
 | `sort_by` | tidak | string | `created_at` (default), `due_date`, `ticket_number`, `priority_id`, `status_id` |
 | `sort_dir` | tidak | string | `asc`/`desc` (default `desc`) |
 | `page` | tidak | number | Default `1` |
@@ -237,6 +239,8 @@ curl -X GET "https://ticketing.example.com/api/external/tickets?status_id=1&page
       "created_by_email": "integrasi@partner.com",
       "response_count": 2,
       "attachment_count": 0,
+      "system_menu_name": "Master COA",
+      "has_unread_response": false,
       "created_at": "2026-08-13 10:00:00"
     }
   ],
@@ -262,8 +266,12 @@ GET /api/external/tickets/{id}
 
 Mengembalikan detail 1 ticket beserta komentar (`responses`, hanya yang customer-facing / `is_internal = 0`) dan `attachments`. Menolak akses (`403`) kalau ticket bukan milik project tempat sistem ini terdaftar.
 
+| Query param | Wajib | Tipe | Keterangan |
+|---|---|---|---|
+| `viewer_email` | tidak | string | Sama seperti di List Ticket — isi `has_unread_response` untuk user ini. |
+
 ```bash
-curl -X GET https://ticketing.example.com/api/external/tickets/123 \
+curl -X GET "https://ticketing.example.com/api/external/tickets/123?viewer_email=integrasi@partner.com" \
   -H "X-API-Key: <api_key>"
 ```
 
@@ -278,6 +286,8 @@ curl -X GET https://ticketing.example.com/api/external/tickets/123 \
     "title": "Pembayaran gagal diproses",
     "status_id": 1,
     "status_name": "Open",
+    "system_menu_name": "Master COA",
+    "has_unread_response": true,
     "responses": [
       { "id": 1, "message": "Update: sudah kami cek", "is_internal": 0, "user_name": "Support", "created_at": "2026-08-13 11:00:00", "attachments": [] }
     ],
@@ -293,6 +303,70 @@ curl -X GET https://ticketing.example.com/api/external/tickets/123 \
 | 401 | API key kosong/invalid |
 | 403 | Ticket bukan milik project tempat sistem ini terdaftar, atau sistem/project nonaktif |
 | 404 | Ticket tidak ditemukan |
+
+## 6. Mark Ticket as Read
+
+```
+POST /api/external/tickets/{id}/read
+```
+
+Menandai semua komentar customer-facing pada ticket ini sebagai sudah dibaca oleh `viewer_email`, sehingga `has_unread_response` untuk user tsb kembali `false` sampai ada komentar baru. Berguna dipanggil begitu sistem eksternal menampilkan halaman detail ticket ke usernya.
+
+| Field | Wajib | Tipe | Keterangan |
+|---|---|---|---|
+| `viewer_email` | ya | string | Email user yang sudah terdaftar & aktif |
+
+```bash
+curl -X POST https://ticketing.example.com/api/external/tickets/123/read \
+  -H "X-API-Key: <api_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"viewer_email":"integrasi@partner.com"}'
+```
+
+### Error
+
+| Status | Penyebab |
+|---|---|
+| 400 | `viewer_email` kosong, atau tidak ditemukan/tidak aktif |
+| 401 | API key kosong/invalid |
+| 403 | Ticket bukan milik project tempat sistem ini terdaftar, atau sistem/project nonaktif |
+| 404 | Ticket tidak ditemukan |
+
+## 7. Get Metadata (Status & Priority)
+
+```
+GET /api/external/meta
+```
+
+Mengembalikan daftar status dan priority yang aktif di sistem ticketing (master data global, tidak di-scope per project) — dipakai untuk mengisi dropdown filter di sistem eksternal tanpa hardcode ID.
+
+```bash
+curl -X GET https://ticketing.example.com/api/external/meta \
+  -H "X-API-Key: <api_key>"
+```
+
+### Contoh response (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "statuses": [
+      { "id": 1, "name": "Open", "color": "#6366f1", "order_index": 1, "is_resolved": 0 }
+    ],
+    "priorities": [
+      { "id": 1, "name": "Low", "color": "#22c55e", "order_index": 1 }
+    ]
+  }
+}
+```
+
+### Error
+
+| Status | Penyebab |
+|---|---|
+| 401 | API key kosong/invalid |
+| 403 | Sistem atau project nonaktif |
 
 ## Webhook
 
