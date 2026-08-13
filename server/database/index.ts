@@ -800,6 +800,37 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  // API key for external/programmatic ticket creation per project
+  await db.execute(`ALTER TABLE projects ADD COLUMN api_key VARCHAR(64) UNIQUE NULL`).catch(() => {})
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS project_webhooks (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_id INT NOT NULL,
+      url VARCHAR(500) NOT NULL,
+      secret VARCHAR(100) NOT NULL,
+      events VARCHAR(255) NOT NULL DEFAULT 'ticket.created,ticket.commented,ticket.closed,ticket.status_changed',
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `)
+
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS webhook_deliveries (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      project_webhook_id INT NOT NULL,
+      event VARCHAR(50) NOT NULL,
+      payload TEXT NOT NULL,
+      response_status INT,
+      success TINYINT(1) NOT NULL DEFAULT 0,
+      error TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_webhook_id) REFERENCES project_webhooks(id) ON DELETE CASCADE
+    )
+  `)
+
   // Fix constraints that were never enforced (column-level REFERENCES shorthand) or
   // that block deletes (default RESTRICT) so ticket/task/prd/qc deletes clean up properly.
   await ensureCascadeFk(db, 'tickets', 'task_id', 'tasks', 'SET NULL')

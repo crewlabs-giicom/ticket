@@ -1,5 +1,8 @@
 # Shadow Care — Panduan Setup & Deploy
 
+## Integrasi API Eksternal
+Untuk membuat ticket, komentar, menutup ticket, dan menerima webhook dari sistem lain, lihat [docs/EXTERNAL_API.md](docs/EXTERNAL_API.md) (versi in-app tersedia di halaman `/api-docs`).
+
 ## Demo Accounts
 | Role | Email | Password |
 |------|-------|----------|

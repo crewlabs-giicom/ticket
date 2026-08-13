@@ -116,6 +116,12 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </button>
         </div>
+        <div v-if="auth.user?.role === 'admin' || auth.user?.role === 'staff'" v-show="!sidebarCollapsed || sidebarOpen" class="px-1 pb-1">
+          <NuxtLink id="sidebar-api-docs-btn" to="/api-docs" class="flex items-center gap-1.5 text-xs text-slate-500 hover:text-primary-600 hover:bg-primary-50 px-2 py-1.5 rounded-lg transition-colors" @click="sidebarOpen = false">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16M6 8L2 12l4 4M18 8l4 4-4 4" /></svg>
+            Dokumentasi API
+          </NuxtLink>
+        </div>
       </div>
     </aside>
 

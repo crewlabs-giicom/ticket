@@ -6,6 +6,7 @@ export default defineEventHandler((event) => {
   if (path === '/api/auth/login' || path === '/api/auth/register' || path === '/api/auth/hris-login') return
   if (path.startsWith('/api/sse')) return
   if (path === '/api/health') return
+  if (path.startsWith('/api/external/')) return
 
   const user = getUserFromEvent(event)
   if (!user) {
