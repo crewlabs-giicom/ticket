@@ -368,6 +368,38 @@ curl -X GET https://ticketing.example.com/api/external/meta \
 | 401 | API key kosong/invalid |
 | 403 | Sistem atau project nonaktif |
 
+## 8. Get System Menus
+
+```
+GET /api/external/system-menus
+```
+
+Mengembalikan daftar menu (`system_menus`) yang berlaku untuk project tempat sistem ini terdaftar — gabungan menu yang di-scope khusus project itu (`project_id` sesuai) dan menu global (`project_id` kosong). Dipakai untuk mengisi dropdown "Menu" saat membuat ticket (`system_menu_id`, lihat [1. Create Ticket](#1-create-ticket)).
+
+```bash
+curl -X GET https://ticketing.example.com/api/external/system-menus \
+  -H "X-API-Key: <api_key>"
+```
+
+### Contoh response (200)
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 5, "module": "coa", "type": "master", "name": "Master COA", "order_index": 1 },
+    { "id": 8, "module": "complain", "type": "transaction", "name": "Complain", "order_index": 2 }
+  ]
+}
+```
+
+### Error
+
+| Status | Penyebab |
+|---|---|
+| 401 | API key kosong/invalid |
+| 403 | Sistem atau project nonaktif |
+
 ## Webhook
 
 Webhook URL & secret diatur **per sistem terdaftar** (bukan per project), diisi saat mendaftarkan sistem atau lewat tombol **Edit** di tab Integrasi API project. Saat sebuah event ticket terjadi di suatu project, ticketing mengirim POST ke webhook URL **semua sistem aktif** yang terdaftar pada project itu dan subscribe event tersebut — bukan cuma sistem yang memicu aksinya. Jadi kalau ada 2 sistem terdaftar untuk project yang sama, keduanya bisa menerima notifikasi yang sama.
