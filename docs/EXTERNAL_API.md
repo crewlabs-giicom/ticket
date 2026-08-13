@@ -6,19 +6,21 @@ Versi in-app dari dokumentasi ini tersedia di halaman `/api-docs` (menu sidebar 
 
 ## Autentikasi
 
-Semua endpoint eksternal diautentikasi per project menggunakan API key, dikirim lewat header:
+Setiap sistem eksternal yang mau berintegrasi harus **didaftarkan** terlebih dahulu di project yang ingin diaksesnya. Satu sistem terdaftar hanya bisa mengakses **satu project** — API key yang didapat hanya berlaku untuk project tempat sistem itu didaftarkan.
+
+Semua endpoint eksternal diautentikasi lewat header:
 
 ```
-X-API-Key: <api_key_project>
+X-API-Key: <api_key_sistem>
 ```
 
-### Mendapatkan API key
+### Mendaftarkan sistem & mendapatkan API key
 
 1. Login sebagai admin.
-2. Buka halaman project → **Generate API Key** (memanggil `POST /api/projects/{id}/api-key`).
-3. Key hanya ditampilkan **sekali** saat digenerate — simpan dengan aman. Generate ulang akan menggantikan key lama (key lama langsung tidak berlaku).
+2. Buka halaman project → tab **Integrasi API** → **Daftarkan Sistem** (memanggil `POST /api/projects/{id}/registered-systems`) — isi nama sistem, deskripsi opsional, dan webhook URL jika perlu menerima notifikasi (lihat bagian Webhook di bawah).
+3. `api_key` (dan `webhook_secret` jika webhook URL diisi) hanya ditampilkan **sekali** saat pendaftaran — simpan dengan aman. Regenerate lewat tombol **Regenerate Key** akan langsung menggantikan key lama (key lama langsung tidak berlaku).
 
-Jika key tidak valid → `401 Unauthorized`. Jika project sedang nonaktif (`is_active = 0`) → `403 Forbidden`.
+Jika key tidak valid → `401 Unauthorized`. Jika sistem dinonaktifkan → `403 Forbidden` ("Sistem tidak aktif"). Jika project sedang nonaktif → `403 Forbidden` ("Project tidak aktif").
 
 Semua request POST harus menyertakan header `Content-Type: application/json` — kecuali endpoint upload file yang memakai `multipart/form-data`.
 
@@ -74,7 +76,7 @@ Field `data` ini yang lalu dimasukkan apa adanya sebagai salah satu elemen array
 POST /api/external/tickets
 ```
 
-Field request **sama persis** dengan endpoint internal (`POST /api/tickets`) yang dipakai sistem ticketing sendiri — ini menjamin ticket yang dibuat lewat API terlihat identik dengan ticket yang dibuat lewat UI. Satu-satunya perbedaan: `project_id` tidak dikirim di body (sudah ditentukan dari API key), dan pengganti sesi login adalah `created_by_email`.
+Field request **sama persis** dengan endpoint internal (`POST /api/tickets`) yang dipakai sistem ticketing sendiri — ini menjamin ticket yang dibuat lewat API terlihat identik dengan ticket yang dibuat lewat UI. Satu-satunya perbedaan: `project_id` tidak dikirim di body (ditentukan dari project tempat sistem terdaftar), dan pengganti sesi login adalah `created_by_email`.
 
 | Field | Wajib | Tipe | Keterangan |
 |---|---|---|---|
@@ -159,7 +161,7 @@ curl -X POST https://ticketing.example.com/api/external/tickets/123/comments \
 |---|---|
 | 400 | `message`/`author_email` kosong, atau `author_email` tidak ditemukan |
 | 401 | API key kosong/invalid |
-| 403 | Ticket bukan milik project dari API key ini, atau project nonaktif |
+| 403 | Ticket bukan milik project tempat sistem ini terdaftar, atau sistem/project nonaktif |
 | 404 | Ticket tidak ditemukan |
 
 ## 3. Action Closed
@@ -189,12 +191,14 @@ curl -X POST https://ticketing.example.com/api/external/tickets/123/close \
 |---|---|
 | 400 | `status_id` dikirim tapi bukan status `is_resolved=1`, `resolution_type` bukan salah satu nilai yang valid, `closed_by_email` tidak ditemukan, atau tidak ada status resolved tersedia sama sekali |
 | 401 | API key kosong/invalid |
-| 403 | Ticket bukan milik project ini, atau project nonaktif |
+| 403 | Ticket bukan milik project tempat sistem ini terdaftar, atau sistem/project nonaktif |
 | 404 | Ticket tidak ditemukan |
 
 ## Webhook
 
-Konfigurasi webhook per project lewat `POST /api/projects/{id}/webhook` (admin only, lihat halaman project settings). Response berisi `secret` yang **hanya tampil sekali** saat pertama kali dibuat.
+Webhook URL & secret diatur **per sistem terdaftar** (bukan per project), diisi saat mendaftarkan sistem atau lewat tombol **Edit** di tab Integrasi API project. Saat sebuah event ticket terjadi di suatu project, ticketing mengirim POST ke webhook URL **semua sistem aktif** yang terdaftar pada project itu dan subscribe event tersebut — bukan cuma sistem yang memicu aksinya. Jadi kalau ada 2 sistem terdaftar untuk project yang sama, keduanya bisa menerima notifikasi yang sama.
+
+`webhook_secret` **hanya tampil sekali**: saat sistem pertama kali didaftarkan dengan webhook URL terisi, saat webhook URL diisi belakangan lewat Edit (padahal sebelumnya kosong), atau lewat tombol **Regenerate Secret**.
 
 ### Event yang tersedia
 
@@ -215,7 +219,7 @@ Konfigurasi webhook per project lewat `POST /api/projects/{id}/webhook` (admin o
 
 ### Verifikasi signature
 
-Setiap request webhook menyertakan header `X-Webhook-Signature`, yaitu HMAC-SHA256 dari body JSON (persis seperti dikirim) menggunakan `secret` project.
+Setiap request webhook menyertakan header `X-Webhook-Signature`, yaitu HMAC-SHA256 dari body JSON (persis seperti dikirim) menggunakan `webhook_secret` milik sistem terdaftar tersebut.
 
 ```js
 const crypto = require('crypto')

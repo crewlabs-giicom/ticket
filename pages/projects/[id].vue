@@ -56,7 +56,7 @@
       <!-- ── Tab bar ── -->
       <div class="flex items-center gap-1 mt-5 -mb-5 border-t border-slate-100 pt-4">
         <button
-          v-for="tab in TABS" :key="tab.key"
+          v-for="tab in visibleTabs" :key="tab.key"
           @click="setTab(tab.key)"
           :class="['px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors', activeTab === tab.key ? 'border-indigo-600 text-indigo-600 bg-indigo-50/60' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50']"
         >{{ tab.label }}</button>
@@ -581,6 +581,106 @@
           </div>
         </div>
       </div>
+
+      <!-- ─ INTEGRATION (Registered Systems) ─ -->
+      <div v-else-if="activeTab === 'integration' && auth.isAdmin" class="space-y-4 max-w-3xl">
+        <div class="flex items-center justify-between">
+          <p class="text-sm text-slate-500">Sistem eksternal yang boleh membuat/komentar/menutup ticket di project ini lewat API. Satu sistem hanya bisa mengakses project ini. Lihat <NuxtLink to="/api-docs" class="text-indigo-600 hover:underline">dokumentasi API</NuxtLink>.</p>
+          <button @click="openRegisterSystemModal()" class="btn-primary text-sm flex items-center gap-1.5 flex-shrink-0 ml-3">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Daftarkan Sistem
+          </button>
+        </div>
+
+        <div v-if="registeredSystemsLoading" class="text-center py-10 text-slate-400 text-sm">Memuat…</div>
+        <div v-else-if="!registeredSystems.length" class="card p-10 text-center text-slate-400 text-sm">
+          Belum ada sistem eksternal terdaftar untuk project ini.
+        </div>
+
+        <div v-else class="space-y-3">
+          <div v-for="sys in registeredSystems" :key="sys.id" class="card p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="text-sm font-semibold text-slate-800">{{ sys.name }}</p>
+                  <span :class="['text-[10px] px-2 py-0.5 rounded-full font-medium', sys.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500']">
+                    {{ sys.is_active ? 'Aktif' : 'Nonaktif' }}
+                  </span>
+                </div>
+                <p v-if="sys.description" class="text-xs text-slate-500 mt-0.5">{{ sys.description }}</p>
+                <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                  <span v-if="sys.webhook_url" class="text-[11px] font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded">{{ sys.webhook_url }}</span>
+                  <span v-else class="text-[11px] text-slate-400">Tanpa webhook</span>
+                </div>
+                <div v-if="sys.webhook_url" class="mt-1 flex flex-wrap gap-1">
+                  <span v-for="ev in sys.webhook_events.split(',')" :key="ev" class="text-[10px] font-mono px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded">{{ ev }}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button @click="regenerateKey(sys)" :disabled="systemActionBusy" class="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors">Regenerate Key</button>
+                <button v-if="sys.webhook_url" @click="regenerateWebhookSecret(sys)" :disabled="systemActionBusy" class="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors">Regenerate Secret</button>
+                <button @click="openRegisterSystemModal(sys)" class="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors">Edit</button>
+                <button @click="deleteRegisteredSystem(sys)" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-colors">Hapus</button>
+              </div>
+            </div>
+
+            <!-- One-time reveal panel for this system's newly (re)generated secrets -->
+            <div v-if="revealedSecrets[sys.id]" class="mt-3 space-y-2">
+              <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                Ditampilkan sekali saja — simpan sekarang, tidak bisa dilihat lagi setelah ini.
+              </div>
+              <div v-if="revealedSecrets[sys.id].api_key">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase mb-1">API Key</p>
+                <CodeBlock :code="revealedSecrets[sys.id].api_key" />
+              </div>
+              <div v-if="revealedSecrets[sys.id].webhook_secret">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase mb-1">Webhook Secret</p>
+                <CodeBlock :code="revealedSecrets[sys.id].webhook_secret" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Register/Edit system modal -->
+        <div v-if="showSystemModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showSystemModal = false">
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">{{ editingSystem ? 'Edit Sistem' : 'Daftarkan Sistem Baru' }}</h2>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Nama Sistem *</label>
+                <input v-model="systemForm.name" type="text" class="input w-full" placeholder="Mis. CRM Internal" autofocus />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Deskripsi</label>
+                <textarea v-model="systemForm.description" rows="2" class="input w-full resize-none" placeholder="Opsional…"></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Webhook URL</label>
+                <input v-model="systemForm.webhook_url" type="text" class="input w-full" placeholder="https://sistem-eksternal.example.com/webhook (opsional)" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Event Webhook</label>
+                <div class="flex flex-wrap gap-3">
+                  <label v-for="ev in WEBHOOK_EVENTS" :key="ev" class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                    <input type="checkbox" :value="ev" v-model="systemForm.webhook_events" class="w-3.5 h-3.5 rounded text-indigo-600" />
+                    <span class="font-mono">{{ ev }}</span>
+                  </label>
+                </div>
+              </div>
+              <label v-if="editingSystem" class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" v-model="systemForm.is_active" class="w-3.5 h-3.5 rounded text-indigo-600" />
+                Aktif
+              </label>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+              <button @click="showSystemModal = false" class="btn-ghost">Batal</button>
+              <button @click="saveRegisteredSystem" :disabled="systemActionBusy || !systemForm.name.trim()" class="btn-primary disabled:opacity-50">
+                {{ systemActionBusy ? 'Menyimpan…' : (editingSystem ? 'Simpan' : 'Daftarkan') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ── Create task modal ── -->
@@ -675,13 +775,14 @@
 definePageMeta({ middleware: 'auth' })
 
 const TABS = [
-  { key: 'overview',      label: 'Overview' },
-  { key: 'tasks',         label: 'Tasks' },
-  { key: 'tickets',       label: 'Tickets' },
-  { key: 'prds',          label: 'PRDs' },
-  { key: 'timeline',      label: 'Timeline' },
-  { key: 'members',       label: 'Members' },
-  { key: 'system-menus',  label: 'System Menus' },
+  { key: 'overview',      label: 'Overview',      adminOnly: false },
+  { key: 'tasks',         label: 'Tasks',         adminOnly: false },
+  { key: 'tickets',       label: 'Tickets',       adminOnly: false },
+  { key: 'prds',          label: 'PRDs',          adminOnly: false },
+  { key: 'timeline',      label: 'Timeline',      adminOnly: false },
+  { key: 'members',       label: 'Members',       adminOnly: false },
+  { key: 'system-menus',  label: 'System Menus',  adminOnly: false },
+  { key: 'integration',   label: 'Integrasi API', adminOnly: true },
 ] as const
 type TabKey = typeof TABS[number]['key']
 
@@ -708,10 +809,13 @@ const { pendingCount } = useSync()
 const { fetchRole, canManageProject } = useProjectRole()
 
 // ── Tab state (URL-driven) ──────────────────────────────────────────────────
+const visibleTabs = computed(() => TABS.filter(t => !t.adminOnly || auth.isAdmin))
+
 const activeTab = computed<TabKey>({
   get() {
     const q = route.query.tab as string
-    return (TABS.map(t => t.key) as string[]).includes(q) ? q as TabKey : 'overview'
+    const allowedKeys = visibleTabs.value.map(t => t.key) as string[]
+    return allowedKeys.includes(q) ? q as TabKey : 'overview'
   },
   set(v) { setTab(v) },
 })
@@ -965,6 +1069,7 @@ async function deleteSystemMenu(id: number) {
 watch(() => activeTab.value, (tab) => {
   if (tab === 'system-menus') loadSystemMenus()
   if (tab === 'prds') loadProjectPrds()
+  if (tab === 'integration') loadRegisteredSystems()
 })
 
 onMounted(() => { loadSystemMenus(); fetchRole(projectId) })
@@ -1024,6 +1129,92 @@ async function saveEdit() {
   } finally {
     editSaving.value = false
   }
+}
+
+// ── Integration: Registered Systems ──────────────────────────────────────────
+const WEBHOOK_EVENTS = ['ticket.created', 'ticket.commented', 'ticket.closed', 'ticket.status_changed']
+
+const registeredSystems = ref<any[]>([])
+const registeredSystemsLoading = ref(false)
+const systemActionBusy = ref(false)
+const revealedSecrets = reactive<Record<number, { api_key?: string; webhook_secret?: string }>>({})
+
+const showSystemModal = ref(false)
+const editingSystem = ref<any>(null)
+const systemForm = reactive({ name: '', description: '', webhook_url: '', webhook_events: [...WEBHOOK_EVENTS], is_active: true })
+
+async function loadRegisteredSystems() {
+  registeredSystemsLoading.value = true
+  try {
+    const res = await $fetch<any>(`/api/projects/${projectId}/registered-systems`)
+    registeredSystems.value = res?.data ?? []
+  } finally {
+    registeredSystemsLoading.value = false
+  }
+}
+
+function openRegisterSystemModal(sys?: any) {
+  editingSystem.value = sys ?? null
+  systemForm.name = sys?.name ?? ''
+  systemForm.description = sys?.description ?? ''
+  systemForm.webhook_url = sys?.webhook_url ?? ''
+  systemForm.webhook_events = sys?.webhook_events ? String(sys.webhook_events).split(',').filter(Boolean) : [...WEBHOOK_EVENTS]
+  systemForm.is_active = sys ? !!sys.is_active : true
+  showSystemModal.value = true
+}
+
+async function saveRegisteredSystem() {
+  if (!systemForm.name.trim()) return
+  systemActionBusy.value = true
+  try {
+    const body = {
+      name: systemForm.name.trim(),
+      description: systemForm.description || null,
+      webhook_url: systemForm.webhook_url.trim() || null,
+      webhook_events: systemForm.webhook_events.join(','),
+      is_active: systemForm.is_active ? 1 : 0,
+    }
+    if (editingSystem.value) {
+      const res = await $fetch<any>(`/api/projects/${projectId}/registered-systems/${editingSystem.value.id}`, { method: 'PATCH', body })
+      if (res?.data?.webhook_secret) revealedSecrets[editingSystem.value.id] = { ...revealedSecrets[editingSystem.value.id], webhook_secret: res.data.webhook_secret }
+    } else {
+      const res = await $fetch<any>(`/api/projects/${projectId}/registered-systems`, { method: 'POST', body })
+      revealedSecrets[res.data.id] = { api_key: res.data.api_key, webhook_secret: res.data.webhook_secret || undefined }
+    }
+    showSystemModal.value = false
+    await loadRegisteredSystems()
+  } finally {
+    systemActionBusy.value = false
+  }
+}
+
+async function regenerateKey(sys: any) {
+  if (!await confirmDelete('Key lama langsung tidak bisa dipakai lagi oleh sistem eksternal.', 'Regenerate API key?')) return
+  systemActionBusy.value = true
+  try {
+    const res = await $fetch<any>(`/api/projects/${projectId}/registered-systems/${sys.id}/regenerate-key`, { method: 'POST' })
+    revealedSecrets[sys.id] = { ...revealedSecrets[sys.id], api_key: res.data.api_key }
+  } finally {
+    systemActionBusy.value = false
+  }
+}
+
+async function regenerateWebhookSecret(sys: any) {
+  if (!await confirmDelete('Secret lama tidak akan valid lagi untuk verifikasi webhook.', 'Regenerate webhook secret?')) return
+  systemActionBusy.value = true
+  try {
+    const res = await $fetch<any>(`/api/projects/${projectId}/registered-systems/${sys.id}/regenerate-webhook-secret`, { method: 'POST' })
+    revealedSecrets[sys.id] = { ...revealedSecrets[sys.id], webhook_secret: res.data.webhook_secret }
+  } finally {
+    systemActionBusy.value = false
+  }
+}
+
+async function deleteRegisteredSystem(sys: any) {
+  if (!await confirmDelete(`Sistem "${sys.name}" tidak akan bisa lagi mengakses API ticket project ini.`, 'Hapus sistem terdaftar?')) return
+  await $fetch(`/api/projects/${projectId}/registered-systems/${sys.id}`, { method: 'DELETE' })
+  delete revealedSecrets[sys.id]
+  await loadRegisteredSystems()
 }
 
 // ── Timeline ──────────────────────────────────────────────────────────────────

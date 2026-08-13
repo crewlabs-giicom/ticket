@@ -8,14 +8,18 @@
     <!-- Auth -->
     <div class="bg-white rounded-2xl border border-slate-200 p-6">
       <h3 class="text-base font-bold text-slate-800 mb-2">🔑 Autentikasi</h3>
-      <p class="text-sm text-slate-600 mb-3">Semua endpoint eksternal diautentikasi per project via header berikut:</p>
-      <CodeBlock code="X-API-Key: <api_key_project>" />
+      <p class="text-sm text-slate-600 mb-3">
+        Sistem eksternal harus <strong>didaftarkan</strong> dulu di project yang mau diakses — satu sistem terdaftar hanya bisa mengakses satu project.
+        Semua endpoint eksternal diautentikasi via header berikut:
+      </p>
+      <CodeBlock code="X-API-Key: <api_key_sistem>" />
       <p class="text-sm text-slate-600 mt-3">
-        Generate API key lewat halaman project (admin) — memanggil <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">POST /api/projects/{id}/api-key</code>.
-        Key hanya tampil sekali saat digenerate.
+        Daftarkan sistem lewat halaman project (admin) → tab <strong>Integrasi API</strong> → <strong>Daftarkan Sistem</strong> — memanggil
+        <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">POST /api/projects/{id}/registered-systems</code>.
+        <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">api_key</code> (dan <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">webhook_secret</code> jika webhook URL diisi) hanya tampil sekali saat pendaftaran.
       </p>
       <div class="mt-3 bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-700">
-        401 jika key kosong/invalid · 403 jika project nonaktif
+        401 jika key kosong/invalid · 403 jika sistem/project nonaktif
       </div>
     </div>
 
@@ -44,7 +48,7 @@
   }
 }' />
       <div class="mt-3 bg-rose-50 border border-rose-100 rounded-lg p-3 text-xs text-rose-700">
-        400 tidak ada file / tipe tidak diizinkan / > 10MB · 401 API key invalid · 403 project nonaktif
+        400 tidak ada file / tipe tidak diizinkan / > 10MB · 401 API key invalid · 403 sistem/project nonaktif
       </div>
     </div>
 
@@ -56,7 +60,7 @@
       </div>
       <p class="text-sm text-slate-600 mb-3">
         Field request sama persis dengan endpoint internal <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">POST /api/tickets</code> —
-        ticket yang dihasilkan identik bentuknya dengan ticket yang dibuat lewat UI. Bedanya hanya <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">project_id</code> (dari API key)
+        ticket yang dihasilkan identik bentuknya dengan ticket yang dibuat lewat UI. Bedanya hanya <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">project_id</code> (ditentukan dari project tempat sistem terdaftar)
         dan <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">created_by_email</code> sebagai pengganti sesi login.
       </p>
       <div class="overflow-x-auto mb-3">
@@ -84,7 +88,7 @@
   -H "Content-Type: application/json" \
   -d &apos;{"title":"Pembayaran gagal","created_by_email":"integrasi@partner.com"}&apos;' />
       <div class="mt-3 bg-rose-50 border border-rose-100 rounded-lg p-3 text-xs text-rose-700">
-        400 field tidak lengkap / email tidak ditemukan · 401 API key invalid · 403 project nonaktif
+        400 field tidak lengkap / email tidak ditemukan · 401 API key invalid · 403 sistem/project nonaktif
       </div>
     </div>
 
@@ -102,7 +106,7 @@
   -H "Content-Type: application/json" \
   -d &apos;{"message":"Update progres","author_email":"integrasi@partner.com"}&apos;' />
       <div class="mt-3 bg-rose-50 border border-rose-100 rounded-lg p-3 text-xs text-rose-700">
-        400 field tidak lengkap · 401 API key invalid · 403 ticket bukan milik project ini · 404 ticket tidak ditemukan
+        400 field tidak lengkap · 401 API key invalid · 403 ticket bukan milik project tempat sistem ini terdaftar · 404 ticket tidak ditemukan
       </div>
     </div>
 
@@ -121,7 +125,7 @@
   -H "Content-Type: application/json" \
   -d &apos;{"closed_by_email":"integrasi@partner.com","resolution_type":"fixed"}&apos;' />
       <div class="mt-3 bg-rose-50 border border-rose-100 rounded-lg p-3 text-xs text-rose-700">
-        400 status_id bukan resolved / email tidak ditemukan · 401 API key invalid · 403 ticket bukan milik project ini · 404 ticket tidak ditemukan
+        400 status_id bukan resolved / email tidak ditemukan · 401 API key invalid · 403 ticket bukan milik project tempat sistem ini terdaftar · 404 ticket tidak ditemukan
       </div>
     </div>
 
@@ -129,7 +133,8 @@
     <div class="bg-white rounded-2xl border border-slate-200 p-6">
       <h3 class="text-base font-bold text-slate-800 mb-2">🔔 Webhook</h3>
       <p class="text-sm text-slate-600 mb-3">
-        Kelola lewat <code class="text-xs bg-slate-100 px-1.5 py-0.5 rounded">POST /api/projects/{id}/webhook</code> (admin only). Secret hanya tampil sekali saat pertama kali dibuat.
+        Webhook URL & secret diatur <strong>per sistem terdaftar</strong> (bukan per project) — diisi saat mendaftarkan sistem atau lewat Edit di tab Integrasi API. Saat event terjadi,
+        dikirim ke <strong>semua sistem aktif</strong> yang terdaftar pada project itu dan subscribe event tsb, bukan cuma sistem yang memicu aksinya. Secret hanya tampil sekali saat dibuat/diisi/regenerate.
       </p>
       <p class="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1">Event tersedia</p>
       <div class="flex flex-wrap gap-2 mb-3">

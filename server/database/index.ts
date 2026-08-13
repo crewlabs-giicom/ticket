@@ -800,34 +800,54 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
-  // API key for external/programmatic ticket creation per project
-  await db.execute(`ALTER TABLE projects ADD COLUMN api_key VARCHAR(64) UNIQUE NULL`).catch(() => {})
+  // Superseded by registered_systems below (API key/webhook now belong to a registered
+  // external system, not the project directly) — one-time cutover.
+  await db.execute(`ALTER TABLE projects DROP COLUMN api_key`).catch(() => {})
+  await db.execute(`DROP TABLE IF EXISTS project_webhooks`).catch(() => {})
+  // webhook_deliveries survives the cutover (holds real delivery history once systems are
+  // registered), so only drop+recreate it while it still has the OLD column — once migrated,
+  // this must become a no-op forever, unlike the two unconditional drops above.
+  const dbNameForCutover = process.env.DB_NAME || 'ticketing'
+  const [[oldWebhookDeliveriesCol]] = await db.execute(
+    `SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'webhook_deliveries' AND COLUMN_NAME = 'project_webhook_id'`,
+    [dbNameForCutover]
+  ) as any[]
+  if (oldWebhookDeliveriesCol) {
+    await db.execute(`DROP TABLE IF EXISTS webhook_deliveries`).catch(() => {})
+  }
 
+  // One external system registration = one project. Carries its own API key and
+  // (optionally) its own webhook config for receiving ticket event notifications.
   await db.execute(`
-    CREATE TABLE IF NOT EXISTS project_webhooks (
+    CREATE TABLE IF NOT EXISTS registered_systems (
       id INT AUTO_INCREMENT PRIMARY KEY,
       project_id INT NOT NULL,
-      url VARCHAR(500) NOT NULL,
-      secret VARCHAR(100) NOT NULL,
-      events VARCHAR(255) NOT NULL DEFAULT 'ticket.created,ticket.commented,ticket.closed,ticket.status_changed',
+      name VARCHAR(255) NOT NULL,
+      description VARCHAR(500) NULL,
+      api_key VARCHAR(64) UNIQUE NOT NULL,
+      webhook_url VARCHAR(500) NULL,
+      webhook_secret VARCHAR(100) NULL,
+      webhook_events VARCHAR(255) NOT NULL DEFAULT 'ticket.created,ticket.commented,ticket.closed,ticket.status_changed',
       is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_by INT NULL,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
     )
   `)
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS webhook_deliveries (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      project_webhook_id INT NOT NULL,
+      registered_system_id INT NOT NULL,
       event VARCHAR(50) NOT NULL,
       payload TEXT NOT NULL,
       response_status INT,
       success TINYINT(1) NOT NULL DEFAULT 0,
       error TEXT,
       created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (project_webhook_id) REFERENCES project_webhooks(id) ON DELETE CASCADE
+      FOREIGN KEY (registered_system_id) REFERENCES registered_systems(id) ON DELETE CASCADE
     )
   `)
 

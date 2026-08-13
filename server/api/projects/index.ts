@@ -14,7 +14,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const [projects] = await db.execute(`
-      SELECT p.*,
+      SELECT p.id, p.name, p.description, p.status, p.is_active, p.sort_order, p.created_at, p.updated_at,
+        (SELECT COUNT(*) FROM registered_systems rs WHERE rs.project_id = p.id AND rs.is_active = 1) AS registered_system_count,
         (SELECT COUNT(*) FROM tickets t WHERE t.project_id = p.id) AS ticket_count,
         (SELECT COUNT(*) FROM tasks tk WHERE tk.project_id = p.id) AS task_count,
         (SELECT COUNT(*) FROM tasks tk WHERE tk.project_id = p.id AND tk.status = 'done') AS task_done,

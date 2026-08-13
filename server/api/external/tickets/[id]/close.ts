@@ -1,7 +1,7 @@
 import { getDb } from '../../../../database/index'
 import { broadcastToAll } from '../../../../utils/sse'
 import { logActivity } from '../../../../utils/activity'
-import { resolveProjectByApiKey, resolveUserByEmail } from '../../../../utils/externalAuth'
+import { resolveRegisteredSystemByApiKey, resolveUserByEmail } from '../../../../utils/externalAuth'
 import { triggerWebhook } from '../../../../utils/webhook'
 
 export default defineEventHandler(async (event) => {
@@ -13,15 +13,16 @@ export default defineEventHandler(async (event) => {
   const apiKey = getHeader(event, 'x-api-key')
   if (!apiKey) throw createError({ statusCode: 401, statusMessage: 'X-API-Key header wajib diisi' })
 
-  const project = await resolveProjectByApiKey(db, apiKey)
-  if (!project) throw createError({ statusCode: 401, statusMessage: 'API key tidak valid' })
-  if (!project.is_active) throw createError({ statusCode: 403, statusMessage: 'Project tidak aktif' })
+  const system = await resolveRegisteredSystemByApiKey(db, apiKey)
+  if (!system) throw createError({ statusCode: 401, statusMessage: 'API key tidak valid' })
+  if (!system.is_active) throw createError({ statusCode: 403, statusMessage: 'Sistem tidak aktif' })
+  if (!system.project_is_active) throw createError({ statusCode: 403, statusMessage: 'Project tidak aktif' })
 
   const ticketId = Number(getRouterParam(event, 'id'))
   const [ticketRows] = await db.execute('SELECT * FROM tickets WHERE id = ?', [ticketId])
   const ticket = (ticketRows as any[])[0]
   if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
-  if (ticket.project_id !== project.id) throw createError({ statusCode: 403, statusMessage: 'Ticket bukan milik project ini' })
+  if (ticket.project_id !== system.project_id) throw createError({ statusCode: 403, statusMessage: 'Ticket bukan milik project ini' })
 
   const body = await readBody(event).catch(() => ({}))
   const { status_id, closed_by_email, resolution_type } = body || {}
@@ -86,7 +87,7 @@ export default defineEventHandler(async (event) => {
 
   broadcastToAll('ticket_updated', { ticket_id: ticketId, ticket_number: ticket.ticket_number, status_id: finalStatusId })
 
-  await triggerWebhook(db, project.id, 'ticket.closed', updatedTicket)
+  await triggerWebhook(db, system.project_id, 'ticket.closed', updatedTicket)
 
   return { success: true, data: updatedTicket }
 })

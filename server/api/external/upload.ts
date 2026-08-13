@@ -1,5 +1,5 @@
 import { getDb } from '../../database/index'
-import { resolveProjectByApiKey } from '../../utils/externalAuth'
+import { resolveRegisteredSystemByApiKey } from '../../utils/externalAuth'
 import { saveUploadedFile } from '../../utils/fileStorage'
 
 export default defineEventHandler(async (event) => {
@@ -11,9 +11,10 @@ export default defineEventHandler(async (event) => {
   const apiKey = getHeader(event, 'x-api-key')
   if (!apiKey) throw createError({ statusCode: 401, statusMessage: 'X-API-Key header wajib diisi' })
 
-  const project = await resolveProjectByApiKey(db, apiKey)
-  if (!project) throw createError({ statusCode: 401, statusMessage: 'API key tidak valid' })
-  if (!project.is_active) throw createError({ statusCode: 403, statusMessage: 'Project tidak aktif' })
+  const system = await resolveRegisteredSystemByApiKey(db, apiKey)
+  if (!system) throw createError({ statusCode: 401, statusMessage: 'API key tidak valid' })
+  if (!system.is_active) throw createError({ statusCode: 403, statusMessage: 'Sistem tidak aktif' })
+  if (!system.project_is_active) throw createError({ statusCode: 403, statusMessage: 'Project tidak aktif' })
 
   const parts = await readMultipartFormData(event)
   if (!parts || parts.length === 0) {
@@ -30,8 +31,8 @@ export default defineEventHandler(async (event) => {
     mime: filePart.type || 'application/octet-stream',
     originalName: filePart.filename || 'file',
     menu: 'ticket',
-    projectId: String(project.id),
-    projectName: project.name,
+    projectId: String(system.project_id),
+    projectName: system.project_name,
   })
 
   return { success: true, data }

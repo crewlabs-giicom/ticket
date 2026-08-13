@@ -1,7 +1,7 @@
 import { getDb } from '../../../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../../../utils/sse'
 import { logActivity } from '../../../../utils/activity'
-import { resolveProjectByApiKey, resolveUserByEmail } from '../../../../utils/externalAuth'
+import { resolveRegisteredSystemByApiKey, resolveUserByEmail } from '../../../../utils/externalAuth'
 import { triggerWebhook } from '../../../../utils/webhook'
 import type { ResultSetHeader } from 'mysql2'
 
@@ -14,15 +14,16 @@ export default defineEventHandler(async (event) => {
   const apiKey = getHeader(event, 'x-api-key')
   if (!apiKey) throw createError({ statusCode: 401, statusMessage: 'X-API-Key header wajib diisi' })
 
-  const project = await resolveProjectByApiKey(db, apiKey)
-  if (!project) throw createError({ statusCode: 401, statusMessage: 'API key tidak valid' })
-  if (!project.is_active) throw createError({ statusCode: 403, statusMessage: 'Project tidak aktif' })
+  const system = await resolveRegisteredSystemByApiKey(db, apiKey)
+  if (!system) throw createError({ statusCode: 401, statusMessage: 'API key tidak valid' })
+  if (!system.is_active) throw createError({ statusCode: 403, statusMessage: 'Sistem tidak aktif' })
+  if (!system.project_is_active) throw createError({ statusCode: 403, statusMessage: 'Project tidak aktif' })
 
   const ticketId = Number(getRouterParam(event, 'id'))
   const [ticketRows] = await db.execute('SELECT ticket_number, title, project_id, created_by, assigned_to FROM tickets WHERE id = ?', [ticketId])
   const ticket = (ticketRows as any[])[0]
   if (!ticket) throw createError({ statusCode: 404, statusMessage: 'Ticket tidak ditemukan' })
-  if (ticket.project_id !== project.id) throw createError({ statusCode: 403, statusMessage: 'Ticket bukan milik project ini' })
+  if (ticket.project_id !== system.project_id) throw createError({ statusCode: 403, statusMessage: 'Ticket bukan milik project ini' })
 
   const body = await readBody(event)
   const { message, author_email, is_internal, attachments } = body
@@ -95,7 +96,7 @@ export default defineEventHandler(async (event) => {
     assigned_to: ticket.assigned_to,
   })
 
-  await triggerWebhook(db, project.id, 'ticket.commented', { ticket_id: ticketId, ticket_number: ticket.ticket_number, message, author: { id: author.id, name: author.name, email: author_email } })
+  await triggerWebhook(db, system.project_id, 'ticket.commented', { ticket_id: ticketId, ticket_number: ticket.ticket_number, message, author: { id: author.id, name: author.name, email: author_email } })
 
   return { success: true, data: response }
 })
