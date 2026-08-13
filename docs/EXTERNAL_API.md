@@ -209,6 +209,7 @@ Mengembalikan daftar ticket milik project tempat sistem ini terdaftar (otomatis 
 | `search` | tidak | string | Cari di `title` atau `ticket_number` |
 | `date_from` / `date_to` | tidak | string (`YYYY-MM-DD`) | Filter rentang `created_at` |
 | `created_by_email` | tidak | string | Filter ticket yang dibuat email tsb |
+| `mine_email` | tidak | string | Filter ticket yang dibuat **atau** yang user (email) ini jadi participant-nya — `(created_by = email) OR (email ada di ticket_participants)` |
 | `extended` | tidak | `1` | Kalau `1`, cuma tampilkan ticket yang due date-nya pernah diperpanjang |
 | `viewer_email` | tidak | string | Kalau diisi (dan email-nya terdaftar & aktif), setiap ticket dapat field `has_unread_response` — `true` kalau ada komentar customer-facing baru yang belum ditandai dibaca oleh user ini (lihat [6. Mark Ticket as Read](#6-mark-ticket-as-read)). Kalau kosong/tidak ketemu, selalu `false`. |
 | `sort_by` | tidak | string | `created_at` (default), `due_date`, `ticket_number`, `priority_id`, `status_id` |
@@ -397,6 +398,45 @@ curl -X GET https://ticketing.example.com/api/external/system-menus \
 
 | Status | Penyebab |
 |---|---|
+| 401 | API key kosong/invalid |
+| 403 | Sistem atau project nonaktif |
+
+## 9. Create User (Auto-provision)
+
+```
+POST /api/external/users
+```
+
+Membuat user baru di ticketing (`role=customer`) untuk keperluan auto-provisioning — dipakai saat sistem eksternal ingin membuat ticket atas nama email yang belum terdaftar sebagai user ticketing, tapi sudah diverifikasi valid di sisi sistem eksternal (mis. lewat HRIS). **Idempotent**: kalau email sudah ada, endpoint ini mengembalikan user yang sudah ada (bukan error 409).
+
+User yang dibuat lewat endpoint ini diberi password acak (hash) — tidak dimaksudkan untuk login manual ke ticketing, cuma jadi pemilik/participant ticket.
+
+| Field | Wajib | Tipe | Keterangan |
+|---|---|---|---|
+| `name` | ya | string | Nama user |
+| `email` | ya | string | Email user (dipakai sebagai unique key) |
+
+```bash
+curl -X POST https://ticketing.example.com/api/external/users \
+  -H "X-API-Key: <api_key>" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Budi Santoso","email":"budi@partner.com"}'
+```
+
+### Contoh response (200)
+
+```json
+{
+  "success": true,
+  "data": { "id": 55, "name": "Budi Santoso", "email": "budi@partner.com", "role": "customer" }
+}
+```
+
+### Error
+
+| Status | Penyebab |
+|---|---|
+| 400 | `name`/`email` kosong |
 | 401 | API key kosong/invalid |
 | 403 | Sistem atau project nonaktif |
 

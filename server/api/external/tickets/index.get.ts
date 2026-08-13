@@ -31,6 +31,17 @@ export default defineEventHandler(async (event) => {
     where += ' AND t.created_by IN (SELECT id FROM users WHERE email = ?)'
     params.push(query.created_by_email)
   }
+  if (query.mine_email) {
+    where += ` AND (
+      t.created_by IN (SELECT id FROM users WHERE email = ?)
+      OR t.id IN (
+        SELECT tp.ticket_id FROM ticket_participants tp
+        JOIN users u ON u.id = tp.user_id
+        WHERE u.email = ?
+      )
+    )`
+    params.push(query.mine_email, query.mine_email)
+  }
   if (query.extended === '1') {
     where += ` AND EXISTS (SELECT 1 FROM activity_logs al WHERE al.entity_type = 'ticket' AND al.entity_id = t.id AND al.action = 'due_date_extended')`
   }
