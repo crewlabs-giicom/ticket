@@ -2,6 +2,7 @@ import { getDb } from '../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../utils/sse'
 import { logActivity } from '../../utils/activity'
 import { checkQcFormCompletion } from '../../utils/qc'
+import { triggerWebhook } from '../../utils/webhook'
 
 export default defineEventHandler(async (event) => {
   const db = getDb()
@@ -267,6 +268,11 @@ export default defineEventHandler(async (event) => {
         label: `${user?.name ?? 'System'} mengubah status dari "${oldStatusName}" ke "${newStatusName}"`,
         user_id: user?.id,
       })
+      triggerWebhook(db, old.project_id, 'ticket.status_changed', {
+        ticket_id: Number(id), ticket_number: old.ticket_number,
+        assigned_to: old.assigned_to,
+        from_status: oldStatusName, to_status: newStatusName,
+      }).catch(() => {})
       if (resolved_at && !old.resolved_at) {
         await logActivity(db, {
           entity_type: 'ticket', entity_id: Number(id), action: 'resolved',

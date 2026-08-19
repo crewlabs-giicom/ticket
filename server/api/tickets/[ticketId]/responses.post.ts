@@ -1,6 +1,7 @@
 import { getDb } from '../../../database/index'
 import { broadcastToAll, broadcastToUser } from '../../../utils/sse'
 import { logActivity } from '../../../utils/activity'
+import { triggerWebhook } from '../../../utils/webhook'
 import type { ResultSetHeader } from 'mysql2'
 
 export default defineEventHandler(async (event) => {
@@ -68,7 +69,7 @@ export default defineEventHandler(async (event) => {
       conn.release()
     }
 
-    const [ticketRows] = await db.execute('SELECT ticket_number, title, created_by, assigned_to FROM tickets WHERE id=?', [ticketId])
+    const [ticketRows] = await db.execute('SELECT ticket_number, title, created_by, assigned_to, project_id FROM tickets WHERE id=?', [ticketId])
     const ticket = (ticketRows as any[])[0]
 
     const [respRows] = await db.execute(`
@@ -120,6 +121,13 @@ export default defineEventHandler(async (event) => {
       created_by: ticket.created_by,
       assigned_to: ticket.assigned_to,
     })
+
+    if (!isInternal) {
+      triggerWebhook(db, ticket.project_id, 'ticket.commented', {
+        ticket_id: Number(ticketId), ticket_number: ticket.ticket_number,
+        message, author: { id: user.id, name: user.name, email: user.email },
+      }).catch(() => {})
+    }
 
     return { success: true, data: response }
   }
