@@ -5,7 +5,16 @@ export const useNotifStore = defineStore('notif', () => {
   const items = ref<any[]>([])
   const unread = ref(0)
   const toasts = ref<any[]>([])
+  // Sinyal reaktif: event SSE terakhir yang menyentuh sebuah ticket.
+  // Dipakai halaman detail/list untuk refetch data otomatis.
+  const lastTicketEvent = ref<{ ticketId: number; event: string; at: number } | null>(null)
   let es: EventSource | null = null
+
+  function signalTicketEvent(event: string, data: any) {
+    const ticketId = Number(data?.ticket_id ?? data?.id)
+    if (!ticketId || Number.isNaN(ticketId)) return
+    lastTicketEvent.value = { ticketId, event, at: Date.now() }
+  }
 
   async function fetchNotifs() {
     const res = await $fetch('/api/notifications') as any
@@ -86,29 +95,17 @@ export const useNotifStore = defineStore('notif', () => {
       items.value.unshift({ ...data, is_read: 0, created_at: new Date().toISOString() })
       addToast(data)
       playSound()
+      if (data?.ticket_id) signalTicketEvent('notification', data)
     })
 
-    es.addEventListener('ticket_created', (e) => {
+    // 'ticket_created' tidak lagi dibroadcast: assignee & participant sudah
+    // menerima event 'notification' per user (ticket_assigned / ticket_invite).
+
+    es.addEventListener('ticket_updated', (e) => {
+      // payload dari /api/tickets/[id] memakai field `id`, dari external API `ticket_id`
       const data = JSON.parse(e.data)
-      const auth = useAuthStore()
-      const role = auth.user?.role
-      // Hanya tampilkan ke staff dan admin, skip jika creator adalah user sendiri
-      if (role !== 'staff' && role !== 'admin') return
-      if (data.created_by === auth.user?.id) return
-      addToast({ title: 'Ticket baru', message: `${data.ticket_number}: ${data.title}`, type: 'ticket_created', ticket_id: data.id })
-      playSound()
-      unread.value++
-      items.value.unshift({
-        title: 'Ticket baru dibuat',
-        message: `${data.ticket_number}: ${data.title}`,
-        type: 'ticket_created',
-        ticket_id: data.id,
-        is_read: 0,
-        created_at: new Date().toISOString(),
-      })
+      signalTicketEvent('ticket_updated', data)
     })
-
-    es.addEventListener('ticket_updated', () => {})
 
     es.addEventListener('ticket_message:new', (e) => {
       const data = JSON.parse(e.data)
@@ -133,11 +130,12 @@ export const useNotifStore = defineStore('notif', () => {
         chatWidget.incrementUnread(data.ticket_id)
         playChatSound()
       }
+
+      signalTicketEvent('ticket_message:new', data)
     })
 
     es.addEventListener('ticket_response', (e) => {
       const data = JSON.parse(e.data)
-      addToast({ title: 'Response baru', message: `Ticket ${data.ticket_number} dibalas`, type: 'new_response', ticket_id: data.ticket_id })
 
       const auth = useAuthStore()
       const userId = auth.user?.id
@@ -149,9 +147,12 @@ export const useNotifStore = defineStore('notif', () => {
         ? (data.created_by === userId || data.assigned_to === userId)
         : (role === 'staff' || role === 'admin')
       if (isRelevant) {
+        addToast({ title: 'Response baru', message: `Ticket ${data.ticket_number} dibalas`, type: 'new_response', ticket_id: data.ticket_id })
         const ticketUnread = useTicketUnreadStore()
         ticketUnread.markUnread(data.ticket_id)
       }
+
+      signalTicketEvent('ticket_response', data)
     })
 
     es.onerror = () => {
@@ -166,5 +167,5 @@ export const useNotifStore = defineStore('notif', () => {
     es = null
   }
 
-  return { items, unread, toasts, fetchNotifs, markRead, connectSSE, disconnectSSE, playSound, playChatSound, dismissToast }
+  return { items, unread, toasts, lastTicketEvent, fetchNotifs, markRead, connectSSE, disconnectSSE, playSound, playChatSound, dismissToast }
 })

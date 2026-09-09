@@ -682,6 +682,15 @@ watch(ticket, (t) => {
   }
 })
 
+// Auto refresh saat ada event SSE untuk ticket yang sedang dibuka
+const notif = useNotifStore()
+watch(() => notif.lastTicketEvent, async (ev) => {
+  if (!ev || String(ev.ticketId) !== String(id)) return
+  if (ticketPending.value) return
+  await refresh()
+  ticketUnread.clear(ev.ticketId)
+})
+
 const showTranscriptModal = ref(false)
 const transcriptData = ref<any>(null)
 

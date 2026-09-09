@@ -1,5 +1,5 @@
 import { getDb } from '../../database/index'
-import { broadcastToAll, broadcastToUser } from '../../utils/sse'
+import { broadcastToUser, broadcastToUsers } from '../../utils/sse'
 import { logActivity } from '../../utils/activity'
 import { nextTicketNumber } from '../../utils/ticketNumber'
 import type { ResultSetHeader } from 'mysql2'
@@ -219,19 +219,6 @@ export default defineEventHandler(async (event) => {
       broadcastToUser(assigned_to, 'notification', { title: 'Ticket baru di-assign', message: `${ticketNumber}: ${title}`, type: 'ticket_assigned', ticket_id: ticketId! })
     }
 
-    // Insert DB notification untuk semua staff & admin aktif (kecuali creator dan assigned_to)
-    const [staffAdmins] = await db.execute(
-      "SELECT id FROM users WHERE role IN ('staff','admin') AND is_active = 1 AND id != ?",
-      [user.id]
-    )
-    for (const su of staffAdmins as any[]) {
-      if (su.id === assigned_to) continue
-      await db.execute(
-        'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
-        [su.id, 'Ticket baru dibuat', `${ticketNumber}: ${title}`, 'ticket_created', ticketId!]
-      )
-    }
-
     await logActivity(db, {
       entity_type: 'ticket', entity_id: ticketId!,
       action: 'created',
@@ -239,7 +226,8 @@ export default defineEventHandler(async (event) => {
       user_id: user.id,
     })
 
-    broadcastToAll('ticket_created', { ticket_number: ticketNumber, title, id: ticketId!, created_by: user.id })
+    // Tidak ada broadcast 'ticket_created' lagi: participant & assignee sudah
+    // menerima event 'notification' per user di atas (ticket_invite/ticket_assigned).
 
     return { success: true, data: ticket }
   }

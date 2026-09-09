@@ -316,6 +316,13 @@ async function handleRefresh() {
 }
 onMounted(fetchTickets)
 
+// Auto refresh list saat ada event SSE untuk ticket manapun
+const notif = useNotifStore()
+watchDebounced(() => notif.lastTicketEvent, () => {
+  if (loading.value) return
+  fetchTickets()
+}, { debounce: 500, maxWait: 2000 })
+
 function openTicket(t: any) { tabs.openTab(t) }
 function onCreated() { showForm.value = false; fetchTickets() }
 

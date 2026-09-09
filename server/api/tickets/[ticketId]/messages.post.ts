@@ -1,5 +1,6 @@
 import { getDb } from '../../../database/index'
-import { broadcastToAll } from '../../../utils/sse'
+import { broadcastToUsers } from '../../../utils/sse'
+import { getTicketAudienceExcept } from '../../../utils/ticketAudience'
 import type { ResultSetHeader } from 'mysql2'
 
 export default defineEventHandler(async (event) => {
@@ -54,7 +55,9 @@ export default defineEventHandler(async (event) => {
     newMessage.attachments = []
   }
 
-  broadcastToAll('ticket_message:new', {
+  const audience = await getTicketAudienceExcept(db, ticketId!, user.id, ticket)
+
+  broadcastToUsers(audience, 'ticket_message:new', {
     ...newMessage,
     ticket_id: Number(ticketId),
     ticket_number: ticket.ticket_number,

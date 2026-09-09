@@ -1,5 +1,6 @@
 import { getDb } from '../../database/index'
-import { broadcastToAll, broadcastToUser } from '../../utils/sse'
+import { broadcastToUser, broadcastToUsers } from '../../utils/sse'
+import { getTicketAudience } from '../../utils/ticketAudience'
 import { logActivity } from '../../utils/activity'
 import { checkQcFormCompletion } from '../../utils/qc'
 import { triggerWebhook } from '../../utils/webhook'
@@ -378,7 +379,11 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    broadcastToAll('ticket_updated', { id: Number(id), ticket_number: old.ticket_number })
+    const updateAudience = await getTicketAudience(db, id, {
+      created_by: old.created_by,
+      assigned_to: assigned_to ?? old.assigned_to,
+    })
+    broadcastToUsers(updateAudience, 'ticket_updated', { id: Number(id), ticket_number: old.ticket_number })
 
     return { success: true }
   }

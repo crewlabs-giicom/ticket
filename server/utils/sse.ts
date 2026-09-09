@@ -17,14 +17,21 @@ export function broadcastToUser(userId: number, event: string, data: object) {
   })
 }
 
-export function broadcastToAll(event: string, data: object) {
+/**
+ * Kirim event hanya ke user-user tertentu (creator/assignee/participant ticket).
+ * Nilai kosong dan duplikat diabaikan.
+ */
+export function broadcastToUsers(userIds: Array<number | null | undefined>, event: string, data: object) {
+  const targets = new Set<number>()
+  for (const id of userIds) {
+    const numeric = Number(id)
+    if (numeric) targets.add(numeric)
+  }
+  if (!targets.size) return
+
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
   clients.forEach(c => {
+    if (!targets.has(c.userId)) return
     try { c.send(payload) } catch {}
   })
-}
-
-export function broadcastToRole(role: string, event: string, data: object, db: any) {
-  const users = db.prepare('SELECT id FROM users WHERE role = ? AND is_active = 1').all(role) as any[]
-  users.forEach(u => broadcastToUser(u.id, event, data))
 }

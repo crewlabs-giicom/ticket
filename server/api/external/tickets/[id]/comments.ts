@@ -1,5 +1,6 @@
 import { getDb } from '../../../../database/index'
-import { broadcastToAll, broadcastToUser } from '../../../../utils/sse'
+import { broadcastToUser, broadcastToUsers } from '../../../../utils/sse'
+import { getTicketAudienceExcept } from '../../../../utils/ticketAudience'
 import { logActivity } from '../../../../utils/activity'
 import { resolveRegisteredSystemByApiKey, resolveUserByEmail } from '../../../../utils/externalAuth'
 import { triggerWebhook } from '../../../../utils/webhook'
@@ -60,17 +61,10 @@ export default defineEventHandler(async (event) => {
   `, [responseId])
   const response = (respRows as any[])[0]
 
+  const audience = await getTicketAudienceExcept(db, ticketId, author.id, ticket)
+
   if (!isInternal) {
-    const notifyIds = new Set<number>()
-    if (ticket.created_by !== author.id) notifyIds.add(ticket.created_by)
-    if (ticket.assigned_to && ticket.assigned_to !== author.id) notifyIds.add(ticket.assigned_to)
-
-    const [partRows] = await db.execute('SELECT user_id FROM ticket_participants WHERE ticket_id = ?', [ticketId])
-    for (const p of partRows as any[]) {
-      if (p.user_id !== author.id) notifyIds.add(p.user_id)
-    }
-
-    for (const uid of notifyIds) {
+    for (const uid of audience) {
       await db.execute(
         'INSERT INTO notifications (user_id, title, message, type, ticket_id) VALUES (?, ?, ?, ?, ?)',
         [uid, 'Response baru', `${ticket.ticket_number}: ${author.name} membalas`, 'new_response', ticketId]
@@ -86,7 +80,17 @@ export default defineEventHandler(async (event) => {
     user_id: author.id,
   })
 
-  broadcastToAll('ticket_response', {
+  // Catatan internal tidak boleh sampai ke customer, walaupun dia participant.
+  let responseAudience = audience
+  if (isInternal && responseAudience.length) {
+    const [roleRows] = await db.execute(
+      `SELECT id FROM users WHERE role <> 'customer' AND id IN (${responseAudience.map(() => '?').join(',')})`,
+      responseAudience
+    )
+    responseAudience = (roleRows as any[]).map(r => Number(r.id))
+  }
+
+  broadcastToUsers(responseAudience, 'ticket_response', {
     ticket_id: ticketId,
     ticket_number: ticket.ticket_number,
     sender_id: author.id,

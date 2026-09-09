@@ -1,5 +1,6 @@
 import { getDb } from '../../../../database/index'
-import { broadcastToAll } from '../../../../utils/sse'
+import { broadcastToUsers } from '../../../../utils/sse'
+import { getTicketAudience } from '../../../../utils/ticketAudience'
 import { logActivity } from '../../../../utils/activity'
 import { resolveRegisteredSystemByApiKey, resolveUserByEmail } from '../../../../utils/externalAuth'
 import { triggerWebhook } from '../../../../utils/webhook'
@@ -85,7 +86,8 @@ export default defineEventHandler(async (event) => {
   const [updatedRows] = await db.execute('SELECT * FROM tickets WHERE id = ?', [ticketId])
   const updatedTicket = (updatedRows as any[])[0]
 
-  broadcastToAll('ticket_updated', { ticket_id: ticketId, ticket_number: ticket.ticket_number, status_id: finalStatusId })
+  const audience = await getTicketAudience(db, ticketId, ticket)
+  broadcastToUsers(audience, 'ticket_updated', { ticket_id: ticketId, ticket_number: ticket.ticket_number, status_id: finalStatusId })
 
   await triggerWebhook(db, system.project_id, 'ticket.closed', updatedTicket)
 
