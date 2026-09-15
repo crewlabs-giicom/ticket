@@ -32,7 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (user.value?.id) {
         const chatWidget = useChatWidgetStore()
         chatWidget.initForUser(user.value.id)
-        await loadActiveChatTickets(false)
+        loadActiveChatTickets(false)
       }
     } catch {
       user.value = null
@@ -47,7 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (user.value?.id) {
         const chatWidget = useChatWidgetStore()
         chatWidget.initForUser(user.value.id)
-        await loadActiveChatTickets(true)
+        loadActiveChatTickets(true)
       }
       return true
     } catch (e: any) {

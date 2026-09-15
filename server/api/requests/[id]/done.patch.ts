@@ -1,0 +1,30 @@
+import { getDb } from '../../../database/index'
+import { requireRole } from '../../../utils/rbac'
+import { logActivity } from '../../../utils/activity'
+
+export default defineEventHandler(async (event) => {
+  const user = requireRole(event, ['admin', 'staff'])
+  const db = getDb()
+  const id = Number(getRouterParam(event, 'id'))
+  const body = await readBody(event)
+  const reason = (body?.reason || '').trim()
+  if (!reason) throw createError({ statusCode: 400, statusMessage: 'Alasan bypass wajib diisi' })
+
+  const [[row]] = await db.execute('SELECT id, status, title FROM requests WHERE id = ?', [id]) as any[]
+  if (!row) throw createError({ statusCode: 404, statusMessage: 'Request not found' })
+  if (row.status === 'done' || row.status === 'rejected') {
+    throw createError({ statusCode: 400, statusMessage: 'Status sudah final dan tidak dapat diubah' })
+  }
+
+  await db.execute(`UPDATE requests SET status = 'done' WHERE id = ?`, [id])
+
+  await logActivity(db, {
+    entity_type: 'request', entity_id: id,
+    action: 'status_bypassed_done',
+    from_value: row.status, to_value: 'done',
+    label: `Request "${row.title}" di-bypass langsung ke Done oleh ${user.name} — alasan: ${reason}`,
+    user_id: user.id,
+  })
+
+  return { success: true }
+})

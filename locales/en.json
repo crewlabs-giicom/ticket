@@ -1,0 +1,46 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "or": "or",
+    "close": "Close",
+    "confirm": "Confirm",
+    "reason": "Reason"
+  },
+  "login": {
+    "welcome": "Welcome",
+    "subtitle": "Sign in to Shadow Care",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in...",
+    "or": "or",
+    "hrisButton": "Login via HRIS giisystem",
+    "hrisTitle": "Sign in using your HRIS giisystem account",
+    "hrisEmail": "HRIS Email",
+    "hrisPassword": "HRIS Password",
+    "hrisSubmit": "Sign in via HRIS",
+    "hrisSubmitting": "Verifying...",
+    "hrisRequired": "Email and password are required",
+    "hrisFailed": "HRIS account not found or wrong password",
+    "noAccount": "Don't have an account?",
+    "register": "Register"
+  },
+  "profile": {
+    "language": "Language"
+  },
+  "requests": {
+    "forceDone": "Force Done",
+    "forceDoneTitle": "Force Done: {title}",
+    "forceDoneDescription": "This bypasses the normal PRD workflow and marks the request as Done immediately. Please provide a reason.",
+    "reasonPlaceholder": "Why is this being marked Done directly?",
+    "reasonRequired": "A bypass reason is required"
+  }
+}

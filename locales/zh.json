@@ -1,0 +1,46 @@
+{
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "search": "搜索",
+    "loading": "加载中...",
+    "success": "成功",
+    "error": "失败",
+    "or": "或",
+    "close": "关闭",
+    "confirm": "确认",
+    "reason": "原因"
+  },
+  "login": {
+    "welcome": "欢迎",
+    "subtitle": "登录 Shadow Care",
+    "email": "邮箱",
+    "password": "密码",
+    "submit": "登录",
+    "submitting": "登录中...",
+    "or": "或",
+    "hrisButton": "通过 HRIS giisystem 登录",
+    "hrisTitle": "使用 HRIS giisystem 账户登录",
+    "hrisEmail": "HRIS 邮箱",
+    "hrisPassword": "HRIS 密码",
+    "hrisSubmit": "通过 HRIS 登录",
+    "hrisSubmitting": "验证中...",
+    "hrisRequired": "邮箱和密码为必填项",
+    "hrisFailed": "未找到 HRIS 账户或密码错误",
+    "noAccount": "还没有账户？",
+    "register": "注册"
+  },
+  "profile": {
+    "language": "语言"
+  },
+  "requests": {
+    "forceDone": "强制完成",
+    "forceDoneTitle": "强制完成：{title}",
+    "forceDoneDescription": "此操作将跳过正常的 PRD 流程，直接将请求标记为完成。请提供原因。",
+    "reasonPlaceholder": "为什么要直接将其标记为完成？",
+    "reasonRequired": "必须填写绕过原因"
+  }
+}

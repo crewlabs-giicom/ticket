@@ -101,6 +101,19 @@
       </div>
     </div>
 
+    <!-- Language -->
+    <div class="card p-6 space-y-3">
+      <h2 class="text-sm font-semibold text-slate-900">{{ t('profile.language') }}</h2>
+      <div class="flex gap-2">
+        <button
+          v-for="l in availableLocales"
+          :key="l.code"
+          @click="setLocale(l.code as any)"
+          :class="['px-3 py-1.5 text-sm rounded-lg border transition-colors', locale === l.code ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:bg-slate-50']"
+        >{{ l.name }}</button>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -109,6 +122,9 @@ definePageMeta({ middleware: 'auth' })
 
 const auth = useAuthStore()
 const user = computed(() => auth.user)
+
+const { t, locale, setLocale, locales } = useI18n()
+const availableLocales = computed(() => locales.value as Array<{ code: string; name: string }>)
 
 const initials = computed(() =>
   user.value?.name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'U'

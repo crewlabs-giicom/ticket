@@ -241,9 +241,14 @@ watch(() => chatWidget.incomingMessage, (msg) => {
   scrollToBottom()
 })
 
-onMounted(async () => {
+async function loadThread() {
+  pending.value = true
   await fetchMessages()
   await markRead()
   scrollToBottom()
-})
+}
+
+watch(() => props.ticketId, loadThread)
+
+onMounted(loadThread)
 </script>

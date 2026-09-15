@@ -115,6 +115,10 @@
                     @click="setStatus(r, 'standalone')"
                     class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
                   >Standalone</button>
+                  <button
+                    @click="openDoneModal(r)"
+                    class="text-xs px-2 py-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                  >{{ t('requests.forceDone') }}</button>
                 </template>
               </div>
             </td>
@@ -174,6 +178,31 @@
           <button @click="showCreateModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
           <button @click="createRequest" :disabled="creating" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
             {{ creating ? 'Creating...' : 'Create Request' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Force Done Modal -->
+    <div v-if="showDoneModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div class="flex items-center justify-between px-6 py-4 border-b">
+          <h2 class="text-lg font-semibold">{{ t('requests.forceDoneTitle', { title: doneTarget?.title }) }}</h2>
+          <button @click="showDoneModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-sm text-gray-500">{{ t('requests.forceDoneDescription') }}</p>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('common.reason') }} <span class="text-red-500">*</span></label>
+            <textarea v-model="doneReason" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" :placeholder="t('requests.reasonPlaceholder')" />
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t">
+          <button @click="showDoneModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button @click="submitForceDone" :disabled="!doneReason.trim() || doneSubmitting" class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+            {{ doneSubmitting ? 'Submitting...' : 'Confirm Done' }}
           </button>
         </div>
       </div>
@@ -334,6 +363,7 @@
 import { useAuthStore } from '~/stores/auth'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const requests = ref<any[]>([])
 const projects = ref<any[]>([])
@@ -350,6 +380,10 @@ const selectedIds = ref<number[]>([])
 const showCreateModal = ref(false)
 const showGroupModal = ref(false)
 const showEditModal = ref(false)
+const showDoneModal = ref(false)
+const doneTarget = ref<any>(null)
+const doneReason = ref('')
+const doneSubmitting = ref(false)
 const showViewModal = ref(false)
 const viewingRequest = ref<any>(null)
 const creating = ref(false)
@@ -485,6 +519,24 @@ async function saveEdit() {
 async function setStatus(r: any, action: 'reject' | 'standalone') {
   await $fetch(`/api/requests/${r.id}/${action}`, { method: 'PATCH' })
   await loadRequests()
+}
+
+function openDoneModal(r: any) {
+  doneTarget.value = r
+  doneReason.value = ''
+  showDoneModal.value = true
+}
+
+async function submitForceDone() {
+  if (!doneReason.value.trim() || !doneTarget.value) return
+  doneSubmitting.value = true
+  try {
+    await $fetch(`/api/requests/${doneTarget.value.id}/done`, { method: 'PATCH', body: { reason: doneReason.value.trim() } })
+    showDoneModal.value = false
+    await loadRequests()
+  } finally {
+    doneSubmitting.value = false
+  }
 }
 
 async function doGroup() {

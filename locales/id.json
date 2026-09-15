@@ -1,0 +1,46 @@
+{
+  "common": {
+    "save": "Simpan",
+    "cancel": "Batal",
+    "delete": "Hapus",
+    "edit": "Edit",
+    "add": "Tambah",
+    "search": "Cari",
+    "loading": "Memuat...",
+    "success": "Berhasil",
+    "error": "Gagal",
+    "or": "atau",
+    "close": "Tutup",
+    "confirm": "Konfirmasi",
+    "reason": "Alasan"
+  },
+  "login": {
+    "welcome": "Welcome",
+    "subtitle": "Masuk ke Shadow Care",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Masuk",
+    "submitting": "Masuk...",
+    "or": "atau",
+    "hrisButton": "Login via HRIS giisystem",
+    "hrisTitle": "Masuk menggunakan akun HRIS giisystem",
+    "hrisEmail": "Email HRIS",
+    "hrisPassword": "Password HRIS",
+    "hrisSubmit": "Masuk via HRIS",
+    "hrisSubmitting": "Verifikasi...",
+    "hrisRequired": "Email dan password wajib diisi",
+    "hrisFailed": "Akun HRIS tidak ditemukan atau password salah",
+    "noAccount": "Belum punya akun?",
+    "register": "Daftar"
+  },
+  "profile": {
+    "language": "Bahasa"
+  },
+  "requests": {
+    "forceDone": "Force Done",
+    "forceDoneTitle": "Force Done: {title}",
+    "forceDoneDescription": "Ini akan melewati alur PRD normal dan langsung menandai request sebagai Done. Silakan berikan alasan.",
+    "reasonPlaceholder": "Kenapa request ini langsung ditandai Done?",
+    "reasonRequired": "Alasan bypass wajib diisi"
+  }
+}
