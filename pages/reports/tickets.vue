@@ -6,22 +6,22 @@
       <div class="stat-card">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Avg SLA</span>
         <span class="text-2xl font-bold text-slate-900 mt-1">{{ stats.avgSla ?? '—' }}</span>
-        <span class="text-xs text-slate-400">Waktu rata-rata resolve</span>
+        <span class="text-xs text-slate-400">{{ tt('reportsTickets.avgResolveTime') }}</span>
       </div>
       <div class="stat-card border-l-4 border-l-blue-400">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Open</span>
         <span class="text-2xl font-bold text-blue-600 mt-1">{{ stats.open }}</span>
-        <span class="text-xs text-slate-400">Belum diselesaikan</span>
+        <span class="text-xs text-slate-400">{{ tt('reportsTickets.notResolvedYet') }}</span>
       </div>
       <div class="stat-card border-l-4 border-l-green-400">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Resolved</span>
         <span class="text-2xl font-bold text-green-600 mt-1">{{ stats.resolved }}</span>
-        <span class="text-xs text-slate-400">Sudah diselesaikan</span>
+        <span class="text-xs text-slate-400">{{ tt('reportsTasks.alreadyDone') }}</span>
       </div>
       <div class="stat-card border-l-4 border-l-red-400">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">SLA Breach</span>
         <span class="text-2xl font-bold text-red-600 mt-1">{{ stats.breached }}</span>
-        <span class="text-xs text-slate-400">Melewati batas SLA</span>
+        <span class="text-xs text-slate-400">{{ tt('reportsTickets.pastSlaLimit') }}</span>
       </div>
     </div>
 
@@ -29,7 +29,7 @@
     <div class="card p-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-3">
         <div class="flex flex-col gap-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Tanggal Dibuat</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ tt('reportsTasks.createdDate') }}</label>
           <div class="flex items-center gap-1.5">
             <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
             <span class="text-xs text-slate-400 flex-shrink-0">—</span>
@@ -42,7 +42,7 @@
           <AppMultiSelect
             v-model="filters.status_ids"
             :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
-            placeholder="Semua Status"
+            :placeholder="tt('tickets.allStatus')"
           />
         </div>
 
@@ -50,17 +50,17 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Assignee</label>
           <AppSelect
             v-model="filters.assigned_to"
-            :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua Assignee"
+            :options="[{ value: '', label: tt('tickets.allAssignee') }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :placeholder="tt('tickets.allAssignee')"
           />
         </div>
 
         <div class="flex flex-col gap-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Dibuat Oleh</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ tt('reportsTasks.createdBy') }}</label>
           <AppSelect
             v-model="filters.created_by"
-            :options="[{ value: '', label: 'Semua User' }, ...allUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua User"
+            :options="[{ value: '', label: tt('reportsTasks.allUsers') }, ...allUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :placeholder="tt('reportsTasks.allUsers')"
           />
         </div>
 
@@ -68,8 +68,8 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Project</label>
           <AppSelect
             v-model="filters.project_id"
-            :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-            placeholder="Semua Project"
+            :options="[{ value: '', label: tt('tickets.allProject') }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+            :placeholder="tt('tickets.allProject')"
           />
         </div>
 
@@ -77,7 +77,7 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">SLA Breach</label>
           <label class="flex items-center gap-2 cursor-pointer h-9 px-3 border border-slate-200 rounded-lg bg-white hover:border-slate-300 transition-colors w-fit">
             <input v-model="filters.sla_breach" type="checkbox" class="w-3.5 h-3.5 rounded accent-red-500" />
-            <span class="text-sm text-slate-600">Hanya yang breach</span>
+            <span class="text-sm text-slate-600">{{ tt('reportsTickets.onlyBreached') }}</span>
           </label>
         </div>
 
@@ -85,17 +85,17 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Due Date</label>
           <label class="flex items-center gap-2 cursor-pointer h-9 px-3 border border-slate-200 rounded-lg bg-white hover:border-slate-300 transition-colors w-fit">
             <input v-model="filters.extended" type="checkbox" class="w-3.5 h-3.5 rounded accent-purple-500" />
-            <span class="text-sm text-slate-600">Hanya yang pernah diperpanjang</span>
+            <span class="text-sm text-slate-600">{{ tt('reportsTickets.onlyEverExtended') }}</span>
           </label>
         </div>
 
         <div class="flex flex-col gap-1 justify-end sm:col-span-2 lg:col-span-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">Aksi</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">{{ tt('reportsWeekly.action') }}</label>
           <div class="flex items-center gap-2">
             <AppRefreshButton :loading="loading" @click="handleRefresh" />
             <button @click="exportExcel" :disabled="exporting || !tickets.length" class="inline-flex items-center gap-1.5 btn-ghost text-xs border border-slate-200 disabled:opacity-40">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              {{ exporting ? 'Mengekspor...' : 'Export Excel' }}
+              {{ exporting ? tt('reportsWeekly.exporting') : 'Export Excel' }}
             </button>
           </div>
         </div>
@@ -110,23 +110,23 @@
             <tr>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Project</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">Menu</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Dibuat Oleh</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">{{ tt('reportsTasks.createdBy') }}</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Assignee</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Kode</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Judul</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{{ tt('reportsTickets.code') }}</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ tt('reports.titleLabel') }}</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Status</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">Tgl Buat</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">Tgl Resolve</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">{{ tt('reportsTasks.createdDateShort') }}</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">{{ tt('reportsTickets.resolveDateShort') }}</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">SLA</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Breach</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-if="loading">
-              <td colspan="11" class="text-center py-10 text-slate-400 text-sm">Memuat data...</td>
+              <td colspan="11" class="text-center py-10 text-slate-400 text-sm">{{ tt('reportsWeekly.loadingData') }}</td>
             </tr>
             <tr v-else-if="!tickets.length">
-              <td colspan="11" class="text-center py-10 text-slate-400 text-sm">Tidak ada data</td>
+              <td colspan="11" class="text-center py-10 text-slate-400 text-sm">{{ tt('reports.noData') }}</td>
             </tr>
             <tr v-for="t in tickets" :key="t.id" class="hover:bg-slate-50 transition-colors">
               <td class="px-4 py-2.5"><span class="text-xs text-slate-600">{{ t.project_name }}</span></td>
@@ -163,14 +163,14 @@
       <div v-if="pagination.total > 0" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 bg-white gap-3 flex-wrap">
         <div class="flex items-center gap-2">
           <span class="text-xs text-slate-500">
-            {{ Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total) }}–{{ Math.min(pagination.page * pagination.limit, pagination.total) }} dari {{ pagination.total }}
+            {{ Math.min((pagination.page - 1) * pagination.limit + 1, pagination.total) }}–{{ Math.min(pagination.page * pagination.limit, pagination.total) }} {{ tt('reportsDaily.of') }} {{ pagination.total }}
           </span>
           <select
             :value="pagination.limit"
             @change="onLimitChange(Number(($event.target as HTMLSelectElement).value))"
             class="text-xs border border-slate-200 rounded-lg px-2 py-1 text-slate-600 bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-300"
           >
-            <option v-for="n in [10, 25, 50, 100]" :key="n" :value="n">{{ n }} / hal</option>
+            <option v-for="n in [10, 25, 50, 100]" :key="n" :value="n">{{ n }} / {{ tt('reportsTickets.pageShort') }}</option>
           </select>
         </div>
         <div v-if="pagination.totalPages > 1" class="flex items-center gap-1">
@@ -200,6 +200,7 @@
 import * as XLSX from 'xlsx'
 
 definePageMeta({ middleware: 'auth' })
+const { t: tt } = useI18n()
 const auth = useAuthStore()
 const tabs = useTabStore()
 const { fmtDate } = useDate()
@@ -319,13 +320,13 @@ async function exportExcel() {
     const rows = (res.data as any[]).map((t: any) => ({
       'Project': t.project_name,
       'Menu': t.system_menu_name || '—',
-      'Dibuat Oleh': t.created_by_name,
+      [tt('reportsTasks.createdBy')]: t.created_by_name,
       'Assignee': t.assigned_to_name || '—',
-      'Kode': t.ticket_number,
-      'Judul': t.title,
+      [tt('reportsTickets.code')]: t.ticket_number,
+      [tt('reports.titleLabel')]: t.title,
       'Status': t.status_name,
-      'Tgl Buat': fmtDate(t.created_at),
-      'Tgl Resolve': fmtDate(t.resolved_at || t.closed_at) || '—',
+      [tt('reportsTasks.createdDateShort')]: fmtDate(t.created_at),
+      [tt('reportsTickets.resolveDateShort')]: fmtDate(t.resolved_at || t.closed_at) || '—',
       'SLA': fmtDuration(t.created_at, t.resolved_at || t.closed_at),
       'SLA Breach': t.sla_breached ? 'Ya' : 'Tidak',
     }))

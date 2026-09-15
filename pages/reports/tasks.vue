@@ -6,22 +6,22 @@
       <div class="stat-card">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Total Tasks</span>
         <span class="text-2xl font-bold text-slate-900 mt-1">{{ stats.total }}</span>
-        <span class="text-xs text-slate-400">Semua task</span>
+        <span class="text-xs text-slate-400">{{ tt('reportsTasks.allTasks') }}</span>
       </div>
       <div class="stat-card border-l-4 border-l-blue-400">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Open</span>
         <span class="text-2xl font-bold text-blue-600 mt-1">{{ stats.open }}</span>
-        <span class="text-xs text-slate-400">Belum selesai</span>
+        <span class="text-xs text-slate-400">{{ tt('dashboard.notDoneYet') }}</span>
       </div>
       <div class="stat-card border-l-4 border-l-green-400">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Completed</span>
         <span class="text-2xl font-bold text-green-600 mt-1">{{ stats.done }}</span>
-        <span class="text-xs text-slate-400">Sudah selesai</span>
+        <span class="text-xs text-slate-400">{{ tt('reportsTasks.alreadyDone') }}</span>
       </div>
       <div class="stat-card border-l-4 border-l-violet-400">
         <span class="text-[11px] text-slate-500 uppercase tracking-wide font-medium">Linked Tickets</span>
         <span class="text-2xl font-bold text-violet-600 mt-1">{{ stats.totalTickets }}</span>
-        <span class="text-xs text-slate-400">Total ticket terhubung</span>
+        <span class="text-xs text-slate-400">{{ tt('reportsTasks.totalLinkedTickets') }}</span>
       </div>
     </div>
 
@@ -29,7 +29,7 @@
     <div class="card p-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-3">
         <div class="flex flex-col gap-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Tanggal Dibuat</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ tt('reportsTasks.createdDate') }}</label>
           <div class="flex items-center gap-1.5">
             <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
             <span class="text-xs text-slate-400 flex-shrink-0">—</span>
@@ -42,7 +42,7 @@
           <AppMultiSelect
             v-model="filters.statuses"
             :options="STATUS_OPTIONS"
-            placeholder="Semua Status"
+            :placeholder="tt('tickets.allStatus')"
           />
         </div>
 
@@ -50,17 +50,17 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Assignee</label>
           <AppSelect
             v-model="filters.assigned_to"
-            :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua Assignee"
+            :options="[{ value: '', label: tt('tickets.allAssignee') }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :placeholder="tt('tickets.allAssignee')"
           />
         </div>
 
         <div class="flex flex-col gap-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Dibuat Oleh</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ tt('reportsTasks.createdBy') }}</label>
           <AppSelect
             v-model="filters.created_by"
-            :options="[{ value: '', label: 'Semua User' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua User"
+            :options="[{ value: '', label: tt('reportsTasks.allUsers') }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :placeholder="tt('reportsTasks.allUsers')"
           />
         </div>
 
@@ -68,18 +68,18 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Project</label>
           <AppSelect
             v-model="filters.project_id"
-            :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-            placeholder="Semua Project"
+            :options="[{ value: '', label: tt('tickets.allProject') }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+            :placeholder="tt('tickets.allProject')"
           />
         </div>
 
         <div class="flex flex-col gap-1 justify-end sm:col-span-2 lg:col-span-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">Aksi</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">{{ tt('reportsWeekly.action') }}</label>
           <div class="flex items-center gap-2">
             <AppRefreshButton :loading="loading" @click="handleRefresh" />
             <button @click="exportExcel" :disabled="exporting || !tasks.length" class="inline-flex items-center gap-1.5 btn-ghost text-xs border border-slate-200 disabled:opacity-40">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              {{ exporting ? 'Mengekspor...' : 'Export Excel' }}
+              {{ exporting ? tt('reportsWeekly.exporting') : 'Export Excel' }}
             </button>
           </div>
         </div>
@@ -93,22 +93,22 @@
           <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Project</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Dibuat Oleh</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">{{ tt('reportsTasks.createdBy') }}</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden md:table-cell">Assignee</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Task</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Status</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">Tgl Buat</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">Tgl Selesai</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">Durasi</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">{{ tt('reportsTasks.createdDateShort') }}</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden xl:table-cell">{{ tt('reportsTasks.doneDateShort') }}</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap hidden lg:table-cell">{{ tt('reports.duration') }}</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Tickets</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-if="loading">
-              <td colspan="9" class="text-center py-10 text-slate-400 text-sm">Memuat data...</td>
+              <td colspan="9" class="text-center py-10 text-slate-400 text-sm">{{ tt('reportsWeekly.loadingData') }}</td>
             </tr>
             <tr v-else-if="!tasks.length">
-              <td colspan="9" class="text-center py-10 text-slate-400 text-sm">Tidak ada data</td>
+              <td colspan="9" class="text-center py-10 text-slate-400 text-sm">{{ tt('reports.noData') }}</td>
             </tr>
             <tr v-for="t in tasks" :key="t.id" class="hover:bg-slate-50 transition-colors">
               <td class="px-4 py-2.5"><span class="text-xs text-slate-600">{{ t.project_name }}</span></td>
@@ -182,6 +182,7 @@
 import * as XLSX from 'xlsx'
 
 definePageMeta({ middleware: 'auth' })
+const { t: tt } = useI18n()
 const auth = useAuthStore()
 const { fmtDate } = useDate()
 
@@ -314,13 +315,13 @@ async function exportExcel() {
     const res = await $fetch('/api/tasks', { query: buildQuery({ limit: 9999, page: 1, export: '1' }) }) as any
     const rows = (res.data as any[]).map((t: any) => ({
       'Project': t.project_name,
-      'Dibuat Oleh': t.created_by_name || '—',
+      [tt('reportsTasks.createdBy')]: t.created_by_name || '—',
       'Assignee': t.assigned_to_name || '—',
       'Task': t.title,
       'Status': STATUS_LABELS[t.status] ?? t.status,
       'Tgl Buat': fmtDate(t.created_at),
       'Tgl Selesai': fmtDate(t.completed_at) || '—',
-      'Durasi': fmtDuration(t.created_at, t.completed_at),
+      [tt('reports.duration')]: fmtDuration(t.created_at, t.completed_at),
       'Linked Tickets': t.ticket_count ?? 0,
     }))
     const ws = XLSX.utils.json_to_sheet(rows)

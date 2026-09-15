@@ -3,15 +3,15 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
       <div>
-        <h1 class="text-2xl font-bold text-slate-800">Master Timeline</h1>
-        <p class="text-sm text-slate-400 mt-0.5">Konsolidasi timeline lintas project</p>
+        <h1 class="text-2xl font-bold text-slate-800">{{ tt('timeline.title') }}</h1>
+        <p class="text-sm text-slate-400 mt-0.5">{{ tt('timeline.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="loading" @click="load" />
         <div class="flex items-center gap-1 border border-slate-200 rounded-lg overflow-hidden">
           <button v-for="s in ['week','month'] as const" :key="s" @click="tlScale = s"
             :class="['text-xs px-3 py-1.5 transition-colors', tlScale === s ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-50']">
-            {{ s === 'week' ? 'Minggu' : 'Bulan' }}
+            {{ s === 'week' ? tt('timeline.week') : tt('timeline.month') }}
           </button>
         </div>
       </div>
@@ -22,17 +22,17 @@
       <div class="flex items-center gap-2">
         <span class="text-xs text-slate-400 font-medium">Project</span>
         <AppSelect v-model="filterProjectId"
-          :options="[{ value: '', label: 'Semua Project' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
-          placeholder="Semua Project" class="w-44" />
+          :options="[{ value: '', label: tt('tickets.allProject') }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+          :placeholder="tt('tickets.allProject')" class="w-44" />
       </div>
       <div class="flex items-center gap-2">
         <span class="text-xs text-slate-400 font-medium">Assignee</span>
         <AppSelect v-model="filterAssignee"
-          :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map(u => ({ value: u.id, label: u.name }))]"
-          placeholder="Semua" class="w-40" />
+          :options="[{ value: '', label: tt('tickets.allAssignee') }, ...staffUsers.map(u => ({ value: u.id, label: u.name }))]"
+          :placeholder="tt('common.all')" class="w-40" />
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-xs text-slate-400 font-medium">Tampilkan</span>
+        <span class="text-xs text-slate-400 font-medium">{{ tt('timeline.show') }}</span>
         <label v-for="t in showTypes" :key="t.key" class="flex items-center gap-1 text-xs cursor-pointer">
           <input type="checkbox" v-model="t.visible" class="rounded accent-indigo-600" />
           {{ t.label }}
@@ -46,13 +46,13 @@
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-blue-400 inline-block"></span>Task</span>
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-amber-400 inline-block"></span>QC Form</span>
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-red-400 inline-block"></span>Overdue</span>
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-400 inline-block"></span>Selesai</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-400 inline-block"></span>{{ tt('taskPanel.done') }}</span>
       <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rotate-45 bg-fuchsia-500 inline-block"></span>Milestone</span>
     </div>
 
     <!-- Summary per assignee -->
     <div v-if="assigneeSummary.length" class="mb-6">
-      <h2 class="text-sm font-semibold text-slate-700 mb-3">Ringkasan per Assignee</h2>
+      <h2 class="text-sm font-semibold text-slate-700 mb-3">{{ tt('timeline.summaryPerAssignee') }}</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div v-for="a in assigneeSummary" :key="a.name" class="card p-4">
           <div class="flex items-center gap-2 mb-2">
@@ -64,11 +64,11 @@
           <div class="grid grid-cols-3 gap-2 text-center text-xs">
             <div class="bg-slate-50 rounded-lg py-2">
               <p class="text-lg font-bold text-slate-700">{{ a.total }}</p>
-              <p class="text-slate-400">Total Task</p>
+              <p class="text-slate-400">{{ tt('timeline.totalTask') }}</p>
             </div>
             <div class="bg-emerald-50 rounded-lg py-2">
               <p class="text-lg font-bold text-emerald-600">{{ a.done }}</p>
-              <p class="text-emerald-500">Selesai</p>
+              <p class="text-emerald-500">{{ tt('taskPanel.done') }}</p>
             </div>
             <div class="bg-red-50 rounded-lg py-2">
               <p class="text-lg font-bold text-red-500">{{ a.overdue }}</p>
@@ -82,11 +82,11 @@
       </div>
     </div>
 
-    <div v-if="loading" class="text-center py-16 text-slate-400">Memuat…</div>
+    <div v-if="loading" class="text-center py-16 text-slate-400">{{ tt('common.loading') }}</div>
     <div v-else-if="!filteredGroups.length" class="card p-12 text-center text-slate-400">
       <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      <p class="text-sm">Tidak ada data timeline yang cocok.</p>
-      <p class="text-xs mt-1 text-slate-300">Coba ubah filter atau isi due date pada PRD / Task / QC Form.</p>
+      <p class="text-sm">{{ tt('timeline.noMatchingData') }}</p>
+      <p class="text-xs mt-1 text-slate-300">{{ tt('timeline.tryChangingFilter') }}</p>
     </div>
 
     <!-- Gantt -->
@@ -94,7 +94,7 @@
       <div :style="{ minWidth: (208 + tlColumns.length * tlColWidth) + 'px' }">
         <!-- Header row (stays put — only the body below scrolls) -->
         <div class="flex border-b border-slate-200 bg-slate-50 sticky top-0 z-10">
-          <div class="w-52 flex-shrink-0 px-3 py-2 text-xs font-semibold text-slate-500 border-r border-slate-200 sticky left-0 bg-slate-50 z-20">Item</div>
+          <div class="w-52 flex-shrink-0 px-3 py-2 text-xs font-semibold text-slate-500 border-r border-slate-200 sticky left-0 bg-slate-50 z-20">{{ tt('timeline.item') }}</div>
           <div class="flex-1 flex">
             <div v-for="col in tlColumns" :key="col.key"
               class="flex-shrink-0 text-center text-[10px] text-slate-400 py-2 border-r border-slate-100 font-medium"
@@ -158,7 +158,7 @@
                         QC #{{ qc.sequence }}{{ qc.sequence > 1 ? ' (Loop)' : '' }}
                       </NuxtLink>
                       <span :class="['text-[10px] px-1 py-px rounded font-medium', qc.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700']">
-                        {{ qc.status === 'completed' ? 'Selesai' : 'Aktif' }}
+                        {{ qc.status === 'completed' ? tt('taskPanel.done') : tt('timeline.active') }}
                       </span>
                     </div>
                     <div class="flex-1 relative h-8">
@@ -177,6 +177,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t: tt } = useI18n()
 
 const loading = ref(false)
 const tlScale = ref<'week' | 'month'>('week')

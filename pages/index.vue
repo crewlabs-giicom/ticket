@@ -7,24 +7,24 @@
     <!-- Stat cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="stat-card">
-        <span class="text-xs text-slate-500">Ticket Masuk Hari Ini</span>
+        <span class="text-xs text-slate-500">{{ t('dashboard.ticketsToday') }}</span>
         <span class="text-2xl font-bold text-slate-900">{{ d?.stats?.tickets_today ?? 0 }}</span>
-        <span class="text-xs text-slate-400">total baru</span>
+        <span class="text-xs text-slate-400">{{ t('dashboard.totalNew') }}</span>
       </div>
       <div class="stat-card">
-        <span class="text-xs text-slate-500">Selesai Hari Ini</span>
+        <span class="text-xs text-slate-500">{{ t('dashboard.doneToday') }}</span>
         <span class="text-2xl font-bold text-green-600">{{ d?.stats?.tickets_closed_today ?? 0 }}</span>
         <span class="text-xs text-slate-400">resolved/closed</span>
       </div>
       <div class="stat-card">
-        <span class="text-xs text-slate-500">Ticket Open</span>
+        <span class="text-xs text-slate-500">{{ t('dashboard.ticketsOpen') }}</span>
         <span class="text-2xl font-bold text-blue-600">{{ d?.stats?.tickets_open ?? 0 }}</span>
-        <span class="text-xs text-slate-400">belum selesai</span>
+        <span class="text-xs text-slate-400">{{ t('dashboard.notDoneYet') }}</span>
       </div>
       <div class="stat-card">
         <span class="text-xs text-slate-500">Overdue</span>
         <span class="text-2xl font-bold text-red-600">{{ d?.stats?.tickets_overdue ?? 0 }}</span>
-        <span class="text-xs text-slate-400">lewat SLA</span>
+        <span class="text-xs text-slate-400">{{ t('dashboard.pastSla') }}</span>
       </div>
     </div>
 
@@ -35,11 +35,11 @@
         <span class="text-xl font-bold text-slate-900">{{ d?.sla?.avg_first_response_hrs ?? '-' }}j</span>
       </div>
       <div class="stat-card border-l-4 border-l-blue-400">
-        <span class="text-xs text-slate-500">Avg Resolusi</span>
+        <span class="text-xs text-slate-500">{{ t('dashboard.avgResolution') }}</span>
         <span class="text-xl font-bold text-slate-900">{{ d?.sla?.avg_resolution_hrs ?? '-' }}j</span>
       </div>
       <div class="stat-card border-l-4 border-l-green-400">
-        <span class="text-xs text-slate-500">SLA Terpenuhi</span>
+        <span class="text-xs text-slate-500">{{ t('dashboard.slaMet') }}</span>
         <span class="text-xl font-bold text-green-600">{{ d?.sla?.sla_met_pct ?? 0 }}%</span>
       </div>
       <div class="stat-card" :class="(d?.sla?.sla_breach_pct ?? 0) > 20 ? 'border-l-4 border-l-red-400' : 'border-l-4 border-l-amber-400'">
@@ -52,14 +52,14 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <!-- Trend chart -->
       <div class="card p-5 lg:col-span-2">
-        <h3 class="text-sm font-semibold text-slate-900 mb-4">Ticket Masuk vs Selesai (30 hari)</h3>
+        <h3 class="text-sm font-semibold text-slate-900 mb-4">{{ t('dashboard.trendChartTitle') }}</h3>
         <div class="h-48">
           <Line v-if="trendData" :data="trendData" :options="lineOpts" />
         </div>
       </div>
       <!-- By status donut -->
       <div class="card p-5">
-        <h3 class="text-sm font-semibold text-slate-900 mb-4">Per Status</h3>
+        <h3 class="text-sm font-semibold text-slate-900 mb-4">{{ t('dashboard.perStatus') }}</h3>
         <div class="h-48">
           <Doughnut v-if="statusData" :data="statusData" :options="donutOpts" />
         </div>
@@ -72,24 +72,24 @@
       <div class="card p-5 lg:col-span-2">
         <h3 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          Ticket Overdue
+          {{ t('dashboard.overdueTickets') }}
         </h3>
-        <div v-if="!d?.overdue?.length" class="text-sm text-slate-400 py-4 text-center">Tidak ada ticket overdue</div>
+        <div v-if="!d?.overdue?.length" class="text-sm text-slate-400 py-4 text-center">{{ t('dashboard.noOverdueTickets') }}</div>
         <div v-else class="space-y-2">
-          <div v-for="t in d.overdue" :key="t.id" @click="tabs.openTab(t)" class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100">
-            <span :class="['priority-dot flex-shrink-0']" :style="{ background: t.priority_color }" />
+          <div v-for="ot in d.overdue" :key="ot.id" @click="tabs.openTab(ot)" class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100">
+            <span :class="['priority-dot flex-shrink-0']" :style="{ background: ot.priority_color }" />
             <div class="flex-1 min-w-0">
-              <p class="text-xs font-medium text-slate-900 truncate">{{ t.ticket_number }} — {{ t.title }}</p>
-              <p class="text-xs text-slate-400">{{ t.assigned_to_name || 'Unassigned' }} · <span class="text-red-500">{{ t.hours_overdue }}j terlambat</span></p>
+              <p class="text-xs font-medium text-slate-900 truncate">{{ ot.ticket_number }} — {{ ot.title }}</p>
+              <p class="text-xs text-slate-400">{{ ot.assigned_to_name || 'Unassigned' }} · <span class="text-red-500">{{ ot.hours_overdue }}{{ t('dashboard.hoursLate') }}</span></p>
             </div>
-            <span class="text-xs px-2 py-0.5 rounded-full text-white flex-shrink-0" :style="{ background: t.priority_color }">{{ t.priority_name }}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full text-white flex-shrink-0" :style="{ background: ot.priority_color }">{{ ot.priority_name }}</span>
           </div>
         </div>
       </div>
 
       <!-- Workload -->
       <div class="card p-5">
-        <h3 class="text-sm font-semibold text-slate-900 mb-3">Workload Staff</h3>
+        <h3 class="text-sm font-semibold text-slate-900 mb-3">{{ t('dashboard.workloadStaff') }}</h3>
         <div class="space-y-2">
           <div v-for="s in d?.workload" :key="s.id" class="flex items-center gap-2">
             <div class="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-semibold flex-shrink-0 overflow-hidden">
@@ -112,7 +112,7 @@
 
     <!-- Activity feed -->
     <div class="card p-5">
-      <h3 class="text-sm font-semibold text-slate-900 mb-3">Aktivitas Terbaru</h3>
+      <h3 class="text-sm font-semibold text-slate-900 mb-3">{{ t('dashboard.recentActivity') }}</h3>
       <div class="space-y-3">
         <div v-for="a in d?.activity" :key="a.ticket_id + a.created_at" class="flex items-start gap-3">
           <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-xs font-semibold flex-shrink-0 overflow-hidden">
@@ -120,7 +120,7 @@
             <span v-else>{{ a.user_name?.charAt(0) }}</span>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-xs text-slate-700"><span class="font-medium">{{ a.user_name }}</span> {{ a.type === 'ticket' ? 'membuat ticket' : 'membalas' }} <span class="text-primary-600 cursor-pointer hover:underline" @click="tabs.openTab({ id: a.ticket_id, ticket_number: a.ticket_number, title: a.message })">{{ a.ticket_number }}</span></p>
+            <p class="text-xs text-slate-700"><span class="font-medium">{{ a.user_name }}</span> {{ a.type === 'ticket' ? t('dashboard.createdTicket') : t('dashboard.replied') }} <span class="text-primary-600 cursor-pointer hover:underline" @click="tabs.openTab({ id: a.ticket_id, ticket_number: a.ticket_number, title: a.message })">{{ a.ticket_number }}</span></p>
             <p class="text-xs text-slate-400">{{ timeAgo(a.created_at) }}</p>
           </div>
         </div>
@@ -134,6 +134,7 @@ import { Line, Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler)
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const tabs = useTabStore()
 definePageMeta({ middleware: 'auth' })
@@ -144,10 +145,10 @@ const d = computed(() => (res.value as any)?.data)
 const trendData = computed(() => {
   const trend = d.value?.trend || []
   return {
-    labels: trend.map((t: any) => t.date?.slice(5)),
+    labels: trend.map((tr: any) => tr.date?.slice(5)),
     datasets: [
-      { label: 'Masuk', data: trend.map((t: any) => t.created), borderColor: '#6366f1', backgroundColor: '#6366f120', fill: true, tension: 0.4 },
-      { label: 'Selesai', data: trend.map((t: any) => t.closed), borderColor: '#22c55e', backgroundColor: '#22c55e20', fill: true, tension: 0.4 }
+      { label: t('dashboard.incoming'), data: trend.map((tr: any) => tr.created), borderColor: '#6366f1', backgroundColor: '#6366f120', fill: true, tension: 0.4 },
+      { label: t('dashboard.doneShort'), data: trend.map((tr: any) => tr.closed), borderColor: '#22c55e', backgroundColor: '#22c55e20', fill: true, tension: 0.4 }
     ]
   }
 })

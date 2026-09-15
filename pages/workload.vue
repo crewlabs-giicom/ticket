@@ -2,13 +2,13 @@
   <div class="p-6 max-w-6xl mx-auto">
     <div class="mb-6 flex items-start justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Workload View</h1>
-        <p class="text-sm text-gray-500 mt-1">Beban kerja per anggota tim — hanya terlihat oleh admin</p>
+        <h1 class="text-2xl font-bold text-gray-900">{{ t('workload.title') }}</h1>
+        <p class="text-sm text-gray-500 mt-1">{{ t('workload.subtitle') }}</p>
       </div>
       <AppRefreshButton :loading="pending" @click="refresh()" />
     </div>
 
-    <div v-if="pending" class="flex items-center justify-center h-48 text-gray-400">Memuat…</div>
+    <div v-if="pending" class="flex items-center justify-center h-48 text-gray-400">{{ t('common.loading') }}</div>
 
     <div v-else-if="data" class="space-y-3">
       <div
@@ -35,7 +35,7 @@
 
             <!-- Task breakdown bar -->
             <div class="mt-3">
-              <p class="text-xs text-gray-500 mb-1">Tasks aktif: {{ member.task_total - member.task_done }}</p>
+              <p class="text-xs text-gray-500 mb-1">{{ t('workload.activeTasks') }}: {{ member.task_total - member.task_done }}</p>
               <div class="flex h-2 rounded-full overflow-hidden gap-px w-full max-w-sm">
                 <div v-if="member.task_in_progress" :style="{ width: pct(member.task_in_progress, member.task_total) }" class="bg-blue-500"></div>
                 <div v-if="member.task_review" :style="{ width: pct(member.task_review, member.task_total) }" class="bg-amber-400"></div>
@@ -53,7 +53,7 @@
 
           <!-- Ticket stats -->
           <div class="flex-shrink-0 text-right text-sm">
-            <p class="text-gray-500 text-xs">Ticket aktif</p>
+            <p class="text-gray-500 text-xs">{{ t('workload.activeTickets') }}</p>
             <p class="text-xl font-bold text-gray-800">{{ member.ticket_active }}</p>
             <div class="flex gap-2 justify-end mt-2">
               <NuxtLink :to="`/tasks?assigned_to=${member.id}`" class="text-xs text-indigo-600 hover:underline">Tasks ↗</NuxtLink>
@@ -68,6 +68,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 const auth = useAuthStore()
 
 // Redirect non-admin

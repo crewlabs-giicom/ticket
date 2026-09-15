@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-xl font-bold text-slate-900">Projects</h1>
-        <p class="text-sm text-slate-500 mt-0.5">{{ projects.length }} project aktif</p>
+        <p class="text-sm text-slate-500 mt-0.5">{{ projects.length }} {{ t('projectsList.activeProjects') }}</p>
       </div>
       <AppRefreshButton :loading="pending" @click="refresh()" />
     </div>
@@ -31,7 +31,7 @@
                 {{ statusStyle(p.status).label }}
               </span>
             </div>
-            <p class="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{{ p.description || 'Tidak ada deskripsi' }}</p>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{{ p.description || t('projects.noDescription') }}</p>
           </div>
         </div>
 
@@ -74,7 +74,7 @@
                 style="margin-left: -8px"
               >+{{ p.member_count - 4 }}</span>
             </template>
-            <span v-else class="text-xs text-slate-400">Belum ada member</span>
+            <span v-else class="text-xs text-slate-400">{{ t('projects.noMembers') }}</span>
           </div>
 
           <!-- Ticket count -->
@@ -82,18 +82,19 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
             </svg>
-            {{ p.ticket_count }} tiket
+            {{ p.ticket_count }} {{ t('reports.ticketsLower') }}
           </div>
         </div>
       </NuxtLink>
     </div>
 
-    <div v-if="!projects.length" class="text-center py-16 text-slate-400 text-sm">Belum ada project.</div>
+    <div v-if="!projects.length" class="text-center py-16 text-slate-400 text-sm">{{ t('projectsList.noProjects') }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const { data, refresh, pending } = await useFetch('/api/projects')
 const projects = computed(() => ((data.value as any)?.data || []).filter((p: any) => p.is_active))

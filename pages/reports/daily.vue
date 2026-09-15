@@ -5,26 +5,26 @@
     <div class="card p-4">
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex flex-col gap-1 min-w-[160px]">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Tanggal</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ t('reportsDaily.date') }}</label>
           <input v-model="filters.date" type="date" class="input text-sm py-1.5" />
         </div>
         <div v-if="auth.isAdmin" class="flex flex-col gap-1 min-w-[180px]">
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">User</label>
           <AppSelect
             v-model="filters.user_id"
-            :options="[{ value: '', label: 'Semua Staff' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua Staff"
+            :options="[{ value: '', label: t('reportsDaily.allStaff') }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :placeholder="t('reportsDaily.allStaff')"
           />
         </div>
         <button @click="fetchReport" :disabled="loading"
           class="btn-primary text-sm py-1.5 px-4 flex items-center gap-1.5 disabled:opacity-50">
           <svg v-if="loading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
           <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          Tampilkan
+          {{ t('reports.show') }}
         </button>
         <div class="flex gap-1.5 ml-auto flex-wrap">
-          <button @click="setDate('today')" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Hari ini</button>
-          <button @click="setDate('yesterday')" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Kemarin</button>
+          <button @click="setDate('today')" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">{{ t('reportsDaily.todayLower') }}</button>
+          <button @click="setDate('yesterday')" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">{{ t('reportsDaily.yesterday') }}</button>
         </div>
       </div>
     </div>
@@ -39,7 +39,7 @@
       <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-xl px-4 py-2">
         <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
         <span class="text-sm font-semibold text-violet-700">{{ summary.tickets_count }}</span>
-        <span class="text-xs text-violet-400">ticket ditangani</span>
+        <span class="text-xs text-violet-400">{{ t('reportsDaily.ticketsHandled') }}</span>
       </div>
       <div v-if="summary.total_ticket_seconds > 0" class="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2">
         <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -61,7 +61,7 @@
         <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
           <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <h3 class="text-sm font-semibold text-slate-700">Task & Time Log</h3>
-          <span class="ml-auto text-xs text-slate-400">{{ timelogs.length }} entri</span>
+          <span class="ml-auto text-xs text-slate-400">{{ timelogs.length }} {{ t('reportsDaily.entries') }}</span>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -69,14 +69,14 @@
               <tr>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Task</th>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Project</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Mulai</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Selesai</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Durasi</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{{ t('reports.start') }}</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{{ t('reports.end') }}</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{{ t('reports.duration') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-if="!timelogs.length">
-                <td colspan="5" class="text-center py-8 text-slate-400 text-xs">Tidak ada timelog pada tanggal ini</td>
+                <td colspan="5" class="text-center py-8 text-slate-400 text-xs">{{ t('reportsDaily.noTimelogThisDate') }}</td>
               </tr>
               <tr v-for="tl in timelogs" :key="tl.id" class="hover:bg-slate-50/50">
                 <td class="px-3 py-2">
@@ -102,13 +102,13 @@
         </div>
         <!-- Per-task total summary -->
         <div v-if="taskGroups.length" class="border-t border-slate-100 px-4 py-2.5 space-y-1.5">
-          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Ringkasan per Task</p>
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{{ t('reportsDaily.summaryPerTask') }}</p>
           <div v-for="g in taskGroups" :key="g.task_id" class="flex items-center justify-between">
             <span class="text-xs text-slate-600 truncate max-w-[200px]">{{ g.task_title }}</span>
             <span class="text-xs font-semibold font-mono text-indigo-600 ml-2 flex-shrink-0">{{ fmtSecs(g.total_seconds) }}</span>
           </div>
           <div class="flex items-center justify-between border-t border-dashed border-slate-200 pt-1.5 mt-1.5">
-            <span class="text-xs font-semibold text-slate-700">Total</span>
+            <span class="text-xs font-semibold text-slate-700">{{ t('reports.total') }}</span>
             <span class="text-xs font-bold font-mono text-indigo-700">{{ fmtSecs(summary.total_task_seconds) }}</span>
           </div>
         </div>
@@ -118,22 +118,22 @@
       <div class="card overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
           <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-          <h3 class="text-sm font-semibold text-slate-700">Ticket Ditangani</h3>
-          <span class="ml-auto text-xs text-slate-400">{{ ticketActivities.length }} respons</span>
+          <h3 class="text-sm font-semibold text-slate-700">{{ t('reportsDaily.ticketsHandledTitle') }}</h3>
+          <span class="ml-auto text-xs text-slate-400">{{ ticketActivities.length }} {{ t('reportsDaily.responses') }}</span>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Ticket</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Judul</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{{ t('reports.titleLabel') }}</th>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Resolved</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Durasi</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">{{ t('reports.duration') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
               <tr v-if="!ticketActivities.length">
-                <td colspan="4" class="text-center py-8 text-slate-400 text-xs">Tidak ada aktivitas ticket pada tanggal ini</td>
+                <td colspan="4" class="text-center py-8 text-slate-400 text-xs">{{ t('reportsDaily.noTicketActivityThisDate') }}</td>
               </tr>
               <tr v-for="ta in pagedTickets" :key="ta.id" class="hover:bg-slate-50/50">
                 <td class="px-3 py-2 whitespace-nowrap">
@@ -157,12 +157,12 @@
         </div>
         <!-- Ticket time total -->
         <div v-if="summary.total_ticket_seconds > 0" class="border-t border-slate-100 px-4 py-2.5 flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-700">Total ticket time</span>
+          <span class="text-xs font-semibold text-slate-700">{{ t('reportsDaily.totalTicketTime') }}</span>
           <span class="text-xs font-bold font-mono text-emerald-600">{{ fmtSecs(summary.total_ticket_seconds) }}</span>
         </div>
         <!-- Ticket pagination -->
         <div v-if="ticketTotalPages > 1" class="flex items-center justify-between px-4 py-2.5 border-t border-slate-100 text-xs text-slate-500">
-          <span>{{ (ticketPage - 1) * TICKET_PER_PAGE + 1 }}–{{ Math.min(ticketPage * TICKET_PER_PAGE, ticketActivities.length) }} dari {{ ticketActivities.length }}</span>
+          <span>{{ (ticketPage - 1) * TICKET_PER_PAGE + 1 }}–{{ Math.min(ticketPage * TICKET_PER_PAGE, ticketActivities.length) }} {{ t('reportsDaily.of') }} {{ ticketActivities.length }}</span>
           <div class="flex items-center gap-1">
             <button :disabled="ticketPage <= 1" @click="ticketPage--"
               class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">‹</button>
@@ -176,8 +176,8 @@
       <div v-if="qcTimelogs.length > 0" class="card overflow-hidden lg:col-span-2">
         <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
           <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <h3 class="text-sm font-semibold text-slate-700">QC Time Log</h3>
-          <span class="ml-auto text-xs text-slate-400">{{ qcTimelogs.length }} entri</span>
+          <h3 class="text-sm font-semibold text-slate-700">{{ t('reportsDaily.qcTimeLog') }}</h3>
+          <span class="ml-auto text-xs text-slate-400">{{ qcTimelogs.length }} {{ t('reportsDaily.entries') }}</span>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -185,9 +185,9 @@
               <tr>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Form QC</th>
                 <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Project</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Mulai</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Selesai</th>
-                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Durasi</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{{ t('reports.start') }}</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{{ t('reports.end') }}</th>
+                <th class="text-left px-3 py-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{{ t('reports.duration') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
@@ -214,13 +214,13 @@
         </div>
         <!-- Per-QC form grouped summary -->
         <div v-if="qcGroups.length" class="border-t border-slate-100 px-4 py-2.5 space-y-1.5">
-          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Ringkasan per Form QC</p>
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{{ t('reportsDaily.summaryPerQcForm') }}</p>
           <div v-for="g in qcGroups" :key="g.qc_form_id" class="flex items-center justify-between">
             <span class="text-xs text-slate-600 truncate max-w-[300px]">{{ g.task_title }} <span class="text-amber-500">QC #{{ g.form_sequence }}</span><span class="text-slate-400"> · {{ g.project_name }}</span></span>
             <span class="text-xs font-semibold font-mono text-amber-600 ml-2 flex-shrink-0">{{ fmtSecs(g.total_seconds) }}</span>
           </div>
           <div class="flex items-center justify-between border-t border-dashed border-slate-200 pt-1.5 mt-1.5">
-            <span class="text-xs font-semibold text-slate-700">Total</span>
+            <span class="text-xs font-semibold text-slate-700">{{ t('reports.total') }}</span>
             <span class="text-xs font-bold font-mono text-amber-700">{{ fmtSecs(summary.total_qc_seconds) }}</span>
           </div>
         </div>
@@ -232,13 +232,13 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
-          <h3 class="text-sm font-semibold text-slate-700">Teks Siap Copas</h3>
+          <h3 class="text-sm font-semibold text-slate-700">{{ t('reportsDaily.copyPasteText') }}</h3>
         </div>
         <button @click="copyText"
           :class="['inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all', copied ? 'border-green-300 bg-green-50 text-green-700' : 'border-slate-200 hover:bg-slate-50 text-slate-600']">
           <svg v-if="copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
           <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10"/></svg>
-          {{ copied ? 'Tersalin!' : 'Copy' }}
+          {{ copied ? t('reportsDaily.copied') : 'Copy' }}
         </button>
       </div>
       <textarea
@@ -271,6 +271,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 const auth = useAuthStore()
 const tabs = useTabStore()
 

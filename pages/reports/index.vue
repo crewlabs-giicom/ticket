@@ -4,7 +4,7 @@
     <div class="card p-4 space-y-3">
       <!-- Preset range buttons -->
       <div>
-        <label class="label text-xs mb-1">Rentang Waktu</label>
+        <label class="label text-xs mb-1">{{ t('reports.dateRange') }}</label>
         <div class="flex flex-wrap gap-1">
           <button v-for="p in presets" :key="p.key" @click="setRange(p.key)"
             :class="['px-3 py-1.5 text-xs rounded-lg border font-medium transition-colors', activePreset === p.key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300']">
@@ -13,33 +13,33 @@
         </div>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label class="label text-xs">Dari</label><input v-model="filters.from" type="date" class="input text-sm w-full" @change="activePreset = ''" /></div>
-        <div><label class="label text-xs">Sampai</label><input v-model="filters.to" type="date" class="input text-sm w-full" @change="activePreset = ''" /></div>
+        <div><label class="label text-xs">{{ t('reports.from') }}</label><input v-model="filters.from" type="date" class="input text-sm w-full" @change="activePreset = ''" /></div>
+        <div><label class="label text-xs">{{ t('reports.to') }}</label><input v-model="filters.to" type="date" class="input text-sm w-full" @change="activePreset = ''" /></div>
         <div><label class="label text-xs">Project</label>
-          <AppSelect v-model="filters.project_id" :options="[{ value: '', label: 'Semua' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]" placeholder="Semua" class="w-full" />
+          <AppSelect v-model="filters.project_id" :options="[{ value: '', label: t('common.all') }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]" :placeholder="t('common.all')" class="w-full" />
         </div>
         <div><label class="label text-xs">Staff</label>
-          <AppSelect v-model="filters.staff_id" :options="[{ value: '', label: 'Semua' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Semua" class="w-full" />
+          <AppSelect v-model="filters.staff_id" :options="[{ value: '', label: t('common.all') }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" :placeholder="t('common.all')" class="w-full" />
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button @click="fetchAll" class="btn-primary">Tampilkan</button>
+        <button @click="fetchAll" class="btn-primary">{{ t('reports.show') }}</button>
         <AppRefreshButton :loading="loadingReport" @click="fetchAll" />
       </div>
     </div>
 
     <!-- Ticket summary report (existing) -->
     <div v-if="d">
-      <h3 class="text-sm font-semibold text-slate-700 mb-3">Report Ticket — SLA & Durasi</h3>
+      <h3 class="text-sm font-semibold text-slate-700 mb-3">{{ t('reports.ticketReportTitle') }}</h3>
       <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
-        <div class="stat-card"><span class="text-xs text-slate-500">Total Ticket</span><span class="text-2xl font-bold text-slate-900">{{ d.timeReport?.total ?? 0 }}</span></div>
+        <div class="stat-card"><span class="text-xs text-slate-500">{{ t('reports.totalTicket') }}</span><span class="text-2xl font-bold text-slate-900">{{ d.timeReport?.total ?? 0 }}</span></div>
         <div class="stat-card"><span class="text-xs text-slate-500">Avg First Response</span><span class="text-2xl font-bold text-slate-900">{{ d.timeReport?.avg_first_response_hrs ?? '-' }}j</span></div>
-        <div class="stat-card"><span class="text-xs text-slate-500">Avg Resolusi</span><span class="text-2xl font-bold text-slate-900">{{ d.timeReport?.avg_resolution_hrs ?? '-' }}j</span></div>
-        <div class="stat-card border-l-4 border-l-green-400"><span class="text-xs text-slate-500">SLA Terpenuhi</span><span class="text-2xl font-bold text-green-600">{{ d.timeReport?.sla_met ?? 0 }}</span><span class="text-xs text-slate-400">{{ d.timeReport?.sla_met_pct ?? 0 }}%</span></div>
+        <div class="stat-card"><span class="text-xs text-slate-500">{{ t('dashboard.avgResolution') }}</span><span class="text-2xl font-bold text-slate-900">{{ d.timeReport?.avg_resolution_hrs ?? '-' }}j</span></div>
+        <div class="stat-card border-l-4 border-l-green-400"><span class="text-xs text-slate-500">{{ t('dashboard.slaMet') }}</span><span class="text-2xl font-bold text-green-600">{{ d.timeReport?.sla_met ?? 0 }}</span><span class="text-xs text-slate-400">{{ d.timeReport?.sla_met_pct ?? 0 }}%</span></div>
         <div class="stat-card border-l-4 border-l-red-400"><span class="text-xs text-slate-500">SLA Breach</span><span class="text-2xl font-bold text-red-600">{{ d.timeReport?.sla_breach ?? 0 }}</span><span class="text-xs text-slate-400">{{ d.timeReport?.sla_met_pct ? (100 - d.timeReport.sla_met_pct).toFixed(1) : 0 }}%</span></div>
       </div>
       <div class="card p-5 mb-5">
-        <h3 class="text-sm font-semibold text-slate-900 mb-3">SLA Breach per Priority</h3>
+        <h3 class="text-sm font-semibold text-slate-900 mb-3">{{ t('reports.slaBreachPerPriority') }}</h3>
         <div class="space-y-3">
           <div v-for="p in d.byPriorityTime" :key="p.name" class="flex items-center gap-3">
             <div class="w-3 h-3 rounded-full flex-shrink-0" :style="{ background: p.color }" />
@@ -47,28 +47,28 @@
             <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
               <div class="h-full rounded-full transition-all" :style="{ width: p.total ? (p.sla_breach / p.total * 100) + '%' : '0%', background: p.color }" />
             </div>
-            <span class="text-xs text-slate-500 w-28 text-right flex-shrink-0">{{ p.sla_breach }}/{{ p.total }} breach · avg {{ p.avg_hrs ?? '-' }}j</span>
+            <span class="text-xs text-slate-500 w-28 text-right flex-shrink-0">{{ p.sla_breach }}/{{ p.total }} {{ t('reports.breach') }} · {{ t('reports.avg') }} {{ p.avg_hrs ?? '-' }}j</span>
           </div>
         </div>
       </div>
-      <h3 class="text-sm font-semibold text-slate-700 mb-3">Volume & Produktivitas</h3>
+      <h3 class="text-sm font-semibold text-slate-700 mb-3">{{ t('reports.volumeProductivity') }}</h3>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-        <div class="card p-5"><h4 class="text-sm font-semibold text-slate-900 mb-3">Tren Harian</h4><div class="h-52"><Bar v-if="trendData" :data="trendData" :options="barOpts" /></div></div>
-        <div class="card p-5"><h4 class="text-sm font-semibold text-slate-900 mb-3">Per Status</h4><div class="h-52"><Doughnut v-if="statusData" :data="statusData" :options="donutOpts" /></div></div>
+        <div class="card p-5"><h4 class="text-sm font-semibold text-slate-900 mb-3">{{ t('reports.dailyTrend') }}</h4><div class="h-52"><Bar v-if="trendData" :data="trendData" :options="barOpts" /></div></div>
+        <div class="card p-5"><h4 class="text-sm font-semibold text-slate-900 mb-3">{{ t('dashboard.perStatus') }}</h4><div class="h-52"><Doughnut v-if="statusData" :data="statusData" :options="donutOpts" /></div></div>
       </div>
       <div class="card overflow-hidden mb-5">
-        <div class="px-5 py-4 border-b border-slate-100"><h3 class="text-sm font-semibold text-slate-900">Produktivitas per Staff</h3></div>
+        <div class="px-5 py-4 border-b border-slate-100"><h3 class="text-sm font-semibold text-slate-900">{{ t('reports.productivityPerStaff') }}</h3></div>
         <!-- Desktop table -->
         <table class="hidden sm:table w-full text-sm">
           <thead class="bg-slate-50"><tr>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Staff</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Total</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">{{ t('reports.total') }}</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Resolved</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">SLA Breach</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Rate Selesai</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">{{ t('reports.completionRate') }}</th>
           </tr></thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-if="!d.byStaff?.length"><td colspan="5" class="text-center py-6 text-slate-400 text-xs">Tidak ada data</td></tr>
+            <tr v-if="!d.byStaff?.length"><td colspan="5" class="text-center py-6 text-slate-400 text-xs">{{ t('reports.noData') }}</td></tr>
             <tr v-for="s in d.byStaff" :key="s.id" class="hover:bg-slate-50">
               <td class="px-4 py-3"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-semibold">{{ s.name?.charAt(0) }}</div><span class="text-sm font-medium text-slate-900">{{ s.name }}</span></div></td>
               <td class="px-4 py-3 text-sm text-slate-700">{{ s.total }}</td>
@@ -85,14 +85,14 @@
         </table>
         <!-- Mobile card list -->
         <div class="sm:hidden divide-y divide-slate-100">
-          <div v-if="!d.byStaff?.length" class="text-center py-6 text-slate-400 text-xs">Tidak ada data</div>
+          <div v-if="!d.byStaff?.length" class="text-center py-6 text-slate-400 text-xs">{{ t('reports.noData') }}</div>
           <div v-for="s in d.byStaff" :key="s.id" class="px-4 py-3 space-y-2">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-xs font-semibold">{{ s.name?.charAt(0) }}</div>
               <span class="text-sm font-medium text-slate-900">{{ s.name }}</span>
             </div>
             <div class="grid grid-cols-3 gap-2 text-xs text-center">
-              <div class="bg-slate-50 rounded-lg py-1.5"><p class="text-slate-400">Total</p><p class="font-semibold text-slate-700">{{ s.total }}</p></div>
+              <div class="bg-slate-50 rounded-lg py-1.5"><p class="text-slate-400">{{ t('reports.total') }}</p><p class="font-semibold text-slate-700">{{ s.total }}</p></div>
               <div class="bg-green-50 rounded-lg py-1.5"><p class="text-slate-400">Resolved</p><p class="font-semibold text-green-600">{{ s.resolved }}</p></div>
               <div :class="['rounded-lg py-1.5', s.sla_breach > 0 ? 'bg-red-50' : 'bg-slate-50']"><p class="text-slate-400">SLA Breach</p><p :class="['font-semibold', s.sla_breach > 0 ? 'text-red-600' : 'text-slate-400']">{{ s.sla_breach }}</p></div>
             </div>
@@ -107,24 +107,24 @@
 
     <!-- ===== ACTIVITY TRACKER SECTION ===== -->
     <div>
-      <h2 class="text-base font-bold text-slate-800 mb-4">Activity Tracker — Waktu Kerja Staff</h2>
+      <h2 class="text-base font-bold text-slate-800 mb-4">{{ t('reports.activityTrackerTitle') }}</h2>
 
       <!-- Staff summary cards -->
-      <div v-if="tl.loading" class="text-center py-10 text-slate-400 text-sm">Memuat data activity…</div>
-      <div v-else-if="tl.staffSummary.length === 0" class="card p-8 text-center text-slate-400 text-sm">Belum ada data. Gunakan tombol Start pada task untuk mencatat waktu kerja.</div>
+      <div v-if="tl.loading" class="text-center py-10 text-slate-400 text-sm">{{ t('reports.loadingActivity') }}</div>
+      <div v-else-if="tl.staffSummary.length === 0" class="card p-8 text-center text-slate-400 text-sm">{{ t('reports.noActivityData') }}</div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
         <div v-for="s in tl.staffSummary" :key="s.id" class="card p-4">
           <div class="flex items-center gap-3 mb-3">
             <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm flex-shrink-0">{{ s.name?.charAt(0) }}</div>
             <div>
               <p class="text-sm font-semibold text-slate-800">{{ s.name }}</p>
-              <p class="text-xs text-slate-400">{{ s.tasks_worked }} task · {{ s.tickets_handled }} tiket</p>
+              <p class="text-xs text-slate-400">{{ s.tasks_worked }} task · {{ s.tickets_handled }} {{ t('reports.ticketsLower') }}</p>
             </div>
           </div>
           <div class="space-y-1.5">
             <div class="flex justify-between text-xs text-slate-500">
               <span>Task: <strong class="text-indigo-600">{{ fmtSecs(s.task_seconds) }}</strong></span>
-              <span>Tiket: <strong class="text-amber-600">{{ fmtSecs(s.ticket_lifecycle_seconds) }}</strong></span>
+              <span>{{ t('reports.ticketCap') }}: <strong class="text-amber-600">{{ fmtSecs(s.ticket_lifecycle_seconds) }}</strong></span>
             </div>
             <!-- Composition bar -->
             <div class="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
@@ -132,12 +132,12 @@
             </div>
             <div class="flex justify-between text-xs text-slate-400">
               <span>{{ s.task_pct }}% Task</span>
-              <span>{{ s.ticket_pct }}% Tiket</span>
+              <span>{{ s.ticket_pct }}% {{ t('reports.ticketCap') }}</span>
             </div>
           </div>
           <!-- Per-project breakdown -->
           <div v-if="staffProjectMap.get(s.id)?.length" class="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Per Project</p>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">{{ t('reports.perProject') }}</p>
             <div v-for="proj in staffProjectMap.get(s.id)" :key="proj.project_id" class="flex items-center gap-2 text-xs">
               <div class="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
               <span class="flex-1 text-slate-700 truncate font-medium">{{ proj.project_name }}</span>
@@ -167,18 +167,18 @@
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Task</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">Project</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none" @click="toggleSort('start')">
-                  Mulai <span class="text-indigo-400">{{ sortIcon('start') }}</span>
+                  {{ t('reports.start') }} <span class="text-indigo-400">{{ sortIcon('start') }}</span>
                 </th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none hidden sm:table-cell" @click="toggleSort('end')">
-                  Selesai <span class="text-indigo-400">{{ sortIcon('end') }}</span>
+                  {{ t('reports.end') }} <span class="text-indigo-400">{{ sortIcon('end') }}</span>
                 </th>
                 <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase cursor-pointer select-none" @click="toggleSort('duration')">
-                  Durasi <span class="text-indigo-400">{{ sortIcon('duration') }}</span>
+                  {{ t('reports.duration') }} <span class="text-indigo-400">{{ sortIcon('duration') }}</span>
                 </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-if="!tl.logs.length"><td colspan="6" class="text-center py-8 text-slate-400 text-xs">Tidak ada data timelog dalam rentang ini</td></tr>
+              <tr v-if="!tl.logs.length"><td colspan="6" class="text-center py-8 text-slate-400 text-xs">{{ t('reports.noTimelogData') }}</td></tr>
               <tr v-for="row in tl.logs" :key="row.id" class="hover:bg-slate-50">
                 <td class="px-4 py-2.5">
                   <div class="flex items-center gap-2">
@@ -201,16 +201,16 @@
           <table class="w-full text-sm min-w-[560px]">
             <thead class="bg-slate-50">
               <tr>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Nomor</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Judul</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">{{ t('reports.number') }}</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">{{ t('reports.titleLabel') }}</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">Project</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden sm:table-cell">Assignee</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Dibuat</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">{{ t('projects.created') }}</th>
                 <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Lifecycle</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-if="!tl.ticketLifecycle.length"><td colspan="6" class="text-center py-8 text-slate-400 text-xs">Belum ada ticket resolved/closed dalam rentang ini</td></tr>
+              <tr v-if="!tl.ticketLifecycle.length"><td colspan="6" class="text-center py-8 text-slate-400 text-xs">{{ t('reports.noLifecycleTickets') }}</td></tr>
               <tr v-for="tk in tl.ticketLifecycle" :key="tk.id" class="hover:bg-slate-50">
                 <td class="px-4 py-2.5 text-xs font-mono text-indigo-600 whitespace-nowrap">{{ tk.ticket_number }}</td>
                 <td class="px-4 py-2.5 text-xs text-slate-700 max-w-[140px] truncate">{{ tk.title }}</td>
@@ -232,6 +232,7 @@ import { Bar, Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js'
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend)
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const now = new Date()
 const fmt = (d: Date) => d.toISOString().slice(0, 10)
@@ -245,12 +246,12 @@ const filters = reactive({
 })
 
 const activePreset = ref('month')
-const presets = [
-  { key: 'today', label: 'Hari Ini' },
-  { key: 'week', label: 'Minggu Ini' },
-  { key: 'month', label: 'Bulan Ini' },
-  { key: 'quarter', label: 'Kuartal' },
-]
+const presets = computed(() => [
+  { key: 'today', label: t('reports.today') },
+  { key: 'week', label: t('reports.thisWeek') },
+  { key: 'month', label: t('reports.thisMonth') },
+  { key: 'quarter', label: t('reports.quarter') },
+])
 
 function setRange(preset: string) {
   const n = new Date()
@@ -292,10 +293,10 @@ async function fetchReport() {
 const sortKey = ref<'start' | 'end' | 'duration'>('start')
 const sortDir = ref<'asc' | 'desc'>('desc')
 const activeTab = ref<'logs' | 'ticket_lifecycle'>('logs')
-const activityTabs = [
-  { key: 'logs', label: 'Detail Timelog' },
-  { key: 'ticket_lifecycle', label: 'Lifecycle Ticket' },
-]
+const activityTabs = computed(() => [
+  { key: 'logs', label: t('reports.timelogDetail') },
+  { key: 'ticket_lifecycle', label: t('reports.ticketLifecycle') },
+])
 
 const tl = reactive({
   loading: false,
@@ -381,12 +382,12 @@ function fmtDatetime(dt: string | null | undefined): string {
 }
 
 const trendData = computed(() => {
-  const t = d.value?.dailyTrend || []
+  const dt = d.value?.dailyTrend || []
   return {
-    labels: t.map((x: any) => x.date?.slice(5)),
+    labels: dt.map((x: any) => x.date?.slice(5)),
     datasets: [
-      { label: 'Masuk', data: t.map((x: any) => x.created), backgroundColor: '#6366f180' },
-      { label: 'Resolved', data: t.map((x: any) => x.resolved), backgroundColor: '#22c55e80' }
+      { label: t('dashboard.incoming'), data: dt.map((x: any) => x.created), backgroundColor: '#6366f180' },
+      { label: 'Resolved', data: dt.map((x: any) => x.resolved), backgroundColor: '#22c55e80' }
     ]
   }
 })

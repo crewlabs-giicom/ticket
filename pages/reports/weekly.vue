@@ -5,7 +5,7 @@
     <div class="card p-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3">
         <div class="flex flex-col gap-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Tanggal</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ t('reportsDaily.date') }}</label>
           <div class="flex items-center gap-1.5">
             <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
             <span class="text-xs text-slate-400 flex-shrink-0">—</span>
@@ -17,21 +17,21 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Project</label>
           <AppSelect
             v-model="filters.project_id"
-            :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-            placeholder="Semua Project"
+            :options="[{ value: '', label: t('tickets.allProject') }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+            :placeholder="t('tickets.allProject')"
           />
         </div>
 
         <div class="flex flex-col gap-1 justify-end">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">Aktivitas</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">{{ t('reportsWeekly.activity') }}</label>
           <label class="flex items-center gap-2 cursor-pointer h-9 px-3 border border-slate-200 rounded-lg bg-white hover:border-slate-300 transition-colors w-fit">
             <input v-model="filters.only_active" type="checkbox" class="w-3.5 h-3.5 rounded accent-indigo-500" />
-            <span class="text-sm text-slate-600">Hanya yang ada aktivitas (response/timelog)</span>
+            <span class="text-sm text-slate-600">{{ t('reportsWeekly.onlyWithActivity') }}</span>
           </label>
         </div>
 
         <div class="flex flex-col gap-1 justify-end sm:col-span-2 lg:col-span-4">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">Aksi</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide invisible">{{ t('reportsWeekly.action') }}</label>
           <div class="flex items-center gap-2 flex-wrap">
             <AppRefreshButton :loading="loading" @click="handleRefresh" />
             <button @click="copyText" :disabled="!hasData" class="inline-flex items-center gap-1.5 btn-ghost text-xs border border-slate-200 disabled:opacity-40">
@@ -40,7 +40,7 @@
             </button>
             <button @click="exportExcel" :disabled="exporting || !hasData" class="inline-flex items-center gap-1.5 btn-ghost text-xs border border-slate-200 disabled:opacity-40">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              {{ exporting ? 'Mengekspor...' : 'Export Excel' }}
+              {{ exporting ? t('reportsWeekly.exporting') : 'Export Excel' }}
             </button>
           </div>
         </div>
@@ -49,13 +49,13 @@
 
     <!-- Empty state -->
     <div v-if="!filters.date_from || !filters.date_to" class="card p-10 text-center text-sm text-slate-400">
-      Pilih rentang tanggal terlebih dahulu.
+      {{ t('reportsWeekly.selectDateRangeFirst') }}
     </div>
     <div v-else-if="loading" class="card p-10 text-center text-sm text-slate-400">
-      Memuat data...
+      {{ t('reportsWeekly.loadingData') }}
     </div>
     <div v-else-if="!groupedProjects.length" class="card p-10 text-center text-sm text-slate-400">
-      Tidak ada data pada rentang tanggal ini.
+      {{ t('reportsWeekly.noDataInRange') }}
     </div>
 
     <!-- Grouped by Project -->
@@ -90,6 +90,7 @@
 import * as XLSX from 'xlsx'
 
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 const auth = useAuthStore()
 const { toast } = useConfirm()
 
@@ -214,7 +215,7 @@ function generateReportText(): string {
 async function copyText() {
   const text = generateReportText()
   await navigator.clipboard.writeText(text)
-  toast('Teks berhasil disalin')
+  toast(t('reportsWeekly.textCopied'))
 }
 
 async function exportExcel() {
