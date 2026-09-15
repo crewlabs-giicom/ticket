@@ -2,17 +2,17 @@
   <div class="max-w-4xl mx-auto space-y-6">
     <div class="flex items-start justify-between gap-4 flex-wrap">
       <div>
-        <h2 class="text-xl font-bold text-slate-900">Panduan & FAQ</h2>
-        <p class="text-sm text-slate-500 mt-0.5">Tata cara penggunaan sistem Shadow Care</p>
+        <h2 class="text-xl font-bold text-slate-900">{{ t('layout.helpFaq') }}</h2>
+        <p class="text-sm text-slate-500 mt-0.5">{{ t('help.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <button @click="showFlowModal = true" class="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
-          Alur Development Fitur Baru
+          {{ t('help.devFlow') }}
         </button>
         <button @click="tour.startTour(true)" class="flex items-center gap-2 px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Mulai Tour Interaktif
+          {{ t('help.startTour') }}
         </button>
       </div>
     </div>
@@ -22,8 +22,8 @@
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
           <div>
-            <h3 class="text-lg font-bold text-slate-900">Alur Development Fitur Baru</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Dari permintaan fitur hingga selesai dikerjakan</p>
+            <h3 class="text-lg font-bold text-slate-900">{{ t('help.devFlow') }}</h3>
+            <p class="text-xs text-slate-500 mt-0.5">{{ t('help.devFlowSubtitle') }}</p>
           </div>
           <button @click="showFlowModal = false" class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -190,13 +190,13 @@
         @click="activeTab = 'staff'"
         :class="['px-4 py-2 text-sm font-medium rounded-lg transition-colors', activeTab === 'staff' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700']"
       >
-        👨‍💼 Panduan Staff
+        👨‍💼 {{ t('help.staffGuide') }}
       </button>
       <button
         @click="activeTab = 'customer'"
         :class="['px-4 py-2 text-sm font-medium rounded-lg transition-colors', activeTab === 'customer' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700']"
       >
-        👤 Panduan Customer
+        👤 {{ t('help.customerGuide') }}
       </button>
     </div>
 
@@ -221,6 +221,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const auth = useAuthStore()
 const tour = useTour()

@@ -1,10 +1,10 @@
 <template>
   <div class="max-w-2xl space-y-4">
     <div class="flex items-center justify-between">
-      <p class="text-sm text-slate-500">Atur status dan alur tiket</p>
+      <p class="text-sm text-slate-500">{{ t('master.statuses.subtitle') }}</p>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="pending" @click="refresh()" />
-        <button @click="openForm()" class="btn-primary">+ Tambah Status</button>
+        <button @click="openForm()" class="btn-primary">+ {{ t('master.statuses.addStatus') }}</button>
       </div>
     </div>
 
@@ -20,8 +20,8 @@
               <span class="text-sm font-medium text-slate-900">{{ s.name }}</span>
               <span v-if="s.is_resolved" class="ml-2 badge bg-green-100 text-green-700 text-[10px]">Resolved</span>
             </div>
-            <button @click="openForm(s)" class="btn-ghost py-1 px-2 text-xs">Edit</button>
-            <button @click="deleteStatus(s.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">Hapus</button>
+            <button @click="openForm(s)" class="btn-ghost py-1 px-2 text-xs">{{ t('common.edit') }}</button>
+            <button @click="deleteStatus(s.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button>
           </div>
         </template>
       </draggable>
@@ -30,11 +30,11 @@
     <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? 'Edit' : 'Tambah' }} Status</h3>
+        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? t('common.edit') : t('common.add') }} Status</h3>
         <div class="space-y-4">
-          <div><label class="label">Nama</label><input v-model="form.name" class="input" placeholder="cth: In Progress" /></div>
+          <div><label class="label">{{ t('profile.name') }}</label><input v-model="form.name" class="input" placeholder="cth: In Progress" /></div>
           <div>
-            <label class="label">Warna</label>
+            <label class="label">{{ t('master.priorities.color') }}</label>
             <div class="flex items-center gap-3">
               <input type="color" v-model="form.color" class="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5" />
               <input v-model="form.color" class="input flex-1 font-mono text-sm" placeholder="#6366f1" />
@@ -46,14 +46,14 @@
           <div>
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" v-model="form.is_resolved" class="w-4 h-4 rounded" />
-              <span class="text-sm text-slate-700">Tandai sebagai status selesai/resolved</span>
+              <span class="text-sm text-slate-700">{{ t('master.statuses.markResolved') }}</span>
             </label>
-            <p class="text-xs text-slate-400 mt-1 ml-6">Ticket dengan status ini dihitung sebagai selesai di laporan</p>
+            <p class="text-xs text-slate-400 mt-1 ml-6">{{ t('master.statuses.resolvedHint') }}</p>
           </div>
         </div>
         <div class="flex gap-2 mt-5">
-          <button @click="showForm = false" class="btn-secondary flex-1">Batal</button>
-          <button @click="save" class="btn-primary flex-1">Simpan</button>
+          <button @click="showForm = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
+          <button @click="save" class="btn-primary flex-1">{{ t('common.save') }}</button>
         </div>
       </div>
     </div>
@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import draggable from 'vuedraggable'
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const { data, refresh, pending } = await useFetch('/api/statuses')
 const list = ref<any[]>([])

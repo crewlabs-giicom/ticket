@@ -33,19 +33,19 @@
           v-model="query"
           type="text"
           class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 placeholder-slate-400"
-          placeholder="Cari..."
+          :placeholder="t('common.search') + '...'"
         />
       </div>
 
       <!-- Quick actions -->
       <div class="flex items-center gap-3 px-3 py-1.5 border-b border-slate-50 bg-slate-50">
-        <button type="button" @click="selectAll" class="text-xs text-primary-600 hover:underline">Semua</button>
-        <button type="button" @click="clearAll" class="text-xs text-slate-500 hover:underline">Reset</button>
+        <button type="button" @click="selectAll" class="text-xs text-primary-600 hover:underline">{{ t('common.all') }}</button>
+        <button type="button" @click="clearAll" class="text-xs text-slate-500 hover:underline">{{ t('common.reset') }}</button>
       </div>
 
       <!-- Options -->
       <ul class="max-h-52 overflow-y-auto py-1">
-        <li v-if="!filteredOptions.length" class="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada hasil</li>
+        <li v-if="!filteredOptions.length" class="px-3 py-2 text-xs text-slate-400 text-center">{{ t('common.noResults') }}</li>
         <li
           v-for="opt in filteredOptions"
           :key="String(opt.value)"
@@ -74,13 +74,15 @@ import { onClickOutside } from '@vueuse/core'
 
 type SelectOption = { value: any; label: string }
 
+const { t } = useI18n()
+
 const props = withDefaults(defineProps<{
   modelValue: any[]
   options: SelectOption[]
   placeholder?: string
   disabled?: boolean
 }>(), {
-  placeholder: 'Pilih...',
+  placeholder: () => useI18n().t('common.selectEllipsis'),
   disabled: false,
 })
 

@@ -34,14 +34,14 @@
             v-model="form.description"
             rows="5"
             class="input w-full text-sm resize-none leading-relaxed"
-            placeholder="Tambahkan keterangan..."
+            :placeholder="t('wishlistModal.addDescription')"
           />
         </div>
 
         <!-- System Menu -->
         <div>
           <label class="label text-sm mb-1.5">Modul / Menu Sistem <span class="text-red-400">*</span></label>
-          <AppSelect v-model="form.system_menu_id" :options="systemMenuOptions" placeholder="— Pilih menu sistem —" />
+          <AppSelect v-model="form.system_menu_id" :options="systemMenuOptions" :placeholder="t('qcForms.selectSystemMenu')" />
         </div>
 
         <!-- Project (if menu has no project) -->
@@ -49,8 +49,8 @@
           <label class="label text-sm mb-1.5">Project <span class="text-red-400">*</span></label>
           <AppSelect
             v-model="form.project_id"
-            :options="[{ value: '', label: '— Pilih project —' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-            placeholder="— Pilih project —"
+            :options="[{ value: '', label: t('wishlistModal.selectProject') }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+            :placeholder="t('wishlistModal.selectProject')"
           />
         </div>
 
@@ -60,7 +60,7 @@
           <AppSelect
             v-model="form.priority_id"
             :options="priorities.map((p: any) => ({ value: p.id, label: `${p.name}  —  SLA ${formatSla(p.sla_hours)}` }))"
-            placeholder="— Pilih priority —"
+            :placeholder="t('wishlistModal.selectPriority')"
           />
         </div>
 
@@ -72,7 +72,7 @@
         <button
           @click="store.closeTicketModal()"
           class="flex-1 text-sm font-semibold text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 py-2.5 rounded-xl transition-colors"
-        >Batal</button>
+        >{{ t('common.cancel') }}</button>
         <button
           @click="submit"
           :disabled="submitting"
@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 const store = useWishlistStore()
 const notif = useNotifStore()
 
@@ -123,7 +124,7 @@ const selectedItems = computed(() => {
 })
 
 const systemMenuOptions = computed(() => {
-  const opts: any[] = [{ value: '', label: '— Pilih menu sistem —' }]
+  const opts: any[] = [{ value: '', label: t('qcForms.selectSystemMenu') }]
   const byModule: Record<string, any[]> = {}
   for (const item of systemMenus.value) {
     if (!byModule[item.module]) byModule[item.module] = []
@@ -161,7 +162,7 @@ async function submit() {
   if (!form.system_menu_id) { error.value = 'Modul wajib dipilih'; return }
   if (!form.priority_id) { error.value = 'Priority wajib dipilih'; return }
   const projectId = selectedMenu.value?.project_id || form.project_id
-  if (!projectId) { error.value = 'Project wajib diisi'; return }
+  if (!projectId) { error.value = t('wishlistModal.projectRequired'); return }
 
   const noteTitle = sourceNote.value?.title || 'Catatan'
   const description = form.description
@@ -180,9 +181,9 @@ async function submit() {
       },
     })
     store.closeTicketModal()
-    notif.addToast({ title: 'Tiket berhasil dibuat', message: `"${noteTitle}" → tiket baru`, type: 'success' })
+    notif.addToast({ title: t('wishlistModal.ticketCreated'), message: `"${noteTitle}" → ${t('wishlistModal.newTicket')}`, type: 'success' })
   } catch (e: any) {
-    error.value = e?.data?.statusMessage || 'Gagal membuat tiket'
+    error.value = e?.data?.statusMessage || t('wishlistModal.createTicketFailed')
   } finally {
     submitting.value = false
   }

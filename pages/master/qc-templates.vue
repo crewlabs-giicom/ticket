@@ -3,11 +3,11 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-xl font-bold text-slate-900">Template QC</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Kelola template checklist untuk Quality Control</p>
+        <p class="text-sm text-slate-500 mt-0.5">{{ tt('master.qcTemplates.subtitle') }}</p>
       </div>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="loading" @click="fetchTemplates" />
-        <button @click="openForm()" class="btn-primary">+ Tambah Template</button>
+        <button @click="openForm()" class="btn-primary">+ {{ tt('master.qcTemplates.addTemplate') }}</button>
       </div>
     </div>
 
@@ -15,16 +15,16 @@
       <table class="w-full text-sm">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Nama Template</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Deskripsi</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ tt('master.qcTemplates.templateName') }}</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">{{ tt('projects.description') }}</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Items</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Dibuat</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Aksi</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ tt('projects.created') }}</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ tt('master.users.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
-          <tr v-if="loading"><td colspan="5" class="text-center py-8 text-slate-400">Memuat...</td></tr>
-          <tr v-else-if="!templates.length"><td colspan="5" class="text-center py-8 text-slate-400">Belum ada template QC</td></tr>
+          <tr v-if="loading"><td colspan="5" class="text-center py-8 text-slate-400">{{ tt('common.loading') }}</td></tr>
+          <tr v-else-if="!templates.length"><td colspan="5" class="text-center py-8 text-slate-400">{{ tt('master.qcTemplates.noTemplates') }}</td></tr>
           <tr v-for="t in templates" :key="t.id" class="hover:bg-slate-50">
             <td class="px-4 py-3 font-medium text-slate-900">{{ t.name }}</td>
             <td class="px-4 py-3 text-slate-500 hidden md:table-cell">{{ t.description || '—' }}</td>
@@ -34,8 +34,8 @@
             <td class="px-4 py-3 text-xs text-slate-400">{{ t.created_by_name }}</td>
             <td class="px-4 py-3">
               <div class="flex items-center gap-1">
-                <button @click="openForm(t)" class="btn-ghost py-1 px-2 text-xs">Edit</button>
-                <button @click="deleteTemplate(t)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">Hapus</button>
+                <button @click="openForm(t)" class="btn-ghost py-1 px-2 text-xs">{{ tt('common.edit') }}</button>
+                <button @click="deleteTemplate(t)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ tt('common.delete') }}</button>
               </div>
             </td>
           </tr>
@@ -46,22 +46,22 @@
     <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? 'Edit' : 'Tambah' }} Template QC</h3>
+        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? tt('common.edit') : tt('common.add') }} Template QC</h3>
         <div class="space-y-4">
           <div>
-            <label class="label">Nama Template <span class="text-red-500">*</span></label>
+            <label class="label">{{ tt('master.qcTemplates.templateName') }} <span class="text-red-500">*</span></label>
             <input v-model="form.name" class="input" placeholder="Contoh: QC Website v1" />
           </div>
           <div>
-            <label class="label">Deskripsi</label>
-            <textarea v-model="form.description" class="input" rows="2" placeholder="Opsional"></textarea>
+            <label class="label">{{ tt('projects.description') }}</label>
+            <textarea v-model="form.description" class="input" rows="2" :placeholder="tt('master.menus.optional')"></textarea>
           </div>
 
           <!-- Checklist Items -->
           <div>
             <div class="flex items-center justify-between mb-2">
               <label class="label mb-0">Checklist Items</label>
-              <button @click="addItem" class="text-xs text-indigo-600 hover:text-indigo-800">+ Tambah Item</button>
+              <button @click="addItem" class="text-xs text-indigo-600 hover:text-indigo-800">+ {{ tt('master.qcTemplates.addItem') }}</button>
             </div>
             <div class="space-y-2">
               <div v-for="(item, idx) in form.items" :key="idx" class="flex items-center gap-2">
@@ -71,7 +71,7 @@
                 </button>
               </div>
               <button v-if="!form.items.length" @click="addItem" class="w-full border-2 border-dashed border-slate-200 rounded-lg py-3 text-xs text-slate-400 hover:border-indigo-300 hover:text-indigo-400 transition-colors">
-                Klik untuk menambah checklist item
+                {{ tt('master.qcTemplates.clickToAddItem') }}
               </button>
             </div>
           </div>
@@ -79,9 +79,9 @@
 
         <p v-if="formError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{{ formError }}</p>
         <div class="flex gap-2 mt-5">
-          <button @click="showForm = false" class="btn-secondary flex-1">Batal</button>
+          <button @click="showForm = false" class="btn-secondary flex-1">{{ tt('common.cancel') }}</button>
           <button @click="saveTemplate" :disabled="saving" class="btn-primary flex-1">
-            {{ saving ? 'Menyimpan...' : 'Simpan' }}
+            {{ saving ? tt('profile.saving') : tt('common.save') }}
           </button>
         </div>
       </div>
@@ -91,6 +91,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t: tt } = useI18n()
 
 const { $swal } = useNuxtApp() as any
 
@@ -137,7 +138,7 @@ function addItem() { form.items.push('') }
 function removeItem(idx: number) { form.items.splice(idx, 1) }
 
 async function saveTemplate() {
-  if (!form.name.trim()) { formError.value = 'Nama template wajib diisi'; return }
+  if (!form.name.trim()) { formError.value = tt('master.qcTemplates.nameRequired'); return }
   saving.value = true
   formError.value = ''
   try {
@@ -153,24 +154,24 @@ async function saveTemplate() {
     showForm.value = false
     await fetchTemplates()
   } catch (e: any) {
-    formError.value = e?.data?.message || 'Gagal menyimpan template'
+    formError.value = e?.data?.message || tt('master.qcTemplates.saveFailed')
   } finally {
     saving.value = false
   }
 }
 
-async function deleteTemplate(t: any) {
+async function deleteTemplate(tpl: any) {
   const confirmed = await $swal.fire({
-    title: 'Hapus Template?',
-    text: `Template "${t.name}" akan dihapus permanen.`,
+    title: tt('master.qcTemplates.deleteTitle'),
+    text: tt('master.qcTemplates.deleteText', { name: tpl.name }),
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Ya, Hapus',
-    cancelButtonText: 'Batal',
+    confirmButtonText: tt('master.qcTemplates.yesDelete'),
+    cancelButtonText: tt('common.cancel'),
     confirmButtonColor: '#ef4444',
   })
   if (!confirmed.isConfirmed) return
-  await $fetch(`/api/qc-templates/${t.id}`, { method: 'DELETE' })
+  await $fetch(`/api/qc-templates/${tpl.id}`, { method: 'DELETE' })
   await fetchTemplates()
 }
 

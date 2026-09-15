@@ -4,11 +4,11 @@
       <p class="text-sm text-slate-500">Daftar modul dan menu dalam sistem. Drag baris untuk mengubah urutan.</p>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="pending" @click="refresh()" />
-        <button @click="openForm()" class="btn-primary">+ Tambah Menu</button>
+        <button @click="openForm()" class="btn-primary">+ {{ t('master.menus.addMenu') }}</button>
       </div>
     </div>
 
-    <div v-if="!list.length" class="card p-8 text-center text-sm text-slate-400">Belum ada data. Tambah modul atau menu sistem.</div>
+    <div v-if="!list.length" class="card p-8 text-center text-sm text-slate-400">{{ t('master.systemMenus.noData') }}</div>
 
     <!-- Grouped by project → module -->
     <template v-for="(moduleGroups, projectKey) in grouped" :key="projectKey">
@@ -18,7 +18,7 @@
         <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">{{ projectKey }}</span>
       </div>
       <div v-else class="flex items-center gap-2 px-1 pt-2">
-        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Global (Semua Project)</span>
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">{{ t('master.systemMenus.globalAllProjects') }}</span>
       </div>
 
       <div v-for="(items, module) in moduleGroups" :key="module" class="card overflow-hidden">
@@ -47,7 +47,7 @@
               </div>
               <span v-if="!item.is_active" class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">nonaktif</span>
               <button @click="openForm(item)" class="btn-ghost py-1 px-2 text-xs">Edit</button>
-              <button @click="deleteItem(item.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">Hapus</button>
+              <button @click="deleteItem(item.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button>
             </div>
           </template>
         </draggable>
@@ -58,14 +58,14 @@
     <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? 'Edit' : 'Tambah' }} Menu Sistem</h3>
+        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? t('common.edit') : t('common.add') }} {{ t('layout.systemMenu') }}</h3>
         <div class="space-y-4">
           <div>
             <label class="label">Project <span class="text-slate-400 text-xs">(opsional)</span></label>
             <AppSelect
               v-model="form.project_id"
-              :options="[{ value: '', label: '— Semua Project (Global) —' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-              placeholder="— Semua Project (Global) —"
+              :options="[{ value: '', label: t('master.systemMenus.allProjectsGlobal') }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+              :placeholder="t('master.systemMenus.allProjectsGlobal')"
             />
           </div>
           <div>
@@ -89,18 +89,18 @@
             />
           </div>
           <div>
-            <label class="label">Nama Menu</label>
+            <label class="label">{{ t('master.menus.menuName') }}</label>
             <input v-model="form.name" class="input" :disabled="!form.type" placeholder="cth: Customer List" />
-            <p v-if="!form.type" class="text-[11px] text-slate-400 mt-1">Pilih jenis terlebih dahulu untuk mengisi nama.</p>
+            <p v-if="!form.type" class="text-[11px] text-slate-400 mt-1">{{ t('master.systemMenus.selectTypeHint') }}</p>
           </div>
           <div v-if="editing" class="flex items-center gap-2">
             <input type="checkbox" v-model="form.is_active" id="chk-active" class="w-4 h-4 rounded" />
-            <label for="chk-active" class="text-sm text-slate-700">Aktif</label>
+            <label for="chk-active" class="text-sm text-slate-700">{{ t('master.projects.active') }}</label>
           </div>
         </div>
         <div class="flex gap-2 mt-5">
-          <button @click="showForm = false" class="btn-secondary flex-1">Batal</button>
-          <button @click="save" :disabled="!form.module.trim()" class="btn-primary flex-1">Simpan</button>
+          <button @click="showForm = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
+          <button @click="save" :disabled="!form.module.trim()" class="btn-primary flex-1">{{ t('common.save') }}</button>
         </div>
       </div>
     </div>
@@ -110,6 +110,7 @@
 <script setup lang="ts">
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const { data, refresh, pending } = await useFetch('/api/system-menus')
 const { data: prd } = await useFetch('/api/projects')

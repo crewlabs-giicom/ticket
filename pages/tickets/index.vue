@@ -13,7 +13,7 @@
     <div class="flex items-center justify-between gap-2">
       <button @click="showFilters = !showFilters" class="inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 bg-white transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
-        Filter
+        {{ t('common.filter') }}
         <span v-if="activeFilterCount" class="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold bg-indigo-600 text-white rounded-full">{{ activeFilterCount }}</span>
         <svg class="w-3 h-3 transition-transform" :class="showFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </button>
@@ -21,7 +21,7 @@
         <AppRefreshButton :loading="refreshing" @click="handleRefresh" />
         <button v-if="sourceTab !== 'qc'" @click="showForm = true" class="btn-primary">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-          Ticket Baru
+          {{ t('tickets.newTicket') }}
         </button>
       </div>
     </div>
@@ -31,8 +31,8 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-3">
         <!-- Pencarian -->
         <div class="flex flex-col gap-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Pencarian</label>
-          <input v-model="filters.search" class="input text-sm" placeholder="Cari judul / nomor..." />
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ t('common.search') }}</label>
+          <input v-model="filters.search" class="input text-sm" :placeholder="t('tickets.searchPlaceholder')" />
         </div>
 
         <!-- Status -->
@@ -41,7 +41,7 @@
           <AppMultiSelect
             v-model="filters.status_ids"
             :options="statuses.map((s: any) => ({ value: s.id, label: s.name }))"
-            placeholder="Semua Status"
+            :placeholder="t('tickets.allStatus')"
           />
         </div>
 
@@ -51,7 +51,7 @@
           <AppMultiSelect
             v-model="filters.priority_ids"
             :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
-            placeholder="Semua Priority"
+            :placeholder="t('tickets.allPriority')"
           />
         </div>
 
@@ -60,8 +60,8 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Project</label>
           <AppSelect
             v-model="filters.project_id"
-            :options="[{ value: '', label: 'Semua Project' }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
-            placeholder="Semua Project"
+            :options="[{ value: '', label: t('tickets.allProject') }, ...projects.map((p: any) => ({ value: p.id, label: p.name }))]"
+            :placeholder="t('tickets.allProject')"
           />
         </div>
 
@@ -70,8 +70,8 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Assignee</label>
           <AppSelect
             v-model="filters.assigned_to"
-            :options="[{ value: '', label: 'Semua Assignee' }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua Assignee"
+            :options="[{ value: '', label: t('tickets.allAssignee') }, ...staffUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :placeholder="t('tickets.allAssignee')"
           />
         </div>
 
@@ -80,14 +80,14 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Creator</label>
           <AppSelect
             v-model="filters.created_by"
-            :options="[{ value: '', label: 'Semua Creator' }, ...customerUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua Creator"
+            :options="[{ value: '', label: t('tickets.allCreator') }, ...customerUsers.map((u: any) => ({ value: u.id, label: u.name }))]"
+            :placeholder="t('tickets.allCreator')"
           />
         </div>
 
         <!-- Tanggal -->
         <div class="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Tanggal Dibuat</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{{ t('tickets.createdDate') }}</label>
           <div class="flex items-center gap-1.5">
             <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
             <span class="text-xs text-slate-400 flex-shrink-0">—</span>
@@ -100,7 +100,7 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Due Date</label>
           <label class="flex items-center gap-2 cursor-pointer h-9 px-3 border border-slate-200 rounded-lg bg-white hover:border-slate-300 transition-colors w-fit">
             <input v-model="filters.extended" type="checkbox" class="w-3.5 h-3.5 rounded accent-purple-500" />
-            <span class="text-sm text-slate-600">Pernah diperpanjang</span>
+            <span class="text-sm text-slate-600">{{ t('tickets.everExtended') }}</span>
           </label>
         </div>
       </div>
@@ -122,8 +122,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-if="loading"><td colspan="7" class="text-center py-8 text-slate-400">Memuat...</td></tr>
-            <tr v-else-if="!tickets.length"><td colspan="7" class="text-center py-8 text-slate-400">Tidak ada ticket</td></tr>
+            <tr v-if="loading"><td colspan="7" class="text-center py-8 text-slate-400">{{ t('common.loading') }}</td></tr>
+            <tr v-else-if="!tickets.length"><td colspan="7" class="text-center py-8 text-slate-400">{{ t('tickets.noTickets') }}</td></tr>
             <tr v-for="t in tickets" :key="t.id" @click="openTicket(t)" class="hover:bg-slate-50 cursor-pointer transition-colors">
               <td class="px-4 py-3">
                 <div class="flex items-start gap-2">
@@ -193,6 +193,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 const { fmtDate, fmtDateTime } = useDate()
 function extendedTooltip(t: any) {
   return (t.extended_due_date_history || []).map((h: any) => h.label).join('\n')
@@ -205,10 +206,10 @@ const showFilters = ref(true)
 const loading = ref(false)
 const tickets = ref<any[]>([])
 
-const sourceTabs = [
-  { value: 'user', label: 'Ticket User' },
-  { value: 'qc', label: 'Ticket QC' },
-]
+const sourceTabs = computed(() => [
+  { value: 'user', label: t('tickets.userTicket') },
+  { value: 'qc', label: t('tickets.qcTicket') },
+])
 const sourceTab = ref<'user' | 'qc'>('user')
 function setSourceTab(v: 'user' | 'qc') {
   sourceTab.value = v

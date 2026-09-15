@@ -3,18 +3,18 @@
     <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-2">
-        <input v-model="search" class="input w-64" placeholder="Cari notifikasi..." />
+        <input v-model="search" class="input w-64" :placeholder="t('notifications.searchPlaceholder')" />
       </div>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="loading" @click="fetchNotifs" />
-        <button @click="markAllRead" class="btn-secondary text-sm">Tandai semua dibaca</button>
+        <button @click="markAllRead" class="btn-secondary text-sm">{{ t('layout.markAllRead') }}</button>
       </div>
     </div>
 
     <!-- List -->
     <div class="card overflow-hidden divide-y divide-slate-100">
-      <div v-if="loading" class="py-10 text-center text-slate-400 text-sm">Memuat...</div>
-      <div v-else-if="!items.length" class="py-10 text-center text-slate-400 text-sm">Tidak ada notifikasi</div>
+      <div v-if="loading" class="py-10 text-center text-slate-400 text-sm">{{ t('common.loading') }}</div>
+      <div v-else-if="!items.length" class="py-10 text-center text-slate-400 text-sm">{{ t('layout.noNotifications') }}</div>
       <div
         v-for="n in items"
         :key="n.id"
@@ -47,6 +47,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 const tabs = useTabStore()
 const notif = useNotifStore()
 const router = useRouter()

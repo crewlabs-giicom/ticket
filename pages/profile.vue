@@ -4,8 +4,8 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-lg font-semibold text-slate-900">Profil Saya</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Kelola informasi akun dan keamanan Anda</p>
+        <h1 class="text-lg font-semibold text-slate-900">{{ t('profile.myProfile') }}</h1>
+        <p class="text-sm text-slate-500 mt-0.5">{{ t('profile.manageAccount') }}</p>
       </div>
       <AppRefreshButton :loading="refreshingProfile" @click="handleRefreshProfile" />
     </div>
@@ -14,25 +14,25 @@
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div class="card p-4 text-center">
         <p class="text-2xl font-bold text-primary-600">{{ stats?.tickets_created ?? '–' }}</p>
-        <p class="text-xs text-slate-500 mt-1">Ticket Dibuat</p>
+        <p class="text-xs text-slate-500 mt-1">{{ t('profile.ticketsCreated') }}</p>
       </div>
       <div class="card p-4 text-center">
         <p class="text-2xl font-bold text-indigo-600">{{ stats?.tickets_assigned ?? '–' }}</p>
-        <p class="text-xs text-slate-500 mt-1">Ticket Di-assign</p>
+        <p class="text-xs text-slate-500 mt-1">{{ t('profile.ticketsAssigned') }}</p>
       </div>
       <div class="card p-4 text-center">
         <p class="text-2xl font-bold text-emerald-600">{{ stats?.tasks_assigned ?? '–' }}</p>
-        <p class="text-xs text-slate-500 mt-1">Task Di-assign</p>
+        <p class="text-xs text-slate-500 mt-1">{{ t('profile.tasksAssigned') }}</p>
       </div>
       <div class="card p-4 text-center">
         <p class="text-2xl font-bold text-amber-600">{{ stats?.projects_involved ?? '–' }}</p>
-        <p class="text-xs text-slate-500 mt-1">Project Terlibat</p>
+        <p class="text-xs text-slate-500 mt-1">{{ t('profile.projectsInvolved') }}</p>
       </div>
     </div>
 
     <!-- Edit Profil -->
     <div class="card p-6 space-y-5">
-      <h2 class="text-sm font-semibold text-slate-900">Edit Profil</h2>
+      <h2 class="text-sm font-semibold text-slate-900">{{ t('profile.editProfile') }}</h2>
 
       <!-- Avatar -->
       <div class="flex items-center gap-4">
@@ -50,19 +50,19 @@
           </div>
         </div>
         <div>
-          <p class="text-sm font-medium text-slate-700">Foto Profil</p>
-          <p class="text-xs text-slate-400 mt-0.5">Klik foto untuk mengganti. Format: JPG, PNG, WebP. Maks 10MB.</p>
+          <p class="text-sm font-medium text-slate-700">{{ t('profile.profilePhoto') }}</p>
+          <p class="text-xs text-slate-400 mt-0.5">{{ t('profile.photoHint') }}</p>
         </div>
       </div>
 
       <!-- Nama & Email -->
       <div class="space-y-3">
         <div>
-          <label class="label">Nama</label>
-          <input v-model="profileForm.name" type="text" class="input" placeholder="Nama lengkap" />
+          <label class="label">{{ t('profile.name') }}</label>
+          <input v-model="profileForm.name" type="text" class="input" :placeholder="t('profile.fullName')" />
         </div>
         <div>
-          <label class="label">Email</label>
+          <label class="label">{{ t('login.email') }}</label>
           <input v-model="profileForm.email" type="email" class="input" placeholder="email@contoh.com" />
         </div>
       </div>
@@ -72,22 +72,22 @@
 
       <div class="flex justify-end">
         <button @click="saveProfile" :disabled="profileSaving" class="btn-primary">
-          {{ profileSaving ? 'Menyimpan...' : 'Simpan Profil' }}
+          {{ profileSaving ? t('profile.saving') : t('profile.saveProfile') }}
         </button>
       </div>
     </div>
 
     <!-- Ganti Password -->
     <div class="card p-6 space-y-4">
-      <h2 class="text-sm font-semibold text-slate-900">Ganti Password</h2>
+      <h2 class="text-sm font-semibold text-slate-900">{{ t('profile.changePassword') }}</h2>
       <div class="space-y-3">
         <div>
-          <label class="label">Password Baru</label>
-          <input v-model="passForm.password" type="password" class="input" placeholder="Minimal 6 karakter" />
+          <label class="label">{{ t('profile.newPassword') }}</label>
+          <input v-model="passForm.password" type="password" class="input" :placeholder="t('profile.minChars')" />
         </div>
         <div>
-          <label class="label">Konfirmasi Password Baru</label>
-          <input v-model="passForm.confirm" type="password" class="input" placeholder="Ulangi password baru" />
+          <label class="label">{{ t('profile.confirmNewPassword') }}</label>
+          <input v-model="passForm.confirm" type="password" class="input" :placeholder="t('profile.repeatPassword')" />
         </div>
       </div>
 
@@ -96,7 +96,7 @@
 
       <div class="flex justify-end">
         <button @click="savePassword" :disabled="passSaving" class="btn-primary">
-          {{ passSaving ? 'Menyimpan...' : 'Ganti Password' }}
+          {{ passSaving ? t('profile.saving') : t('profile.changePassword') }}
         </button>
       </div>
     </div>
@@ -165,7 +165,7 @@ async function handleAvatarUpload(e: Event) {
     })
     await auth.fetchMe()
   } catch {
-    profileError.value = 'Gagal mengupload foto profil'
+    profileError.value = t('profile.uploadFailed')
   } finally {
     avatarUploading.value = false
   }
@@ -184,7 +184,7 @@ async function saveProfile() {
   profileError.value = ''
   profileSuccess.value = ''
   if (!profileForm.name.trim() || !profileForm.email.trim()) {
-    profileError.value = 'Nama dan email wajib diisi'
+    profileError.value = t('profile.nameEmailRequired')
     return
   }
   profileSaving.value = true
@@ -200,9 +200,9 @@ async function saveProfile() {
       },
     })
     await auth.fetchMe()
-    profileSuccess.value = 'Profil berhasil diperbarui'
+    profileSuccess.value = t('profile.updateSuccess')
   } catch (err: any) {
-    profileError.value = err?.data?.statusMessage || 'Gagal menyimpan profil'
+    profileError.value = err?.data?.statusMessage || t('profile.saveFailed')
   } finally {
     profileSaving.value = false
   }
@@ -218,15 +218,15 @@ async function savePassword() {
   passError.value = ''
   passSuccess.value = ''
   if (!passForm.password) {
-    passError.value = 'Password baru wajib diisi'
+    passError.value = t('profile.newPasswordRequired')
     return
   }
   if (passForm.password.length < 6) {
-    passError.value = 'Password minimal 6 karakter'
+    passError.value = t('profile.passwordTooShort')
     return
   }
   if (passForm.password !== passForm.confirm) {
-    passError.value = 'Konfirmasi password tidak cocok'
+    passError.value = t('profile.passwordMismatch')
     return
   }
   passSaving.value = true
@@ -244,9 +244,9 @@ async function savePassword() {
     })
     passForm.password = ''
     passForm.confirm = ''
-    passSuccess.value = 'Password berhasil diubah'
+    passSuccess.value = t('profile.passwordChangeSuccess')
   } catch (err: any) {
-    passError.value = err?.data?.statusMessage || 'Gagal mengubah password'
+    passError.value = err?.data?.statusMessage || t('profile.passwordChangeFailed')
   } finally {
     passSaving.value = false
   }

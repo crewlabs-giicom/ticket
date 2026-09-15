@@ -284,7 +284,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Lampiran</label>
             <label class="flex items-center gap-2 cursor-pointer px-3 py-2 border-2 border-dashed border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-colors">
               <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-              <span class="text-xs text-slate-500">{{ taskUploading ? 'Mengupload...' : 'Pilih file (maks. 10MB)' }}</span>
+              <span class="text-xs text-slate-500">{{ taskUploading ? t('tasks.uploading') : t('tasks.chooseFile') }}</span>
               <input type="file" multiple class="hidden" :disabled="taskUploading" @change="handleTaskFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
             </label>
             <div v-if="taskUploadedFiles.length" class="mt-2 flex flex-wrap gap-2">
@@ -330,6 +330,7 @@
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
 
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const COLUMNS = [
   { status: 'backlog',     label: 'Backlog',      color: '#94a3b8' },
@@ -430,7 +431,7 @@ async function handleTaskFiles(e: Event) {
       taskUploadedFiles.value.push(res.data)
     }
   } catch (err: any) {
-    taskUploadError.value = err?.data?.statusMessage || 'Gagal mengupload file'
+    taskUploadError.value = err?.data?.statusMessage || t('tickets.fileUploadFailed')
   } finally {
     taskUploading.value = false
     input.value = ''

@@ -2,8 +2,8 @@
   <div class="flex flex-col h-full">
     <!-- Messages -->
     <div ref="scrollEl" class="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
-      <div v-if="pending" class="text-center text-sm text-gray-400 py-4">Memuat pesan...</div>
-      <div v-else-if="!messages.length" class="text-center text-sm text-gray-400 py-4">Belum ada pesan. Mulai percakapan.</div>
+      <div v-if="pending" class="text-center text-sm text-gray-400 py-4">{{ t('chat.loadingMessages') }}</div>
+      <div v-else-if="!messages.length" class="text-center text-sm text-gray-400 py-4">{{ t('chat.noMessages') }}</div>
       <div
         v-for="msg in messages"
         :key="msg.id"
@@ -63,7 +63,7 @@
           </div>
         </template>
       </div>
-      <p v-if="uploading" class="text-[11px] text-indigo-500 self-center">Mengupload...</p>
+      <p v-if="uploading" class="text-[11px] text-indigo-500 self-center">{{ t('tasks.uploading') }}</p>
     </div>
 
     <!-- Input -->
@@ -79,7 +79,7 @@
       <textarea
         v-model="draft"
         rows="1"
-        placeholder="Ketik pesan... (Ctrl+V untuk paste gambar)"
+        :placeholder="t('chat.typeMessage')"
         class="flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[36px] max-h-24"
         @keydown.enter.exact.prevent="send"
         @input="autoResize"
@@ -102,6 +102,7 @@
 <script setup lang="ts">
 const props = defineProps<{ ticketId: number; projectId?: number; projectName?: string }>()
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const authUser = computed(() => authStore.user)
 const lb = useLightbox()

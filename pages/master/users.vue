@@ -2,17 +2,17 @@
   <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-2">
-        <input v-model="filters.search" class="input w-48" placeholder="Cari nama / email..." />
+        <input v-model="filters.search" class="input w-48" :placeholder="t('master.users.searchPlaceholder')" />
         <AppSelect
           v-model="filters.role"
-          :options="[{ value: '', label: 'Semua Role' }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'customer', label: 'Customer' }]"
-          placeholder="Semua Role"
+          :options="[{ value: '', label: t('master.users.allRoles') }, { value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'customer', label: 'Customer' }]"
+          :placeholder="t('master.users.allRoles')"
           class="w-36"
         />
       </div>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="loading" @click="fetchUsers" />
-        <button @click="openForm()" class="btn-primary">+ Tambah User</button>
+        <button @click="openForm()" class="btn-primary">+ {{ t('master.users.addUser') }}</button>
       </div>
     </div>
 
@@ -24,12 +24,12 @@
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Email</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Role</th>
             <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Status</th>
-            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Aksi</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{{ t('master.users.actions') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
-          <tr v-if="loading"><td colspan="5" class="text-center py-8 text-slate-400">Memuat...</td></tr>
-          <tr v-else-if="!users.length"><td colspan="5" class="text-center py-8 text-slate-400">Tidak ada user</td></tr>
+          <tr v-if="loading"><td colspan="5" class="text-center py-8 text-slate-400">{{ t('common.loading') }}</td></tr>
+          <tr v-else-if="!users.length"><td colspan="5" class="text-center py-8 text-slate-400">{{ t('master.users.noUsers') }}</td></tr>
           <tr v-for="u in users" :key="u.id" class="hover:bg-slate-50">
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
@@ -45,12 +45,12 @@
               <span :class="['badge text-xs', u.role === 'admin' ? 'bg-purple-100 text-purple-700' : u.role === 'staff' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600']">{{ u.role }}</span>
             </td>
             <td class="px-4 py-3 hidden sm:table-cell">
-              <span :class="['badge text-xs', u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">{{ u.is_active ? 'Aktif' : 'Nonaktif' }}</span>
+              <span :class="['badge text-xs', u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700']">{{ u.is_active ? t('master.projects.active') : t('master.projects.inactive') }}</span>
             </td>
             <td class="px-4 py-3">
               <div class="flex items-center gap-1">
-                <button @click="openForm(u)" class="btn-ghost py-1 px-2 text-xs">Edit</button>
-                <button @click="toggleActive(u)" class="btn-ghost py-1 px-2 text-xs" :class="u.is_active ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'">{{ u.is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button>
+                <button @click="openForm(u)" class="btn-ghost py-1 px-2 text-xs">{{ t('common.edit') }}</button>
+                <button @click="toggleActive(u)" class="btn-ghost py-1 px-2 text-xs" :class="u.is_active ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'">{{ u.is_active ? t('master.users.deactivate') : t('master.users.activate') }}</button>
               </div>
             </td>
           </tr>
@@ -62,23 +62,23 @@
     <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? 'Edit' : 'Tambah' }} User</h3>
+        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? t('common.edit') : t('common.add') }} User</h3>
         <div class="space-y-4">
-          <div><label class="label">Nama</label><input v-model="form.name" class="input" placeholder="Nama lengkap" required /></div>
+          <div><label class="label">{{ t('profile.name') }}</label><input v-model="form.name" class="input" :placeholder="t('profile.fullName')" required /></div>
           <div><label class="label">Email</label><input v-model="form.email" type="email" class="input" placeholder="email@domain.com" required /></div>
-          <div><label class="label">Password {{ editing ? '(kosongkan jika tidak diubah)' : '' }}</label><input v-model="form.password" type="password" class="input" :placeholder="editing ? 'Kosongkan jika tidak diubah' : 'Min. 6 karakter'" /></div>
-          <div><label class="label">Role</label>
+          <div><label class="label">{{ t('login.password') }} {{ editing ? t('master.users.leaveBlankHint') : '' }}</label><input v-model="form.password" type="password" class="input" :placeholder="editing ? t('master.users.leaveBlankHint') : t('register.minChars')" /></div>
+          <div><label class="label">{{ t('master.users.role') }}</label>
             <AppSelect
               v-model="form.role"
               :options="[{ value: 'admin', label: 'Admin' }, { value: 'staff', label: 'Staff' }, { value: 'customer', label: 'Customer' }]"
-              placeholder="Role"
+              :placeholder="t('master.users.role')"
             />
           </div>
         </div>
         <p v-if="formError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{{ formError }}</p>
         <div class="flex gap-2 mt-5">
-          <button @click="showForm = false" class="btn-secondary flex-1">Batal</button>
-          <button @click="save" :disabled="saving" class="btn-primary flex-1">{{ saving ? 'Menyimpan...' : 'Simpan' }}</button>
+          <button @click="showForm = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
+          <button @click="save" :disabled="saving" class="btn-primary flex-1">{{ saving ? t('profile.saving') : t('common.save') }}</button>
         </div>
       </div>
     </div>
@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const loading = ref(false)
 const users = ref<any[]>([])
@@ -135,13 +136,13 @@ async function save() {
     if (editing.value) {
       await $fetch(`/api/users/${editing.value.id}`, { method: 'PUT', body })
     } else {
-      if (!form.password) { formError.value = 'Password wajib diisi'; saving.value = false; return }
+      if (!form.password) { formError.value = t('master.users.passwordRequired'); saving.value = false; return }
       await $fetch('/api/users', { method: 'POST', body: { ...body, password: form.password } })
     }
     showForm.value = false
     await fetchUsers()
   } catch (e: any) {
-    formError.value = e?.data?.statusMessage || 'Gagal menyimpan'
+    formError.value = e?.data?.statusMessage || t('master.users.saveFailed')
   } finally { saving.value = false }
 }
 

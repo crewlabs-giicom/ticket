@@ -62,7 +62,7 @@
             Chat
           </button>
           <button v-if="auth.isAdmin" @click="deleteTicket" class="btn-ghost text-xs py-1.5 text-red-500 hover:text-red-700">
-            Hapus
+            {{ t('common.delete') }}
           </button>
         </div>
       </div>
@@ -83,7 +83,7 @@
               {{ ticket.system_menu_name }}
             </span>
           </template>
-          <span>· Dibuat oleh</span>
+          <span>· {{ t('tickets.createdBy') }}</span>
           <span class="text-slate-500 font-medium">{{ ticket.created_by_name }}</span>
           <span>· {{ timeAgo(ticket.created_at) }}</span>
         </p>
@@ -95,7 +95,7 @@
         <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 flex-wrap">
           <button v-if="ticket.task_id" @click="openTaskPanel" :disabled="taskPanelLoading" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg text-xs transition-colors disabled:opacity-50">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            {{ taskPanelLoading ? 'Memuat...' : ('Task: ' + (ticket.task_title || ticket.task_id)) }}
+            {{ taskPanelLoading ? t('common.loading') : ('Task: ' + (ticket.task_title || ticket.task_id)) }}
           </button>
           <button v-else-if="auth.isStaffOrAdmin" @click="showCreateTaskModal = true" class="inline-flex items-center gap-1.5 text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-300 px-2.5 py-1 rounded-lg text-xs transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -104,13 +104,13 @@
           <NuxtLink v-if="ticket.source === 'qc' && ticket.qc_form_id" :to="`/qc-forms/${ticket.qc_form_id}`"
             class="inline-flex items-center gap-1.5 text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg text-xs transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l-6 6m0 0l6-6m-6 6h12a6 6 0 006-6v-1"/></svg>
-            Lihat QC Form
+            {{ t('tickets.viewQcForm') }}
           </NuxtLink>
         </div>
 
         <!-- Ticket-level Attachments -->
         <div v-if="ticket.attachments?.length" class="mt-4 pt-4 border-t border-slate-100">
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Lampiran ({{ ticket.attachments.length }})</p>
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{{ t('tickets.attachments') }} ({{ ticket.attachments.length }})</p>
           <div class="flex flex-wrap gap-2">
             <template v-for="(a, i) in ticket.attachments" :key="a.id">
               <button v-if="isImage(a.mime_type)" @click="openLightbox(ticketImages, ticketImageIndex(i))" class="group relative w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-indigo-400 transition-colors shrink-0">
@@ -208,7 +208,7 @@
 
             <!-- Status change pills — opsional, hilang saat internal note atau ticket sudah resolved -->
             <div v-if="!isInternal && !ticket.status_is_resolved && replyStatusOptions.length" class="flex items-center gap-2 mb-2 flex-wrap">
-              <span class="text-xs text-slate-400">Ubah status:</span>
+              <span class="text-xs text-slate-400">{{ t('tickets.changeStatus') }}</span>
               <button
                 v-for="s in replyStatusOptions" :key="s.id"
                 type="button"
@@ -249,7 +249,7 @@
                 {{ uploading ? 'Mengupload...' : 'Lampirkan file' }}
                 <input ref="fileInput" type="file" multiple class="hidden" :disabled="uploading" @change="handleReplyFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
               </label>
-              <button @click="submitReply" :disabled="!reply.trim() || sending || uploading" class="btn-primary">{{ sending ? 'Mengirim...' : 'Kirim' }}</button>
+              <button @click="submitReply" :disabled="!reply.trim() || sending || uploading" class="btn-primary">{{ sending ? t('tickets.sending') : t('tickets.send') }}</button>
             </div>
           </div>
         </div>
@@ -336,7 +336,7 @@
             <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Peserta <span class="font-normal text-slate-400">({{ ticket.participants?.length || 0 }})</span></h3>
             <button v-if="canManageParticipants" @click="showInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Undang
+              {{ t('tickets.invite') }}
             </button>
           </div>
           <div v-if="ticket.participants?.length" class="flex flex-wrap gap-1.5">
@@ -349,7 +349,7 @@
               <button v-if="canManageParticipants" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-400 ml-0.5 transition-colors leading-none text-[10px]">✕</button>
             </div>
           </div>
-          <p v-else class="text-xs text-slate-400 italic">Belum ada peserta.</p>
+          <p v-else class="text-xs text-slate-400 italic">{{ t('tickets.noParticipants') }}</p>
         </div>
 
         <!-- Card 3: References -->
@@ -373,7 +373,7 @@
               <span class="text-slate-500 text-[11px] truncate">{{ bl.new_ticket_title }}</span>
             </div>
           </div>
-          <p v-else class="text-xs text-slate-400">Belum ada referensi.</p>
+          <p v-else class="text-xs text-slate-400">{{ t('tickets.noReferences') }}</p>
         </div>
 
         <!-- Card 4: Activity -->
@@ -399,7 +399,7 @@
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <h3 class="font-semibold mb-4">Link Ticket Referensi</h3>
         <div class="space-y-3">
-          <input v-model="linkSearch" @input="searchTickets" type="text" placeholder="Cari ticket by judul / nomor…" class="input text-sm w-full" />
+          <input v-model="linkSearch" @input="searchTickets" type="text" :placeholder="t('tickets.searchByTitleNumber')" class="input text-sm w-full" />
           <div v-if="linkResults.length" class="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-xl p-2">
             <button v-for="t in linkResults" :key="t.id" @click="selectLinkTicket(t)" class="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-indigo-50 text-sm">
               <span class="font-mono text-xs text-slate-400">{{ t.ticket_number }}</span>
@@ -417,9 +417,9 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-4">
-          <button @click="showLinkModal = false" class="text-sm text-slate-600">Batal</button>
+          <button @click="showLinkModal = false" class="text-sm text-slate-600">{{ t('common.cancel') }}</button>
           <button @click="submitLink" :disabled="!selectedLinkTicket || linkSaving" class="btn-primary text-sm">
-            {{ linkSaving ? 'Menyimpan…' : 'Simpan' }}
+            {{ linkSaving ? t('profile.saving') : t('common.save') }}
           </button>
         </div>
       </div>
@@ -427,7 +427,7 @@
     <!-- Invite Participant Modal -->
     <div v-if="showInviteModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="closeInviteModal">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h3 class="font-semibold mb-4">Undang Peserta ke Ticket</h3>
+        <h3 class="font-semibold mb-4">{{ t('tickets.inviteParticipant') }}</h3>
         <div class="space-y-3">
           <input v-model="inviteSearch" @input="searchInviteUsers" type="text" placeholder="Cari customer by nama / email…" class="input text-sm w-full" />
           <div v-if="inviteResults.length" class="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-xl p-2">
@@ -446,13 +446,13 @@
                 <p class="text-xs text-slate-400 truncate">{{ u.email }}</p>
               </div>
               <span v-if="isAlreadyParticipant(u.id)" class="text-xs text-green-600">Sudah</span>
-              <span v-else class="text-xs text-indigo-600">+ Undang</span>
+              <span v-else class="text-xs text-indigo-600">+ {{ t('tickets.invite') }}</span>
             </button>
           </div>
-          <p v-else-if="inviteSearch.length > 1" class="text-xs text-slate-400 text-center py-2">Tidak ada hasil</p>
+          <p v-else-if="inviteSearch.length > 1" class="text-xs text-slate-400 text-center py-2">{{ t('common.noResults') }}</p>
         </div>
         <div class="flex justify-end mt-4">
-          <button @click="closeInviteModal" class="text-sm text-slate-600 btn-ghost">Tutup</button>
+          <button @click="closeInviteModal" class="text-sm text-slate-600 btn-ghost">{{ t('common.close') }}</button>
         </div>
       </div>
     </div>
@@ -460,7 +460,7 @@
     <!-- Create Task Modal -->
     <div v-if="showCreateTaskModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showCreateTaskModal = false">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h3 class="font-semibold mb-4">Buat Task dari Ticket</h3>
+        <h3 class="font-semibold mb-4">{{ t('tickets.createTaskFromTicket') }}</h3>
         <div class="space-y-3">
           <div>
             <label class="text-xs text-slate-500 mb-1 block">Judul Task <span class="text-red-500">*</span></label>
@@ -471,12 +471,12 @@
             <textarea v-model="createTaskForm.description" class="input text-sm w-full min-h-[72px] resize-none" placeholder="Deskripsi task..." />
           </div>
           <div>
-            <label class="text-xs text-slate-500 mb-1 block">Assign ke</label>
+            <label class="text-xs text-slate-500 mb-1 block">{{ t('tickets.assignTo') }}</label>
             <AppSelect v-model="createTaskForm.assigned_to" :options="[{ value: '', label: 'Unassigned' }, ...staff.map((u: any) => ({ value: u.id, label: u.name }))]" placeholder="Unassigned" class="w-full" />
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-5">
-          <button @click="showCreateTaskModal = false" class="text-sm text-slate-600">Batal</button>
+          <button @click="showCreateTaskModal = false" class="text-sm text-slate-600">{{ t('common.cancel') }}</button>
           <button @click="submitCreateTask" :disabled="!createTaskForm.title.trim() || creatingTask" class="btn-primary text-sm">
             {{ creatingTask ? 'Membuat...' : 'Buat Task' }}
           </button>
@@ -503,7 +503,7 @@
         </div>
         <!-- Messages -->
         <div class="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-          <div v-if="!transcriptData?.transcript?.length" class="text-center text-sm text-slate-400 py-8">Tidak ada riwayat chat.</div>
+          <div v-if="!transcriptData?.transcript?.length" class="text-center text-sm text-slate-400 py-8">{{ t('tickets.noChatHistory') }}</div>
           <div
             v-for="(msg, i) in transcriptData?.transcript"
             :key="i"
@@ -538,7 +538,7 @@
       <h3 class="font-semibold text-slate-800 mb-4">Perpanjang Due Date</h3>
       <div class="space-y-3">
         <div>
-          <label class="text-xs text-slate-500 mb-1 block">Due Date Baru <span class="text-red-500">*</span></label>
+          <label class="text-xs text-slate-500 mb-1 block">{{ t('tickets.newDueDate') }} <span class="text-red-500">*</span></label>
           <input v-model="extendDate" type="datetime-local" class="input w-full text-sm" :min="todayMin" />
         </div>
         <div>
@@ -547,9 +547,9 @@
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-5">
-        <button @click="showExtendModal = false" class="text-sm text-slate-600 hover:text-slate-800">Batal</button>
+        <button @click="showExtendModal = false" class="text-sm text-slate-600 hover:text-slate-800">{{ t('common.cancel') }}</button>
         <button @click="submitExtend" :disabled="!extendDate || !extendReason.trim() || extendSaving" class="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-          {{ extendSaving ? 'Menyimpan…' : 'Simpan' }}
+          {{ extendSaving ? t('profile.saving') : t('common.save') }}
         </button>
       </div>
     </div>
@@ -559,7 +559,7 @@
   <div v-if="showResolutionModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
       <h3 class="text-base font-semibold text-slate-900 mb-1">Tipe Resolusi Ticket QC</h3>
-      <p class="text-xs text-slate-400 mb-4">Pilih tipe resolusi sebelum menutup ticket ini.</p>
+      <p class="text-xs text-slate-400 mb-4">{{ t('tickets.selectResolutionType') }}</p>
       <div class="space-y-2">
         <label class="flex items-start gap-3 p-3 border rounded-xl cursor-pointer hover:bg-green-50 transition-colors"
           :class="pendingResolution.type === 'fixed' ? 'border-green-400 bg-green-50' : 'border-slate-200'">
@@ -574,13 +574,13 @@
           <input type="radio" v-model="pendingResolution.type" value="mismatch_requirement" class="mt-0.5 accent-amber-600" />
           <div>
             <p class="text-sm font-medium text-slate-800">Mismatch Requirement</p>
-            <p class="text-xs text-slate-500">Bukan bug — melenceng dari requirement. Customer diminta submit request baru.</p>
+            <p class="text-xs text-slate-500">{{ t('tickets.notABugHint') }}</p>
           </div>
         </label>
       </div>
       <div class="flex gap-2 mt-5">
-        <button @click="cancelResolution" class="btn-secondary flex-1">Batal</button>
-        <button @click="confirmResolution" :disabled="!pendingResolution.type" class="btn-primary flex-1">Konfirmasi</button>
+        <button @click="cancelResolution" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
+        <button @click="confirmResolution" :disabled="!pendingResolution.type" class="btn-primary flex-1">{{ t('common.confirm') }}</button>
       </div>
     </div>
   </div>
@@ -589,6 +589,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 const { fmtDateTime } = useDate()
+const { t } = useI18n()
 const auth = useAuthStore()
 const tabs = useTabStore()
 const chatWidget = useChatWidgetStore()
@@ -657,7 +658,7 @@ const closingTicket = ref(false)
 
 const { confirmDelete } = useConfirm()
 async function deleteTicket() {
-  if (!await confirmDelete('Ticket ini akan dihapus permanen beserta seluruh riwayatnya.', 'Hapus ticket?')) return
+  if (!await confirmDelete(t('tickets.deleteConfirmMessage'), t('tickets.deleteConfirmTitle'))) return
   await $fetch(`/api/tickets/${id}`, { method: 'DELETE' })
   await navigateTo('/tickets')
 }
@@ -757,7 +758,7 @@ async function handleReplyPaste(e: ClipboardEvent) {
       }
     }
   } catch (err: any) {
-    uploadError.value = err?.data?.statusMessage || 'Gagal mengupload gambar'
+    uploadError.value = err?.data?.statusMessage || t('tickets.imageUploadFailed')
   } finally {
     uploading.value = false
   }
@@ -814,7 +815,7 @@ async function handleReplyFiles(e: Event) {
       replyFiles.value.push(r.data)
     }
   } catch (e: any) {
-    uploadError.value = e?.data?.statusMessage || 'Gagal mengupload file'
+    uploadError.value = e?.data?.statusMessage || t('tickets.fileUploadFailed')
   } finally {
     uploading.value = false
     input.value = ''

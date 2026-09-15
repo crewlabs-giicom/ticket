@@ -19,7 +19,7 @@
           <AppSelect
             v-model="selectedVersionId"
             :options="prd.versions.map((v: any) => ({ value: v.id, label: `v${v.version_number}${v.id === prd.current_version_id ? ' (active)' : ''}` }))"
-            placeholder="Pilih versi"
+            :placeholder="t('prds.selectVersion')"
             class="w-36"
           />
           <!-- Status -->
@@ -41,7 +41,7 @@
             v-if="authStore.isAdmin"
             @click="deletePrd"
             class="px-4 py-2 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
-          >Hapus</button>
+          >{{ t('common.delete') }}</button>
         </div>
       </div>
 
@@ -57,7 +57,7 @@
             <span>{{ p.name }}</span>
             <button v-if="authStore.isStaffOrAdmin" @click="removeParticipant(p.user_id)" class="text-slate-300 hover:text-red-500 transition-colors ml-0.5">✕</button>
           </div>
-          <span v-if="!prdParticipants.length" class="text-xs text-gray-400 italic">Belum ada peserta</span>
+          <span v-if="!prdParticipants.length" class="text-xs text-gray-400 italic">{{ t('prds.noParticipants') }}</span>
         </div>
         <button v-if="authStore.isStaffOrAdmin" @click="showInviteModal = true" class="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 flex-shrink-0">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -79,11 +79,11 @@
               v-model="inviteSearch"
               @input="searchUsers"
               type="text"
-              placeholder="Cari nama atau email..."
+              :placeholder="t('projects.searchNameEmailShort')"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
             <div class="max-h-52 overflow-y-auto space-y-1">
-              <div v-if="!inviteResults.length && inviteSearch.length >= 2" class="text-xs text-center text-gray-400 py-4">Tidak ada user ditemukan</div>
+              <div v-if="!inviteResults.length && inviteSearch.length >= 2" class="text-xs text-center text-gray-400 py-4">{{ t('prds.noUsersFound') }}</div>
               <div v-for="u in inviteResults" :key="u.id" class="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-slate-50">
                 <div class="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700 overflow-hidden flex-shrink-0">
                   <img v-if="u.avatar" :src="`/uploads/${u.avatar}`" class="w-full h-full object-cover" />
@@ -136,7 +136,7 @@
               :disabled="!newOriginalDueDate || savingDates"
               @click="savePrdDate('original_due_date', newOriginalDueDate)"
               class="text-xs px-2 py-0.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-40"
-            >Simpan</button>
+            >{{ t('common.save') }}</button>
           </template>
           <template v-else>
             <span class="text-sm text-slate-700">{{ fmtDate(prd.original_due_date) }}</span>
@@ -354,7 +354,7 @@
         </div>
         <div class="p-5 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Due Date Baru <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('tickets.newDueDate') }} <span class="text-red-500">*</span></label>
             <input v-model="reviseForm.new_due_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
           </div>
           <div>
@@ -363,9 +363,9 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 px-5 py-4 border-t">
-          <button @click="showReviseModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
+          <button @click="showReviseModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">{{ t('common.cancel') }}</button>
           <button @click="submitRevise" :disabled="revisingDate || !reviseForm.new_due_date || !reviseForm.reason.trim()" class="px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
-            {{ revisingDate ? 'Menyimpan...' : 'Simpan Revisi' }}
+            {{ revisingDate ? t('profile.saving') : t('qcForms.saveRevision') }}
           </button>
         </div>
       </div>
@@ -477,6 +477,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '~/stores/auth'
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const route = useRoute()
 const prdId = computed(() => Number(route.params.id))
@@ -664,7 +665,7 @@ async function updateStatus(status: string) {
 
 const { confirmDelete } = useConfirm()
 async function deletePrd() {
-  if (!await confirmDelete('PRD ini akan dihapus permanen beserta seluruh versi dan milestone-nya. Task yang terkait tidak akan terhapus, hanya dilepas dari PRD ini.', 'Hapus PRD?')) return
+  if (!await confirmDelete(t('prds.deleteConfirmMessage'), t('prds.deleteConfirmTitle'))) return
   await $fetch(`/api/prds/${prdId.value}`, { method: 'DELETE' })
   await navigateTo('/prds')
 }

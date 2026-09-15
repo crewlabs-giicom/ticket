@@ -67,7 +67,7 @@
         <table class="w-full text-xs">
           <thead>
             <tr class="text-left text-slate-400 uppercase tracking-wide">
-              <th class="py-1.5 pr-3">Field</th><th class="py-1.5 pr-3">Wajib</th><th class="py-1.5">Keterangan</th>
+              <th class="py-1.5 pr-3">Field</th><th class="py-1.5 pr-3">{{ t('apiDocs.required') }}</th><th class="py-1.5">{{ t('apiDocs.description') }}</th>
             </tr>
           </thead>
           <tbody class="text-slate-600">
@@ -165,5 +165,6 @@ function isValidSignature(rawBody, signatureHeader, secret) {
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 const events = ['ticket.created', 'ticket.commented', 'ticket.closed', 'ticket.status_changed']
 </script>

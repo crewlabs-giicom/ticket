@@ -30,7 +30,7 @@
           v-model="query"
           type="text"
           class="w-full px-2.5 py-1.5 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 placeholder-slate-400"
-          placeholder="Cari..."
+          :placeholder="t('common.search') + '...'"
           @keydown.down.prevent="moveHighlight(1)"
           @keydown.up.prevent="moveHighlight(-1)"
           @keydown.enter.prevent="selectHighlighted"
@@ -40,7 +40,7 @@
 
       <!-- Options list -->
       <ul class="max-h-52 overflow-y-auto py-1">
-        <li v-if="!filteredSelectables.length" class="px-3 py-2 text-xs text-slate-400 text-center">Tidak ada hasil</li>
+        <li v-if="!filteredSelectables.length" class="px-3 py-2 text-xs text-slate-400 text-center">{{ t('common.noResults') }}</li>
         <template v-for="(opt, i) in filtered" :key="isGroup(opt) ? `g-${opt.group}` : String(opt.value)">
           <!-- Group header -->
           <li
@@ -79,13 +79,15 @@ type GroupHeader = { group: string }
 type SelectOption = { value: any; label: string }
 type AnyOption = GroupHeader | SelectOption
 
+const { t } = useI18n()
+
 const props = withDefaults(defineProps<{
   modelValue: any
   options: AnyOption[]
   placeholder?: string
   disabled?: boolean
 }>(), {
-  placeholder: 'Pilih...',
+  placeholder: () => useI18n().t('common.selectEllipsis'),
   disabled: false,
 })
 

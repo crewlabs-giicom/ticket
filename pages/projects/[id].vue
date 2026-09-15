@@ -124,7 +124,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="text-sm text-slate-400">Belum ada member. <button v-if="auth.isAdmin" @click="setTab('members')" class="text-indigo-600 hover:underline">Tambah →</button></p>
+          <p v-else class="text-sm text-slate-400">{{ t('projects.noMembers') }} <button v-if="auth.isAdmin" @click="setTab('members')" class="text-indigo-600 hover:underline">{{ t('projects.addArrow') }}</button></p>
         </div>
       </div>
 
@@ -168,7 +168,7 @@
         <div v-if="taskViewMode === 'list'" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div v-if="tasksLoading" class="flex items-center justify-center py-12 text-slate-400">
             <svg class="w-5 h-5 animate-spin mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Memuat…
+            {{ t('common.loading') }}
           </div>
           <table v-else class="w-full text-sm">
             <thead class="bg-slate-50 border-b border-slate-200">
@@ -182,7 +182,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-if="!filteredProjectTasks.length">
-                <td colspan="5" class="px-4 py-10 text-center text-slate-400">Belum ada task.</td>
+                <td colspan="5" class="px-4 py-10 text-center text-slate-400">{{ t('projects.noTasks') }}</td>
               </tr>
               <tr
                 v-for="task in filteredProjectTasks" :key="task.id"
@@ -240,13 +240,13 @@
         <!-- Filter bar -->
         <div class="flex items-center gap-2 flex-wrap">
           <select v-model="ticketStatusFilter" @change="loadTickets()" class="input text-sm w-44 py-2">
-            <option value="">Semua Status</option>
+            <option value="">{{ t('tickets.allStatus') }}</option>
             <option v-for="s in statuses" :key="s.id" :value="s.id">{{ s.name }}</option>
           </select>
         </div>
         <div v-if="ticketsLoading" class="flex items-center justify-center py-12 text-slate-400">
           <svg class="w-5 h-5 animate-spin mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Memuat tiket…
+          {{ t('projects.loadingTickets') }}
         </div>
         <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <table class="w-full text-sm">
@@ -257,12 +257,12 @@
                 <th class="text-left px-4 py-3 font-medium text-slate-500">Status</th>
                 <th class="text-left px-4 py-3 font-medium text-slate-500">Prioritas</th>
                 <th class="text-left px-4 py-3 font-medium text-slate-500">Assignee</th>
-                <th class="text-left px-4 py-3 font-medium text-slate-500">Dibuat</th>
+                <th class="text-left px-4 py-3 font-medium text-slate-500">{{ t('projects.created') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-if="!tickets.length">
-                <td colspan="6" class="px-4 py-10 text-center text-slate-400">Belum ada tiket untuk project ini.</td>
+                <td colspan="6" class="px-4 py-10 text-center text-slate-400">{{ t('projects.noTicketsForProject') }}</td>
               </tr>
               <tr
                 v-for="tk in tickets" :key="tk.id"
@@ -292,9 +292,9 @@
       <div v-else-if="activeTab === 'members'" class="space-y-4">
         <!-- Add member (admin or project admin) -->
         <div v-if="auth.isAdmin || canManageProject(projectId)" class="card p-4 space-y-3">
-          <label class="block text-xs font-medium text-slate-600">Tambah Member</label>
+          <label class="block text-xs font-medium text-slate-600">{{ t('projects.addMember') }}</label>
           <!-- Search input -->
-          <input v-model="addMemberSearch" type="text" class="input text-sm" placeholder="Cari nama atau email user…" />
+          <input v-model="addMemberSearch" type="text" class="input text-sm" :placeholder="t('projects.searchNameEmail')" />
           <!-- Checkbox list -->
           <div v-if="filteredAvailableUsers.length" class="max-h-48 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
             <label
@@ -312,8 +312,8 @@
               </div>
             </label>
           </div>
-          <p v-else-if="addMemberSearch" class="text-xs text-slate-400 text-center py-2">Tidak ada user yang cocok.</p>
-          <p v-else class="text-xs text-slate-400 text-center py-2">Semua user sudah menjadi member.</p>
+          <p v-else-if="addMemberSearch" class="text-xs text-slate-400 text-center py-2">{{ t('projects.noMatchingUsers') }}</p>
+          <p v-else class="text-xs text-slate-400 text-center py-2">{{ t('projects.allUsersAreMembers') }}</p>
           <div class="flex items-center justify-between gap-3 flex-wrap">
             <div class="flex items-center gap-3">
               <span class="text-xs text-slate-500">{{ addMemberIds.length }} user dipilih</span>
@@ -326,7 +326,7 @@
               @click="addMember"
               :disabled="!addMemberIds.length || memberSaving"
               class="btn-primary text-sm disabled:opacity-50"
-            >{{ memberSaving ? 'Menambah…' : `Tambah ${addMemberIds.length ? `(${addMemberIds.length})` : ''}` }}</button>
+            >{{ memberSaving ? t('projects.adding') : `${t('common.add')} ${addMemberIds.length ? `(${addMemberIds.length})` : ''}` }}</button>
           </div>
         </div>
 
@@ -334,13 +334,13 @@
         <div class="flex items-center gap-2">
           <div class="relative flex-1 max-w-xs">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input v-model="memberSearch" @input="onMemberSearch" type="text" placeholder="Cari nama atau email..." class="input pl-9 text-sm" />
+            <input v-model="memberSearch" @input="onMemberSearch" type="text" :placeholder="t('projects.searchNameEmailShort')" class="input pl-9 text-sm" />
           </div>
         </div>
 
         <!-- Member list -->
         <div class="card overflow-hidden">
-          <div v-if="!members.length" class="p-6 text-center text-slate-400 text-sm">{{ memberSearch ? 'Tidak ada member yang cocok.' : 'Belum ada member.' }}</div>
+          <div v-if="!members.length" class="p-6 text-center text-slate-400 text-sm">{{ memberSearch ? t('projects.noMatchingMembers') : t('projects.noMembers') }}</div>
           <div v-else class="divide-y divide-slate-100">
             <div v-for="m in members" :key="m.id" class="flex items-center gap-3 px-5 py-3.5">
               <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 text-sm font-bold flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -358,7 +358,7 @@
                 v-if="auth.isAdmin || canManageProject(projectId)"
                 @click="removeMember(m.id)"
                 class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors"
-              >Hapus</button>
+              >{{ t('common.delete') }}</button>
             </div>
           </div>
         </div>
@@ -378,12 +378,12 @@
           <NuxtLink
             :to="`/prds?project_id=${projectId}`"
             class="text-sm text-indigo-600 hover:underline flex items-center gap-1"
-          >Lihat semua →</NuxtLink>
+          >{{ t('projects.viewAllArrow') }}</NuxtLink>
         </div>
 
-        <div v-if="prdsLoading" class="text-center py-10 text-slate-400">Memuat…</div>
+        <div v-if="prdsLoading" class="text-center py-10 text-slate-400">{{ t('common.loading') }}</div>
         <div v-else-if="!projectPrds.length" class="card p-10 text-center text-slate-400">
-          Belum ada PRD untuk project ini.
+          {{ t('projects.noPrdsForProject') }}
           <NuxtLink to="/prds" class="ml-1 text-indigo-600 hover:underline">Buat PRD baru →</NuxtLink>
         </div>
 
@@ -416,11 +416,11 @@
 
       <!-- ─ TIMELINE ─ -->
       <div v-else-if="activeTab === 'timeline'">
-        <div v-if="timelineLoading" class="text-center py-16 text-slate-400">Memuat timeline…</div>
+        <div v-if="timelineLoading" class="text-center py-16 text-slate-400">{{ t('projects.loadingTimeline') }}</div>
         <div v-else-if="!timelineHasData" class="card p-12 text-center text-slate-400">
           <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <p class="text-sm">Belum ada data timeline.</p>
-          <p class="text-xs mt-1 text-slate-300">Isi due date pada PRD, Task, atau QC Form terlebih dahulu.</p>
+          <p class="text-sm">{{ t('projects.noTimelineData') }}</p>
+          <p class="text-xs mt-1 text-slate-300">{{ t('projects.fillDueDateHint') }}</p>
         </div>
         <div v-else>
           <!-- Legend + controls -->
@@ -538,30 +538,30 @@
       <!-- ─ SYSTEM MENUS ─ -->
       <div v-else-if="activeTab === 'system-menus'" class="space-y-4">
         <div v-if="auth.isAdmin" class="card p-4 space-y-3">
-          <h3 class="text-sm font-semibold text-slate-700">Tambah Menu Sistem</h3>
+          <h3 class="text-sm font-semibold text-slate-700">{{ t('projects.addSystemMenu') }}</h3>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="label">Modul</label>
-              <input v-model="smForm.module" type="text" class="input w-full" placeholder="Nama modul…" />
+              <input v-model="smForm.module" type="text" class="input w-full" :placeholder="t('projects.modulePlaceholder')" />
             </div>
             <div>
               <label class="label">Tipe</label>
-              <AppSelect v-model="smForm.type" :options="[{ value: '', label: '— Pilih —' }, { value: 'Master', label: 'Master' }, { value: 'Transaction', label: 'Transaction' }, { value: 'Report', label: 'Report' }]" placeholder="— Pilih —" />
+              <AppSelect v-model="smForm.type" :options="[{ value: '', label: t('projects.selectPlaceholder') }, { value: 'Master', label: 'Master' }, { value: 'Transaction', label: 'Transaction' }, { value: 'Report', label: 'Report' }]" :placeholder="t('projects.selectPlaceholder')" />
             </div>
           </div>
           <div>
-            <label class="label">Nama Menu</label>
-            <input v-model="smForm.name" type="text" class="input w-full" placeholder="Nama menu…" />
+            <label class="label">{{ t('projects.menuName') }}</label>
+            <input v-model="smForm.name" type="text" class="input w-full" :placeholder="t('projects.menuNamePlaceholder')" />
           </div>
           <div class="flex justify-end">
             <button @click="addSystemMenu" :disabled="smSaving || !smForm.module.trim()" class="btn-primary text-sm disabled:opacity-50">
-              {{ smSaving ? 'Menyimpan…' : 'Tambah' }}
+              {{ smSaving ? t('profile.saving') : t('common.add') }}
             </button>
           </div>
         </div>
 
         <div class="card overflow-hidden">
-          <div v-if="!projectSystemMenus.length" class="p-6 text-center text-slate-400 text-sm">Belum ada menu sistem untuk project ini.</div>
+          <div v-if="!projectSystemMenus.length" class="p-6 text-center text-slate-400 text-sm">{{ t('projects.noSystemMenus') }}</div>
           <div v-else>
             <div v-for="(items, mod) in groupedSystemMenus" :key="mod" class="border-b border-slate-100 last:border-0">
               <div class="px-5 py-2 bg-slate-50 flex items-center gap-2">
@@ -575,7 +575,7 @@
                 <span :class="['text-xs px-2 py-0.5 rounded-full', item.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500']">
                   {{ item.is_active ? 'Aktif' : 'Nonaktif' }}
                 </span>
-                <button v-if="auth.isAdmin" @click="deleteSystemMenu(item.id)" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors">Hapus</button>
+                <button v-if="auth.isAdmin" @click="deleteSystemMenu(item.id)" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition-colors">{{ t('common.delete') }}</button>
               </div>
             </div>
           </div>
@@ -585,16 +585,16 @@
       <!-- ─ INTEGRATION (Registered Systems) ─ -->
       <div v-else-if="activeTab === 'integration' && auth.isAdmin" class="space-y-4 max-w-3xl">
         <div class="flex items-center justify-between">
-          <p class="text-sm text-slate-500">Sistem eksternal yang boleh membuat/komentar/menutup ticket di project ini lewat API. Satu sistem hanya bisa mengakses project ini. Lihat <NuxtLink to="/api-docs" class="text-indigo-600 hover:underline">dokumentasi API</NuxtLink>.</p>
+          <p class="text-sm text-slate-500">{{ t('projects.externalSystemHint') }} <NuxtLink to="/api-docs" class="text-indigo-600 hover:underline">{{ t('layout.apiDocs') }}</NuxtLink>.</p>
           <button @click="openRegisterSystemModal()" class="btn-primary text-sm flex items-center gap-1.5 flex-shrink-0 ml-3">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Daftarkan Sistem
           </button>
         </div>
 
-        <div v-if="registeredSystemsLoading" class="text-center py-10 text-slate-400 text-sm">Memuat…</div>
+        <div v-if="registeredSystemsLoading" class="text-center py-10 text-slate-400 text-sm">{{ t('common.loading') }}</div>
         <div v-else-if="!registeredSystems.length" class="card p-10 text-center text-slate-400 text-sm">
-          Belum ada sistem eksternal terdaftar untuk project ini.
+          {{ t('projects.noRegisteredSystems') }}
         </div>
 
         <div v-else class="space-y-3">
@@ -620,7 +620,7 @@
                 <button @click="regenerateKey(sys)" :disabled="systemActionBusy" class="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors">Regenerate Key</button>
                 <button v-if="sys.webhook_url" @click="regenerateWebhookSecret(sys)" :disabled="systemActionBusy" class="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors">Regenerate Secret</button>
                 <button @click="openRegisterSystemModal(sys)" class="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors">Edit</button>
-                <button @click="deleteRegisteredSystem(sys)" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-colors">Hapus</button>
+                <button @click="deleteRegisteredSystem(sys)" class="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-colors">{{ t('common.delete') }}</button>
               </div>
             </div>
 
@@ -644,14 +644,14 @@
         <!-- Register/Edit system modal -->
         <div v-if="showSystemModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showSystemModal = false">
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-            <h2 class="text-lg font-semibold mb-4">{{ editingSystem ? 'Edit Sistem' : 'Daftarkan Sistem Baru' }}</h2>
+            <h2 class="text-lg font-semibold mb-4">{{ editingSystem ? t('projects.editSystem') : t('projects.registerNewSystem') }}</h2>
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Nama Sistem *</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">{{ t('projects.systemName') }} *</label>
                 <input v-model="systemForm.name" type="text" class="input w-full" placeholder="Mis. CRM Internal" autofocus />
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Deskripsi</label>
+                <label class="block text-sm font-medium text-slate-700 mb-1">{{ t('projects.description') }}</label>
                 <textarea v-model="systemForm.description" rows="2" class="input w-full resize-none" placeholder="Opsional…"></textarea>
               </div>
               <div>
@@ -673,9 +673,9 @@
               </label>
             </div>
             <div class="flex justify-end gap-3 mt-6">
-              <button @click="showSystemModal = false" class="btn-ghost">Batal</button>
+              <button @click="showSystemModal = false" class="btn-ghost">{{ t('common.cancel') }}</button>
               <button @click="saveRegisteredSystem" :disabled="systemActionBusy || !systemForm.name.trim()" class="btn-primary disabled:opacity-50">
-                {{ systemActionBusy ? 'Menyimpan…' : (editingSystem ? 'Simpan' : 'Daftarkan') }}
+                {{ systemActionBusy ? t('profile.saving') : (editingSystem ? t('common.save') : t('projects.register')) }}
               </button>
             </div>
           </div>
@@ -728,7 +728,7 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-6">
-          <button @click="showCreateModal = false" class="btn-ghost">Batal</button>
+          <button @click="showCreateModal = false" class="btn-ghost">{{ t('common.cancel') }}</button>
           <button @click="createTask" :disabled="creating || !taskForm.title.trim()" class="btn-primary disabled:opacity-50">
             {{ creating ? 'Membuat…' : 'Buat Task' }}
           </button>
@@ -739,14 +739,14 @@
     <!-- ── Edit project modal ── -->
     <div v-if="showEditModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="showEditModal = false">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-        <h2 class="text-lg font-semibold mb-4">Edit Project</h2>
+        <h2 class="text-lg font-semibold mb-4">{{ t('projects.editProject') }}</h2>
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Nama *</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">{{ t('profile.name') }} *</label>
             <input v-model="editForm.name" type="text" class="input w-full" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Deskripsi</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">{{ t('projects.description') }}</label>
             <textarea v-model="editForm.description" rows="3" class="input w-full resize-none"></textarea>
           </div>
           <div>
@@ -759,9 +759,9 @@
           </div>
         </div>
         <div class="flex justify-end gap-3 mt-6">
-          <button @click="showEditModal = false" class="btn-ghost">Batal</button>
+          <button @click="showEditModal = false" class="btn-ghost">{{ t('common.cancel') }}</button>
           <button @click="saveEdit" :disabled="editSaving || !editForm.name.trim()" class="btn-primary disabled:opacity-50">
-            {{ editSaving ? 'Menyimpan…' : 'Simpan' }}
+            {{ editSaving ? t('profile.saving') : t('common.save') }}
           </button>
         </div>
       </div>
@@ -801,6 +801,7 @@ const STATUS_STYLES: Record<string, { label: string; class: string }> = {
 }
 function statusStyle(s: string) { return STATUS_STYLES[s] ?? STATUS_STYLES.active }
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
@@ -907,7 +908,7 @@ async function addMember() {
 
 const { confirmDelete } = useConfirm()
 async function removeMember(userId: number) {
-  if (!await confirmDelete('Member ini akan dihapus dari project.', 'Hapus member?')) return
+  if (!await confirmDelete(t('projects.deleteMemberConfirm'), t('projects.deleteMemberTitle'))) return
   await $fetch(`/api/projects/${projectId}/members`, { method: 'DELETE', body: { user_id: userId } })
   await Promise.all([loadMembers(), refreshProject()])
 }
@@ -1061,7 +1062,7 @@ async function addSystemMenu() {
 }
 
 async function deleteSystemMenu(id: number) {
-  if (!await confirmDelete('Menu sistem ini akan dihapus permanen.', 'Hapus menu sistem?')) return
+  if (!await confirmDelete(t('projects.deleteSystemMenuConfirm'), t('projects.deleteSystemMenuTitle'))) return
   await $fetch(`/api/system-menus/${id}`, { method: 'DELETE' })
   await loadSystemMenus()
 }
@@ -1211,7 +1212,7 @@ async function regenerateWebhookSecret(sys: any) {
 }
 
 async function deleteRegisteredSystem(sys: any) {
-  if (!await confirmDelete(`Sistem "${sys.name}" tidak akan bisa lagi mengakses API ticket project ini.`, 'Hapus sistem terdaftar?')) return
+  if (!await confirmDelete(t('projects.deleteRegisteredSystemConfirm', { name: sys.name }), t('projects.deleteRegisteredSystemTitle'))) return
   await $fetch(`/api/projects/${projectId}/registered-systems/${sys.id}`, { method: 'DELETE' })
   delete revealedSecrets[sys.id]
   await loadRegisteredSystems()

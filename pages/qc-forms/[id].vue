@@ -11,11 +11,11 @@
             </span>
           </div>
           <h1 class="text-lg font-bold text-slate-900">{{ form.task_title }}</h1>
-          <p class="text-xs text-slate-400 mt-0.5">Template: {{ form.template_name || 'Tanpa template' }} · Dibuat oleh {{ form.created_by_name }}</p>
+          <p class="text-xs text-slate-400 mt-0.5">Template: {{ form.template_name || t('qcForms.noTemplate') }} · {{ t('tickets.createdBy') }} {{ form.created_by_name }}</p>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           <AppRefreshButton :loading="loading" @click="fetchForm" />
-          <button v-if="auth.isAdmin" @click="deleteQcForm" class="btn-ghost text-xs py-1.5 text-red-500 hover:text-red-700">Hapus</button>
+          <button v-if="auth.isAdmin" @click="deleteQcForm" class="btn-ghost text-xs py-1.5 text-red-500 hover:text-red-700">{{ t('common.delete') }}</button>
         </div>
       </div>
 
@@ -43,7 +43,7 @@
         </button>
         <button @click="openTaskPanel" :disabled="taskPanelLoading" class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg text-xs transition-colors disabled:opacity-50 flex-shrink-0">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          {{ taskPanelLoading ? 'Memuat...' : 'Detail Task' }}
+          {{ taskPanelLoading ? t('common.loading') : t('qcForms.taskDetail') }}
         </button>
       </div>
       <div v-if="showTaskInfo" class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -106,7 +106,7 @@
         <h3 class="text-base font-semibold text-slate-900 mb-4">Revisi Due Date QC Form</h3>
         <div class="space-y-4">
           <div>
-            <label class="label">Due Date Baru <span class="text-red-500">*</span></label>
+            <label class="label">{{ t('tickets.newDueDate') }} <span class="text-red-500">*</span></label>
             <input v-model="qcReviseForm.new_due_date" type="date" class="input w-full" />
           </div>
           <div>
@@ -115,9 +115,9 @@
           </div>
         </div>
         <div class="flex gap-2 mt-5">
-          <button @click="showQcReviseModal = false" class="btn-secondary flex-1">Batal</button>
+          <button @click="showQcReviseModal = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
           <button @click="submitQcRevise" :disabled="revisingQcDate || !qcReviseForm.new_due_date || !qcReviseForm.reason.trim()" class="flex-1 px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
-            {{ revisingQcDate ? 'Menyimpan...' : 'Simpan Revisi' }}
+            {{ revisingQcDate ? t('profile.saving') : t('qcForms.saveRevision') }}
           </button>
         </div>
       </div>
@@ -131,7 +131,7 @@
           <p class="text-xs text-slate-400 mt-0.5">
             Total saya: <span class="font-medium text-slate-600">{{ timer.totalFormatted.value }}</span>
             <span v-if="myTotalSeconds > 0 && timer.totalSeconds.value !== myTotalSeconds" class="ml-2">
-              · Semua checker: <span class="font-medium text-slate-600">{{ formatSeconds(allTotalSeconds) }}</span>
+              · {{ t('qcForms.allCheckers') }}: <span class="font-medium text-slate-600">{{ formatSeconds(allTotalSeconds) }}</span>
             </span>
           </p>
         </div>
@@ -189,7 +189,7 @@
     <!-- Loop QC — only once the form is waiting for an explicit re-submission -->
     <div v-if="auth.isStaffOrAdmin && form.status === 'waiting_resubmit'" class="card p-4 flex items-center justify-between">
       <div>
-        <p class="text-sm font-semibold text-slate-700">Semua ticket QC sudah selesai</p>
+        <p class="text-sm font-semibold text-slate-700">{{ t('qcForms.allQcTicketsDone') }}</p>
         <p class="text-xs text-slate-400">Ajukan pemeriksaan QC ulang untuk verifikasi.</p>
       </div>
       <button @click="checkerSearchLoop = ''; showLoopQcModal = true" class="btn-primary text-sm flex-shrink-0">+ Ajukan QC Ulang</button>
@@ -199,8 +199,8 @@
     <div v-if="showLoopQcModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <h3 class="text-base font-semibold text-slate-900 mb-4">Ajukan QC Ulang — Form #{{ (form.sequence || 0) + 1 }}</h3>
-        <label class="text-xs font-medium text-slate-500 mb-1 block">Pilih Checker</label>
-        <input v-model="checkerSearchLoop" placeholder="Cari checker..." class="input text-sm mb-2 w-full" />
+        <label class="text-xs font-medium text-slate-500 mb-1 block">{{ t('qcForms.selectChecker') }}</label>
+        <input v-model="checkerSearchLoop" :placeholder="t('qcForms.searchChecker')" class="input text-sm mb-2 w-full" />
         <div class="max-h-52 overflow-y-auto border border-slate-200 rounded-lg mb-4">
           <div v-if="!filteredUsersLoop.length" class="text-sm text-slate-400 px-2 py-2">Tidak ditemukan</div>
           <label v-for="u in filteredUsersLoop" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
@@ -209,7 +209,7 @@
           </label>
         </div>
         <div class="flex gap-2">
-          <button @click="showLoopQcModal = false" class="btn-secondary flex-1">Batal</button>
+          <button @click="showLoopQcModal = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
           <button @click="submitLoopQc" :disabled="!loopCheckerIds.length || loopingQc" class="btn-primary flex-1">
             {{ loopingQc ? 'Memproses...' : 'Ajukan QC Ulang' }}
           </button>
@@ -219,7 +219,7 @@
 
     <!-- Add manual item (staff only) -->
     <div v-if="auth.isStaffOrAdmin && form.status === 'active'" class="card p-4">
-      <h3 class="text-sm font-semibold text-slate-700 mb-3">Tambah Item Checklist Manual</h3>
+      <h3 class="text-sm font-semibold text-slate-700 mb-3">{{ t('qcForms.addManualChecklistItem') }}</h3>
       <div class="flex gap-2">
         <input v-model="newItemName" class="input flex-1 text-sm" placeholder="Nama item..." @keydown.enter.prevent="addManualItem" />
         <div class="flex flex-col gap-1">
@@ -232,7 +232,7 @@
           </div>
         </div>
         <button @click="addManualItem" :disabled="!newItemName.trim() || !newItemCheckerIds.length"
-          class="btn-primary text-sm self-end">Tambah</button>
+          class="btn-primary text-sm self-end">{{ t('common.add') }}</button>
       </div>
     </div>
 
@@ -286,31 +286,31 @@
             class="flex-shrink-0 text-[10px] border border-indigo-200 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors whitespace-nowrap"
           >+ Buka Ticket</button>
         </div>
-        <p v-if="!checkerItems(checker.user_id).length" class="px-5 py-4 text-sm text-slate-400">Belum ada item checklist.</p>
+        <p v-if="!checkerItems(checker.user_id).length" class="px-5 py-4 text-sm text-slate-400">{{ t('qcForms.noChecklistItems') }}</p>
       </div>
     </div>
 
     <!-- Open Ticket Modal -->
     <div v-if="ticketModal.show" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <h3 class="text-base font-semibold text-slate-900 mb-1">Buka Ticket dari Checklist</h3>
+        <h3 class="text-base font-semibold text-slate-900 mb-1">{{ t('qcForms.openTicketFromChecklist') }}</h3>
         <p class="text-xs text-slate-400 mb-4">Item: {{ ticketModal.item?.item_name }}</p>
         <div class="space-y-3">
           <div>
-            <label class="label">Judul Ticket</label>
+            <label class="label">{{ t('qcForms.ticketTitle') }}</label>
             <input v-model="ticketModal.title" class="input text-sm" />
           </div>
           <div v-if="systemMenus.length">
-            <label class="label">Menu Sistem</label>
+            <label class="label">{{ t('qcForms.systemMenu') }}</label>
             <AppSelect v-model="ticketModal.system_menu_id"
-              :options="[{ value: '', label: 'Tidak ada' }, ...systemMenus.map((m: any) => ({ value: m.id, label: m.name ? `[${m.module}] ${m.name}` : m.module }))]"
-              placeholder="Pilih menu sistem" />
+              :options="[{ value: '', label: t('qcForms.none') }, ...systemMenus.map((m: any) => ({ value: m.id, label: m.name ? `[${m.module}] ${m.name}` : m.module }))]"
+              :placeholder="t('qcForms.selectSystemMenu')" />
           </div>
           <div>
             <label class="label">Priority <span class="text-red-500">*</span></label>
             <AppSelect v-model="ticketModal.priority_id"
               :options="priorities.map((p: any) => ({ value: p.id, label: p.name }))"
-              placeholder="Pilih priority" />
+              :placeholder="t('qcForms.selectPriority')" />
           </div>
           <div>
             <label class="label">Deskripsi</label>
@@ -339,7 +339,7 @@
           </div>
         </div>
         <div class="flex gap-2 mt-5">
-          <button @click="ticketModal.show = false" class="btn-secondary flex-1">Batal</button>
+          <button @click="ticketModal.show = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
           <button @click="submitOpenTicket" :disabled="ticketModal.loading || !ticketModal.priority_id || ticketModal.uploading" class="btn-primary flex-1">
             {{ ticketModal.loading ? 'Membuat...' : 'Buka Ticket' }}
           </button>
@@ -347,7 +347,7 @@
       </div>
     </div>
   </div>
-  <div v-else-if="loading" class="text-center py-16 text-slate-400">Memuat QC Form...</div>
+  <div v-else-if="loading" class="text-center py-16 text-slate-400">{{ t('qcForms.loadingForm') }}</div>
   <div v-else class="text-center py-16 text-slate-400">QC Form tidak ditemukan.</div>
   <TaskDetailPanel v-if="showTaskPanel && taskPanelData" :task="taskPanelData" @close="showTaskPanel = false" @deleted="navigateTo('/tasks')" />
 </template>
@@ -356,6 +356,7 @@
 definePageMeta({ middleware: 'auth' })
 
 const route = useRoute()
+const { t } = useI18n()
 const auth = useAuthStore()
 const id = Number(route.params.id)
 const qcFormIdRef = computed(() => id)
@@ -446,7 +447,7 @@ async function openTaskPanel() {
 
 const { confirmDelete } = useConfirm()
 async function deleteQcForm() {
-  if (!await confirmDelete('QC form ini akan dihapus permanen. Jika ini form aktif satu-satunya, task akan dikembalikan ke status Review.', 'Hapus QC form?')) return
+  if (!await confirmDelete(t('qcForms.deleteConfirmMessage'), t('qcForms.deleteConfirmTitle'))) return
   await $fetch(`/api/qc-forms/${id}`, { method: 'DELETE' })
   await navigateTo('/tasks')
 }
@@ -495,7 +496,7 @@ async function markDone(checker: any) {
     await $fetch(`/api/qc-forms/${id}/checkers/${checker.user_id}/done`, { method: 'POST' })
     await fetchForm()
   } catch (e: any) {
-    alert(e?.data?.message || 'Gagal')
+    alert(e?.data?.message || t('common.error'))
   } finally {
     markingDone.value = null
   }
@@ -600,7 +601,7 @@ async function submitOpenTicket() {
     ticketModal.show = false
     await fetchForm()
   } catch (e: any) {
-    alert(e?.data?.message || 'Gagal membuat ticket')
+    alert(e?.data?.message || t('qcForms.createTicketFailed'))
   } finally {
     ticketModal.loading = false
   }

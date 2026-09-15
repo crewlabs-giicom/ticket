@@ -7,7 +7,7 @@
           <span class="text-xs text-gray-400">{{ task.project_name }}</span>
           <h2 class="text-lg font-semibold text-gray-900 mt-0.5">{{ task.title }}</h2>
           <span v-if="task.status === 'done'" class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 mt-1">
-            ✓ Selesai
+            ✓ {{ t('taskPanel.done') }}
           </span>
         </div>
         <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-1">
@@ -41,39 +41,39 @@
             v-if="auth.isStaffOrAdmin && task.due_date"
             @click="taskReviseForm.new_due_date = String(task.due_date).slice(0,10); showTaskReviseModal = true"
             class="text-xs px-2 py-0.5 bg-amber-50 text-amber-600 rounded-lg border border-amber-200 hover:bg-amber-100"
-          >Revisi</button>
+          >{{ t('taskPanel.revise') }}</button>
         </div>
 
         <!-- Timeline Info -->
         <div class="grid grid-cols-2 gap-2 text-xs">
           <!-- Original Due Date -->
           <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Due Date Awal</p>
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{{ t('taskPanel.originalDueDate') }}</p>
             <p class="text-slate-700 font-medium">{{ task.original_due_date ? fmtDate(task.original_due_date) : '—' }}</p>
           </div>
           <!-- Estimated Duration -->
           <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Estimasi</p>
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{{ t('taskPanel.estimation') }}</p>
             <div v-if="auth.isStaffOrAdmin" class="flex items-center gap-1">
               <input
                 v-model.number="localEstimatedDuration"
                 type="number" min="1"
                 class="w-14 border border-slate-200 rounded px-1.5 py-0.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                placeholder="jam"
+                :placeholder="t('taskPanel.hours')"
                 @change="saveEstimatedDuration"
               />
-              <span class="text-slate-400">jam</span>
+              <span class="text-slate-400">{{ t('taskPanel.hours') }}</span>
             </div>
-            <p v-else class="text-slate-700 font-medium">{{ task.estimated_duration ? `${task.estimated_duration} jam` : '—' }}</p>
+            <p v-else class="text-slate-700 font-medium">{{ task.estimated_duration ? `${task.estimated_duration} ${t('taskPanel.hours')}` : '—' }}</p>
           </div>
           <!-- Actual Start -->
           <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Mulai Aktual</p>
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{{ t('taskPanel.actualStart') }}</p>
             <p class="text-slate-700">{{ task.actual_start_date ? fmtDatetime(task.actual_start_date) : '—' }}</p>
           </div>
           <!-- Actual End -->
           <div class="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Selesai Aktual</p>
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">{{ t('taskPanel.actualEnd') }}</p>
             <p class="text-slate-700">{{ task.actual_end_date ? fmtDatetime(task.actual_end_date) : '—' }}</p>
           </div>
         </div>
@@ -92,10 +92,10 @@
 
         <!-- System Menu -->
         <div v-if="systemMenus.length" class="flex items-center gap-3">
-          <span class="text-xs text-gray-500 w-20 flex-shrink-0">Menu Sistem</span>
+          <span class="text-xs text-gray-500 w-20 flex-shrink-0">{{ t('layout.systemMenu') }}</span>
           <AppSelect v-if="auth.isStaffOrAdmin"
             v-model="localSystemMenuId"
-            :options="[{ value: '', label: 'Tidak ada' }, ...systemMenuOptions]"
+            :options="[{ value: '', label: t('qcForms.none') }, ...systemMenuOptions]"
             class="flex-1"
             @update:modelValue="updateSystemMenu" />
           <span v-else class="text-sm text-slate-600">{{ currentSystemMenuLabel || '—' }}</span>
@@ -104,10 +104,10 @@
         <!-- Participants -->
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs text-gray-500 w-20 flex-shrink-0">Peserta</span>
+            <span class="text-xs text-gray-500 w-20 flex-shrink-0">{{ t('taskPanel.participants') }}</span>
             <button @click="showTaskInviteModal = true" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Undang
+              {{ t('tickets.invite') }}
             </button>
           </div>
           <div class="flex flex-wrap gap-1.5">
@@ -119,7 +119,7 @@
               <span>{{ p.name }}</span>
               <button @click="removeTaskParticipant(p.user_id)" class="text-slate-300 hover:text-red-500 transition-colors">✕</button>
             </div>
-            <span v-if="!taskParticipants.length" class="text-xs text-gray-400">Belum ada peserta.</span>
+            <span v-if="!taskParticipants.length" class="text-xs text-gray-400">{{ t('tickets.noParticipants') }}</span>
           </div>
         </div>
 
@@ -128,7 +128,7 @@
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <h3 class="font-semibold mb-4">Undang Peserta ke Task</h3>
             <div class="space-y-3">
-              <input v-model="taskInviteSearch" @input="searchTaskInviteUsers" type="text" placeholder="Cari customer by nama / email…" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+              <input v-model="taskInviteSearch" @input="searchTaskInviteUsers" type="text" :placeholder="t('projects.searchNameEmail')" class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
               <div v-if="taskInviteResults.length" class="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-xl p-2">
                 <button
                   v-for="u in taskInviteResults" :key="u.id"
@@ -148,17 +148,17 @@
                   <span v-else class="text-xs text-indigo-600">+ Undang</span>
                 </button>
               </div>
-              <p v-else-if="taskInviteSearch.length > 1" class="text-xs text-slate-400 text-center py-2">Tidak ada hasil</p>
+              <p v-else-if="taskInviteSearch.length > 1" class="text-xs text-slate-400 text-center py-2">{{ t('common.noResults') }}</p>
             </div>
             <div class="flex justify-end mt-4">
-              <button @click="closeTaskInviteModal" class="text-sm text-slate-600 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">Tutup</button>
+              <button @click="closeTaskInviteModal" class="text-sm text-slate-600 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">{{ t('common.close') }}</button>
             </div>
           </div>
         </div>
 
         <!-- Description -->
         <p v-if="task.description" class="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{{ task.description }}</p>
-        <p v-else class="text-sm text-gray-300 italic">Tidak ada deskripsi.</p>
+        <p v-else class="text-sm text-gray-300 italic">{{ t('taskPanel.noDescription') }}</p>
 
         <!-- QC Section -->
         <div v-if="auth.isStaffOrAdmin || task.status === 'in_qc'">
@@ -186,12 +186,12 @@
                   </span>
                 </div>
                 <NuxtLink :to="`/qc-forms/${form.id}`" @click="$emit('close')"
-                  class="text-indigo-600 hover:text-indigo-800 font-medium">Lihat →</NuxtLink>
+                  class="text-indigo-600 hover:text-indigo-800 font-medium">{{ t('projects.viewAllArrow') }}</NuxtLink>
               </div>
               <p class="text-slate-400 mt-1">{{ form.done_count }}/{{ form.checker_count }} checker selesai</p>
             </div>
           </div>
-          <p v-else-if="task.status !== 'review'" class="text-xs text-slate-400">Belum ada QC form.</p>
+          <p v-else-if="task.status !== 'review'" class="text-xs text-slate-400">{{ t('taskPanel.noQcForm') }}</p>
 
           <!-- Loop QC button — only once the latest form's linked tickets are all resolved -->
           <div v-if="auth.isStaffOrAdmin && latestQcForm && latestQcForm.status === 'waiting_resubmit'" class="mt-2">
@@ -210,7 +210,7 @@
                 <label class="label">Template QC <span class="text-slate-400 font-normal">(opsional)</span></label>
                 <AppSelect v-model="pushQcForm.template_id"
                   :options="[{ value: '', label: 'Tanpa template' }, ...qcTemplates.map((t: any) => ({ value: t.id, label: t.name }))]"
-                  placeholder="Pilih template" @update:modelValue="onTemplateSelect" />
+                  :placeholder="t('taskPanel.selectTemplate')" @update:modelValue="onTemplateSelect" />
               </div>
 
               <!-- Checklist preview from template -->
@@ -228,7 +228,7 @@
               <!-- Manual items -->
               <div>
                 <div class="flex items-center justify-between mb-2">
-                  <label class="label mb-0">Tambah Item Manual</label>
+                  <label class="label mb-0">{{ t('taskPanel.addManualItem') }}</label>
                   <button @click="addManualItem" class="text-xs text-indigo-600 hover:text-indigo-800">+ Item</button>
                 </div>
                 <div class="space-y-2">
@@ -248,7 +248,7 @@
               <!-- Checkers -->
               <div>
                 <label class="label">Checker <span class="text-red-500">*</span></label>
-                <input v-model="checkerSearchPush" placeholder="Cari checker..." class="input text-sm mb-2 w-full" />
+                <input v-model="checkerSearchPush" :placeholder="t('qcForms.searchChecker')" class="input text-sm mb-2 w-full" />
                 <div class="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2">
                   <div v-if="!filteredUsersPush.length" class="text-sm text-slate-400 px-2 py-2">Tidak ditemukan</div>
                   <label v-for="u in filteredUsersPush" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
@@ -265,7 +265,7 @@
             </div>
             <p v-if="pushQcError" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{{ pushQcError }}</p>
             <div class="flex gap-2 mt-5">
-              <button @click="showPushQcModal = false" class="btn-secondary flex-1">Batal</button>
+              <button @click="showPushQcModal = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
               <button @click="submitPushQc" :disabled="pushingQc" class="btn-primary flex-1">
                 {{ pushingQc ? 'Memproses...' : 'Push to QC' }}
               </button>
@@ -280,7 +280,7 @@
             <div class="space-y-4">
               <div>
                 <label class="label">Checker <span class="text-red-500">*</span></label>
-                <input v-model="checkerSearchLoop" placeholder="Cari checker..." class="input text-sm mb-2 w-full" />
+                <input v-model="checkerSearchLoop" :placeholder="t('qcForms.searchChecker')" class="input text-sm mb-2 w-full" />
                 <div class="space-y-1 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2">
                   <div v-if="!filteredUsersLoop.length" class="text-sm text-slate-400 px-2 py-2">Tidak ditemukan</div>
                   <label v-for="u in filteredUsersLoop" :key="u.id" class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
@@ -292,7 +292,7 @@
               </div>
             </div>
             <div class="flex gap-2 mt-5">
-              <button @click="showLoopQcModal = false" class="btn-secondary flex-1">Batal</button>
+              <button @click="showLoopQcModal = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
               <button @click="submitLoopQc" :disabled="loopingQc" class="btn-primary flex-1">
                 {{ loopingQc ? 'Memproses...' : 'Ajukan QC Ulang' }}
               </button>
@@ -315,7 +315,7 @@
               <span class="text-xs px-2 py-0.5 rounded-full text-white flex-shrink-0" :style="{ background: tk.status_color }">{{ tk.status_name }}</span>
             </NuxtLink>
           </div>
-          <p v-else class="text-xs text-gray-400">Belum ada tiket terhubung.</p>
+          <p v-else class="text-xs text-gray-400">{{ t('taskPanel.noLinkedTickets') }}</p>
         </div>
 
         <!-- Checklist -->
@@ -342,7 +342,7 @@
           </div>
           <div class="flex gap-2">
             <input v-model="newChecklistTitle" @keydown.enter.prevent="addChecklistItem" type="text"
-              placeholder="Tambah poin..."
+              :placeholder="t('taskPanel.addPoint')"
               class="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
             <button @click="addChecklistItem" :disabled="!newChecklistTitle.trim()"
               class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 disabled:opacity-40">Add</button>
@@ -352,11 +352,11 @@
         <!-- Attachments -->
         <div>
           <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-gray-700">Lampiran ({{ task.attachments?.length || 0 }})</h3>
+            <h3 class="text-sm font-semibold text-gray-700">{{ t('tickets.attachments') }} ({{ task.attachments?.length || 0 }})</h3>
             <label class="cursor-pointer text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
               :class="taskUploading && 'opacity-50 pointer-events-none'">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Tambah File
+              {{ t('taskPanel.addFile') }}
               <input type="file" multiple class="hidden" :disabled="taskUploading"
                 @change="handleTaskAttachment" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
             </label>
@@ -376,13 +376,13 @@
                 class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity leading-none">×</button>
             </div>
           </div>
-          <p v-else class="text-xs text-gray-400 mb-2">Belum ada lampiran.</p>
+          <p v-else class="text-xs text-gray-400 mb-2">{{ t('taskPanel.noAttachments') }}</p>
           <p v-if="taskUploading" class="text-xs text-indigo-500">Mengupload...</p>
         </div>
 
         <!-- Comments -->
         <div>
-          <h3 class="text-sm font-semibold text-gray-700 mb-2">Komentar</h3>
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">{{ t('taskPanel.comments') }}</h3>
           <div v-if="task.comments?.length" class="space-y-3 mb-3">
             <div v-for="c in task.comments" :key="c.id" class="flex gap-2.5">
               <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden">
@@ -411,7 +411,7 @@
               </div>
             </div>
           </div>
-          <p v-else class="text-xs text-gray-400 mb-3">Belum ada komentar.</p>
+          <p v-else class="text-xs text-gray-400 mb-3">{{ t('taskPanel.noComments') }}</p>
 
           <!-- Pending files -->
           <div v-if="commentPendingFiles.length" class="flex flex-wrap gap-1.5 mb-2">
@@ -534,7 +534,7 @@
           <h3 class="text-base font-semibold text-slate-900 mb-4">Revisi Due Date Task</h3>
           <div class="space-y-4">
             <div>
-              <label class="label">Due Date Baru <span class="text-red-500">*</span></label>
+              <label class="label">{{ t('tickets.newDueDate') }} <span class="text-red-500">*</span></label>
               <input v-model="taskReviseForm.new_due_date" type="date" class="input w-full" />
             </div>
             <div>
@@ -543,9 +543,9 @@
             </div>
           </div>
           <div class="flex gap-2 mt-5">
-            <button @click="showTaskReviseModal = false" class="btn-secondary flex-1">Batal</button>
+            <button @click="showTaskReviseModal = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
             <button @click="submitTaskRevise" :disabled="revisingTaskDate || !taskReviseForm.new_due_date || !taskReviseForm.reason.trim()" class="flex-1 px-4 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50">
-              {{ revisingTaskDate ? 'Menyimpan...' : 'Simpan Revisi' }}
+              {{ revisingTaskDate ? t('profile.saving') : t('qcForms.saveRevision') }}
             </button>
           </div>
         </div>
@@ -553,9 +553,9 @@
 
       <!-- Footer -->
       <div class="p-5 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
-        <button v-if="auth.isAdmin" @click="deleteTask" class="text-xs text-red-500 hover:text-red-700">Hapus task</button>
+        <button v-if="auth.isAdmin" @click="deleteTask" class="text-xs text-red-500 hover:text-red-700">{{ t('taskPanel.deleteTask') }}</button>
         <span v-else></span>
-        <button @click="$emit('close')" class="text-xs text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">Tutup</button>
+        <button @click="$emit('close')" class="text-xs text-slate-500 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50">{{ t('common.close') }}</button>
       </div>
     </div>
   </div>
@@ -658,6 +658,7 @@ async function updateAssigned(value: any) {
   task.history = hist.data
 }
 
+const { t } = useI18n()
 const auth = useAuthStore()
 
 const COLUMNS = [
@@ -733,7 +734,7 @@ function removeManualItem(idx: number) {
 
 async function submitPushQc() {
   pushQcError.value = ''
-  if (!pushQcForm.checker_ids.length) { pushQcError.value = 'Pilih minimal 1 checker'; return }
+  if (!pushQcForm.checker_ids.length) { pushQcError.value = t('taskPanel.selectAtLeastOneChecker'); return }
   pushingQc.value = true
   try {
     await $fetch(`/api/tasks/${task.id}/qc-forms`, {
@@ -749,7 +750,7 @@ async function submitPushQc() {
     showPushQcModal.value = false
     await loadQcData()
   } catch (e: any) {
-    pushQcError.value = e?.data?.message || 'Gagal push to QC'
+    pushQcError.value = e?.data?.message || t('taskPanel.pushToQcFailed')
   } finally {
     pushingQc.value = false
   }
@@ -801,7 +802,7 @@ function createTicketFromTask() {
 
 const { confirmDelete } = useConfirm()
 async function deleteTask() {
-  if (!await confirmDelete('Task ini akan dihapus permanen.', 'Hapus task?')) return
+  if (!await confirmDelete(t('taskPanel.deleteConfirmMessage'), t('taskPanel.deleteConfirmTitle'))) return
   await $fetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
   emit('deleted', task.id)
   emit('close')

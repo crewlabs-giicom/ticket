@@ -1,10 +1,10 @@
 <template>
   <div class="max-w-2xl space-y-4">
     <div class="flex items-center justify-between">
-      <p class="text-sm text-slate-500">Atur priority dan konfigurasi SLA</p>
+      <p class="text-sm text-slate-500">{{ t('master.priorities.subtitle') }}</p>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="pending" @click="refresh()" />
-        <button @click="openForm()" class="btn-primary">+ Tambah Priority</button>
+        <button @click="openForm()" class="btn-primary">+ {{ t('master.priorities.addPriority') }}</button>
       </div>
     </div>
 
@@ -18,10 +18,10 @@
             <div class="w-4 h-4 rounded-full flex-shrink-0 border border-white shadow-sm" :style="{ background: p.color }" />
             <div class="flex-1">
               <span class="text-sm font-medium text-slate-900">{{ p.name }}</span>
-              <span class="ml-2 text-xs text-slate-400">SLA: {{ p.sla_hours }}j</span>
+              <span class="ml-2 text-xs text-slate-400">SLA: {{ p.sla_hours }}{{ t('master.priorities.hoursShort') }}</span>
             </div>
-            <button @click="openForm(p)" class="btn-ghost py-1 px-2 text-xs">Edit</button>
-            <button @click="deletePriority(p.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">Hapus</button>
+            <button @click="openForm(p)" class="btn-ghost py-1 px-2 text-xs">{{ t('common.edit') }}</button>
+            <button @click="deletePriority(p.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button>
           </div>
         </template>
       </draggable>
@@ -30,11 +30,11 @@
     <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? 'Edit' : 'Tambah' }} Priority</h3>
+        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? t('common.edit') : t('common.add') }} Priority</h3>
         <div class="space-y-4">
-          <div><label class="label">Nama</label><input v-model="form.name" class="input" placeholder="cth: Critical" /></div>
+          <div><label class="label">{{ t('profile.name') }}</label><input v-model="form.name" class="input" placeholder="cth: Critical" /></div>
           <div>
-            <label class="label">Warna</label>
+            <label class="label">{{ t('master.priorities.color') }}</label>
             <div class="flex items-center gap-3">
               <input type="color" v-model="form.color" class="w-10 h-10 rounded-lg border border-slate-200 cursor-pointer p-0.5" />
               <input v-model="form.color" class="input flex-1 font-mono text-sm" placeholder="#ef4444" />
@@ -43,11 +43,11 @@
               <button v-for="c in presetColors" :key="c" @click="form.color = c" class="w-6 h-6 rounded-full border-2 border-white shadow-sm transition-transform hover:scale-110" :style="{ background: c }" />
             </div>
           </div>
-          <div><label class="label">SLA (jam)</label><input v-model.number="form.sla_hours" type="number" min="1" class="input" placeholder="24" /></div>
+          <div><label class="label">{{ t('master.priorities.slaHours') }}</label><input v-model.number="form.sla_hours" type="number" min="1" class="input" placeholder="24" /></div>
         </div>
         <div class="flex gap-2 mt-5">
-          <button @click="showForm = false" class="btn-secondary flex-1">Batal</button>
-          <button @click="save" class="btn-primary flex-1">Simpan</button>
+          <button @click="showForm = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
+          <button @click="save" class="btn-primary flex-1">{{ t('common.save') }}</button>
         </div>
       </div>
     </div>
@@ -56,6 +56,7 @@
 <script setup lang="ts">
 import draggable from 'vuedraggable'
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 const { data, refresh, pending } = await useFetch('/api/priorities')
 const list = ref<any[]>([])
 watch(data, (v) => { list.value = [...((v as any)?.data || [])] }, { immediate: true })

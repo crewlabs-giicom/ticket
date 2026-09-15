@@ -14,11 +14,11 @@
             <span class="ml-1 text-[10px]">({{ tab === 'ticket' ? filteredUnscheduledTickets.length : filteredUnscheduledTasks.length }})</span>
           </button>
         </div>
-        <input v-model="search" class="input text-xs mb-3" :placeholder="panelTab === 'ticket' ? 'Cari ticket...' : 'Cari task...'" />
+        <input v-model="search" class="input text-xs mb-3" :placeholder="panelTab === 'ticket' ? t('calendar.searchTicket') : t('calendar.searchTask')" />
 
         <!-- Unscheduled tickets -->
         <div v-show="panelTab === 'ticket'" class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-          <div v-if="!filteredUnscheduledTickets.length" class="text-xs text-slate-400 text-center py-4">Tidak ada ticket</div>
+          <div v-if="!filteredUnscheduledTickets.length" class="text-xs text-slate-400 text-center py-4">{{ t('calendar.noTickets') }}</div>
           <div
             v-for="t in filteredUnscheduledTickets" :key="`tk-${t.id}`"
             draggable="true"
@@ -37,7 +37,7 @@
 
         <!-- Unscheduled tasks -->
         <div v-show="panelTab === 'task'" class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-          <div v-if="!filteredUnscheduledTasks.length" class="text-xs text-slate-400 text-center py-4">Tidak ada task</div>
+          <div v-if="!filteredUnscheduledTasks.length" class="text-xs text-slate-400 text-center py-4">{{ t('calendar.noTasks') }}</div>
           <div
             v-for="t in filteredUnscheduledTasks" :key="`task-${t.id}`"
             draggable="true"
@@ -76,6 +76,7 @@ import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const tabs = useTabStore()
 const router = useRouter()

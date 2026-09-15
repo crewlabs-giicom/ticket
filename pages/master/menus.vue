@@ -1,10 +1,10 @@
 <template>
   <div class="max-w-2xl space-y-4">
     <div class="flex items-center justify-between">
-      <p class="text-sm text-slate-500">Atur menu navigasi dan hak akses per role</p>
+      <p class="text-sm text-slate-500">{{ t('master.menus.subtitle') }}</p>
       <div class="flex items-center gap-2">
         <AppRefreshButton :loading="pending" @click="refresh()" />
-        <button @click="openForm()" class="btn-primary">+ Tambah Menu</button>
+        <button @click="openForm()" class="btn-primary">+ {{ t('master.menus.addMenu') }}</button>
       </div>
     </div>
 
@@ -25,12 +25,12 @@
                 </div>
                 <div class="flex-1">
                   <span class="text-sm font-medium text-slate-900">{{ m.name }}</span>
-                  <span class="ml-2 text-xs text-slate-400">{{ m.path || '(folder)' }}</span>
+                  <span class="ml-2 text-xs text-slate-400">{{ m.path || t('master.menus.folder') }}</span>
                 </div>
                 <span :class="['badge text-xs', m.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700']">{{ m.role }}</span>
-                <span :class="['badge text-xs ml-1', m.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500']">{{ m.is_active ? 'Aktif' : 'Off' }}</span>
-                <button @click="openForm(m)" class="btn-ghost py-1 px-2 text-xs ml-1">Edit</button>
-                <button @click="deleteMenu(m.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">Hapus</button>
+                <span :class="['badge text-xs ml-1', m.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500']">{{ m.is_active ? t('master.projects.active') : t('master.menus.off') }}</span>
+                <button @click="openForm(m)" class="btn-ghost py-1 px-2 text-xs ml-1">{{ t('common.edit') }}</button>
+                <button @click="deleteMenu(m.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button>
               </div>
 
               <!-- Children draggable (per parent) -->
@@ -54,9 +54,9 @@
                       <span class="ml-2 text-xs text-slate-400">{{ c.path }}</span>
                     </div>
                     <span :class="['badge text-xs', c.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700']">{{ c.role }}</span>
-                    <span :class="['badge text-xs ml-1', c.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500']">{{ c.is_active ? 'Aktif' : 'Off' }}</span>
-                    <button @click="openForm(c)" class="btn-ghost py-1 px-2 text-xs ml-1">Edit</button>
-                    <button @click="deleteMenu(c.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">Hapus</button>
+                    <span :class="['badge text-xs ml-1', c.is_active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500']">{{ c.is_active ? t('master.projects.active') : t('master.menus.off') }}</span>
+                    <button @click="openForm(c)" class="btn-ghost py-1 px-2 text-xs ml-1">{{ t('common.edit') }}</button>
+                    <button @click="deleteMenu(c.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button>
                   </div>
                 </template>
               </draggable>
@@ -69,27 +69,27 @@
           <div class="flex-1">
             <span class="text-sm font-medium text-slate-900">{{ m.name }}</span>
             <span class="ml-2 text-xs text-slate-400">{{ m.path }}</span>
-            <span class="ml-2 text-xs text-orange-400">(parent tidak ditemukan)</span>
+            <span class="ml-2 text-xs text-orange-400">{{ t('master.menus.parentNotFound') }}</span>
           </div>
-          <button @click="openForm(m)" class="btn-ghost py-1 px-2 text-xs ml-1">Edit</button>
-          <button @click="deleteMenu(m.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">Hapus</button>
+          <button @click="openForm(m)" class="btn-ghost py-1 px-2 text-xs ml-1">{{ t('common.edit') }}</button>
+          <button @click="deleteMenu(m.id)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button>
         </div>
 
-        <div v-if="!list.length" class="px-4 py-8 text-center text-slate-400 text-sm">Belum ada menu</div>
+        <div v-if="!list.length" class="px-4 py-8 text-center text-slate-400 text-sm">{{ t('master.menus.noMenus') }}</div>
       </ClientOnly>
     </div>
 
     <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? 'Edit' : 'Tambah' }} Menu</h3>
+        <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? t('common.edit') : t('common.add') }} Menu</h3>
         <div class="space-y-4">
           <div>
-            <label class="label">Nama</label>
-            <input v-model="form.name" class="input" placeholder="Nama menu" />
+            <label class="label">{{ t('profile.name') }}</label>
+            <input v-model="form.name" class="input" :placeholder="t('master.menus.menuName')" />
           </div>
           <div>
-            <label class="label">Path <span class="text-slate-400 font-normal text-xs">(kosongkan jika folder group)</span></label>
+            <label class="label">Path <span class="text-slate-400 font-normal text-xs">{{ t('master.menus.leaveEmptyFolder') }}</span></label>
             <input v-model="form.path" class="input" placeholder="/tickets" />
           </div>
           <div>
@@ -97,36 +97,36 @@
             <input v-model="form.icon" class="input" placeholder="ticket" />
           </div>
           <div>
-            <label class="label">Parent Group <span class="text-slate-400 font-normal text-xs">(opsional)</span></label>
+            <label class="label">{{ t('master.menus.parentGroup') }} <span class="text-slate-400 font-normal text-xs">({{ t('master.menus.optional') }})</span></label>
             <AppSelect
               v-model="form.parent_id"
-              :options="[{ value: '', label: '— Top level (tidak ada parent) —' }, ...folderOptions]"
-              placeholder="Pilih parent..."
+              :options="[{ value: '', label: t('master.menus.topLevel') }, ...folderOptions]"
+              :placeholder="t('master.menus.selectParent')"
             />
           </div>
           <div>
-            <label class="label">Akses Role</label>
+            <label class="label">{{ t('master.menus.roleAccess') }}</label>
             <AppSelect
               v-model="form.role"
               :options="[
-                { value: 'all', label: 'Semua (all)' },
-                { value: 'admin', label: 'Admin saja' },
-                { value: 'staff', label: 'Staff & Admin' },
-                { value: 'customer', label: 'Customer saja' },
+                { value: 'all', label: t('master.menus.roleAll') },
+                { value: 'admin', label: t('master.menus.roleAdminOnly') },
+                { value: 'staff', label: t('master.menus.roleStaffAdmin') },
+                { value: 'customer', label: t('master.menus.roleCustomerOnly') },
               ]"
-              placeholder="Role"
+              :placeholder="t('master.users.role')"
             />
           </div>
           <div v-if="editing">
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" v-model="form.is_active" class="w-4 h-4 rounded" />
-              <span class="text-sm text-slate-700">Tampilkan menu</span>
+              <span class="text-sm text-slate-700">{{ t('master.menus.showMenu') }}</span>
             </label>
           </div>
         </div>
         <div class="flex gap-2 mt-5">
-          <button @click="showForm = false" class="btn-secondary flex-1">Batal</button>
-          <button @click="save" class="btn-primary flex-1">Simpan</button>
+          <button @click="showForm = false" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
+          <button @click="save" class="btn-primary flex-1">{{ t('common.save') }}</button>
         </div>
       </div>
     </div>
@@ -136,6 +136,7 @@
 <script setup lang="ts">
 const draggable = defineAsyncComponent(() => import('vuedraggable'))
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 
 const { data: allMenus, refresh, pending } = await useFetch('/api/menus')
 const list = ref<any[]>([])

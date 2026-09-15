@@ -26,7 +26,7 @@
         <!-- Search -->
         <div>
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Pencarian</label>
-          <input v-model="filters.search" class="input text-sm" placeholder="Cari task / project..." />
+          <input v-model="filters.search" class="input text-sm" :placeholder="t('qcForms.searchPlaceholder')" />
         </div>
 
         <!-- Status -->
@@ -34,42 +34,42 @@
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Status</label>
           <AppSelect v-model="filters.status"
             :options="[
-              { value: '', label: 'Semua Status' },
+              { value: '', label: t('tickets.allStatus') },
               { value: 'active', label: 'Active' },
               { value: 'waiting_resolve', label: 'Waiting Resolve' },
               { value: 'waiting_resubmit', label: 'Waiting Resubmit' },
               { value: 'completed', label: 'Completed' },
             ]"
-            placeholder="Semua Status" />
+            :placeholder="t('tickets.allStatus')" />
         </div>
 
         <!-- Project -->
         <div>
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Project</label>
           <AppSelect v-model="filters.project_id"
-            :options="[{ value: '', label: 'Semua Project' }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
-            placeholder="Semua Project" />
+            :options="[{ value: '', label: t('tickets.allProject') }, ...projects.map(p => ({ value: p.id, label: p.name }))]"
+            :placeholder="t('tickets.allProject')" />
         </div>
 
         <!-- Checker -->
         <div>
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Checker</label>
           <AppSelect v-model="filters.checker_id"
-            :options="[{ value: '', label: 'Semua Checker' }, ...staffUsers.map(u => ({ value: u.id, label: u.name }))]"
-            placeholder="Semua Checker" />
+            :options="[{ value: '', label: t('qcForms.allChecker') }, ...staffUsers.map(u => ({ value: u.id, label: u.name }))]"
+            :placeholder="t('qcForms.allChecker')" />
         </div>
 
         <!-- Template -->
         <div>
           <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Template</label>
           <AppSelect v-model="filters.template_id"
-            :options="[{ value: '', label: 'Semua Template' }, { value: 'none', label: 'Tanpa Template' }, ...templates.map(t => ({ value: t.id, label: t.name }))]"
-            placeholder="Semua Template" />
+            :options="[{ value: '', label: t('qcForms.allTemplate') }, { value: 'none', label: t('qcForms.noTemplate') }, ...templates.map(tm => ({ value: tm.id, label: tm.name }))]"
+            :placeholder="t('qcForms.allTemplate')" />
         </div>
 
         <!-- Date range -->
         <div>
-          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">Tanggal Dibuat</label>
+          <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1 block">{{ t('tickets.createdDate') }}</label>
           <div class="flex items-center gap-1.5">
             <input v-model="filters.date_from" type="date" class="input text-xs py-1.5 flex-1 min-w-0" />
             <span class="text-xs text-slate-400 flex-shrink-0">—</span>
@@ -93,8 +93,8 @@
     </div>
 
     <!-- Table -->
-    <div v-if="loading" class="text-center py-12 text-slate-400">Memuat...</div>
-    <div v-else-if="!forms.length" class="text-center py-12 text-slate-400">Tidak ada form QC.</div>
+    <div v-if="loading" class="text-center py-12 text-slate-400">{{ t('common.loading') }}</div>
+    <div v-else-if="!forms.length" class="text-center py-12 text-slate-400">{{ t('qcForms.noForms') }}</div>
     <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-slate-50 border-b border-slate-200">
@@ -151,6 +151,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 const showFilters = ref(true)
 const forms = ref<any[]>([])
 const loading = ref(false)

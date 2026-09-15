@@ -3,8 +3,8 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-xl font-bold text-slate-900">Catatan</h1>
-        <p class="text-sm text-slate-500 mt-0.5">{{ store.notes.length }} catatan · {{ store.totalUnchecked }} item belum selesai</p>
+        <h1 class="text-xl font-bold text-slate-900">{{ t('wishlist.title') }}</h1>
+        <p class="text-sm text-slate-500 mt-0.5">{{ t('wishlist.summary', { count: store.notes.length, unchecked: store.totalUnchecked }) }}</p>
       </div>
       <button
         @click="store.createNote()"
@@ -13,7 +13,7 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
         </svg>
-        Note Baru
+        {{ t('wishlist.newNote') }}
       </button>
     </div>
 
@@ -28,8 +28,8 @@
     <!-- Empty state -->
     <div v-else-if="!store.notes.length" class="text-center py-20">
       <div class="text-6xl mb-4">📝</div>
-      <p class="text-slate-500 text-sm">Belum ada catatan</p>
-      <button @click="store.createNote()" class="mt-3 text-sm text-yellow-600 hover:underline font-medium">Buat catatan pertama</button>
+      <p class="text-slate-500 text-sm">{{ t('wishlist.empty') }}</p>
+      <button @click="store.createNote()" class="mt-3 text-sm text-yellow-600 hover:underline font-medium">{{ t('wishlist.createFirst') }}</button>
     </div>
 
     <!-- Notes grid -->
@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
+const { t } = useI18n()
 const store = useWishlistStore()
 onMounted(async () => {
   if (!store.notes.length) await store.fetchNotes()

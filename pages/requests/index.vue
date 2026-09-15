@@ -351,7 +351,7 @@
         <div class="flex justify-end gap-3 px-6 py-4 border-t">
           <button @click="showEditModal = false" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
           <button @click="saveEdit" :disabled="saving" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-            {{ saving ? 'Menyimpan...' : 'Simpan' }}
+            {{ saving ? t('profile.saving') : t('common.save') }}
           </button>
         </div>
       </div>

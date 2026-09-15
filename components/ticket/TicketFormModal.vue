@@ -3,7 +3,7 @@
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg my-8">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
         <div>
-          <h2 class="text-base font-semibold text-slate-900">Buat Ticket Baru</h2>
+          <h2 class="text-base font-semibold text-slate-900">{{ t('ticketForm.createNewTicket') }}</h2>
           <p v-if="taskId" class="text-xs text-indigo-600 mt-0.5">Dari task: {{ props.taskTitle }}</p>
         </div>
         <button @click="$emit('close')" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
@@ -14,7 +14,7 @@
           <AppSelect
             v-model="form.system_menu_id"
             :options="systemMenuOptions"
-            placeholder="Pilih menu sistem..."
+            :placeholder="t('qcForms.selectSystemMenu')"
           />
           <p v-if="selectedMenu?.project_name" class="mt-1.5 flex items-center gap-1.5">
             <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{{ selectedMenu.project_name }}</span>
@@ -26,7 +26,7 @@
           <AppSelect
             v-model="form.project_id"
             :options="projects.map((p: any) => ({ value: p.id, label: p.name }))"
-            placeholder="Pilih project"
+            :placeholder="t('ticketForm.selectProject')"
           />
         </div>
         <div>
@@ -54,7 +54,7 @@
           <label class="label">Lampiran</label>
           <label class="flex items-center gap-2 cursor-pointer px-3 py-2 border-2 border-dashed border-slate-200 rounded-xl hover:border-primary-400 hover:bg-primary-50/50 transition-colors">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-            <span class="text-xs text-slate-500">{{ uploading ? 'Mengupload...' : 'Pilih file atau paste gambar (maks. 10MB)' }}</span>
+            <span class="text-xs text-slate-500">{{ uploading ? t('tasks.uploading') : t('ticketForm.chooseFileOrPaste') }}</span>
             <input type="file" multiple class="hidden" :disabled="uploading" @change="handleFiles" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.zip,.txt,.csv" />
           </label>
           <div v-if="uploadedFiles.length" class="mt-2 flex flex-wrap gap-2">
@@ -97,7 +97,7 @@
               v-model="participantSearch"
               type="text"
               class="input text-xs"
-              placeholder="Cari participant..."
+              :placeholder="t('ticketForm.searchParticipant')"
               @focus="participantOpen = true"
               @keydown.escape="participantOpen = false"
             />
@@ -128,7 +128,7 @@
               v-else-if="participantOpen && participantSearch && !filteredParticipantUsers.length"
               class="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg px-3 py-2.5 text-xs text-slate-400"
             >
-              Tidak ada user ditemukan
+              {{ t('prds.noUsersFound') }}
             </div>
           </div>
           <p v-if="selectedParticipants.length" class="text-[11px] text-indigo-500 mt-1">{{ selectedParticipants.length }} participant dipilih</p>
@@ -136,7 +136,7 @@
 
         <p v-if="error" class="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{{ error }}</p>
         <div class="flex justify-end gap-2 pt-2">
-          <button type="button" @click="$emit('close')" class="btn-secondary">Batal</button>
+          <button type="button" @click="$emit('close')" class="btn-secondary">{{ t('common.cancel') }}</button>
           <button type="submit" class="btn-primary" :disabled="loading || uploading">{{ loading ? 'Menyimpan...' : 'Buat Ticket' }}</button>
         </div>
       </form>
@@ -159,6 +159,7 @@ function formatSla(hours: number) {
   return days === 1 ? '1 hari' : `${days} hari`
 }
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const emit = defineEmits(['close', 'created'])
 const { data: pd } = await useFetch('/api/priorities')
@@ -172,7 +173,7 @@ const allUsers = computed(() => ((ud.value as any)?.data || []).filter((u: any) 
 const systemMenus = ref<any[]>([])
 
 const systemMenuOptions = computed(() => {
-  const opts: any[] = [{ value: '', label: '— Pilih menu sistem —' }]
+  const opts: any[] = [{ value: '', label: t('qcForms.selectSystemMenu') }]
   const byModule: Record<string, any[]> = {}
   for (const item of systemMenus.value) {
     if (!byModule[item.module]) byModule[item.module] = []
@@ -278,7 +279,7 @@ async function handleFiles(e: Event) {
       uploadedFiles.value.push(res.data)
     }
   } catch (e: any) {
-    uploadError.value = e?.data?.statusMessage || 'Gagal mengupload file'
+    uploadError.value = e?.data?.statusMessage || t('tickets.fileUploadFailed')
   } finally {
     uploading.value = false
     input.value = ''
@@ -313,7 +314,7 @@ async function handlePaste(e: ClipboardEvent) {
       uploadedFiles.value.push(res.data)
     }
   } catch {
-    uploadError.value = 'Gagal mengupload gambar paste'
+    uploadError.value = t('ticketForm.pasteUploadFailed')
   } finally {
     uploading.value = false
   }
@@ -326,11 +327,11 @@ async function submit() {
     return
   }
   if (!form.project_id || !form.priority_id || !form.status_id) {
-    error.value = 'Project dan priority wajib diisi'
+    error.value = t('ticketForm.projectPriorityRequired')
     return
   }
   if (!form.description.trim()) {
-    error.value = 'Deskripsi wajib diisi'
+    error.value = t('ticketForm.descriptionRequired')
     return
   }
   loading.value = true
@@ -346,7 +347,7 @@ async function submit() {
     })
     emit('created')
   } catch (e: any) {
-    error.value = e?.data?.statusMessage || 'Gagal membuat ticket'
+    error.value = e?.data?.statusMessage || t('qcForms.createTicketFailed')
   } finally { loading.value = false }
 }
 </script>
