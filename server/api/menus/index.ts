@@ -7,6 +7,11 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'GET') {
     if (user.role === 'admin') {
+      // Sidebar: admin tidak perlu baris menu khusus staff (hindari folder ganda)
+      if (getQuery(event).sidebar) {
+        const [rows] = await db.execute("SELECT * FROM menus WHERE role IN ('all','admin') ORDER BY parent_id IS NOT NULL ASC, order_index ASC")
+        return { success: true, data: rows }
+      }
       const [rows] = await db.execute('SELECT * FROM menus ORDER BY parent_id IS NOT NULL ASC, order_index ASC')
       return { success: true, data: rows }
     }

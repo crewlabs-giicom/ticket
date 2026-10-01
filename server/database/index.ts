@@ -851,6 +851,127 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  // ── Infrastruktur: ruangan, device/AP, network check, pembersihan PC ──────
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(150) NOT NULL,
+      location VARCHAR(200) NULL,
+      description VARCHAR(500) NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS network_devices (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      room_id INT NOT NULL,
+      name VARCHAR(150) NOT NULL,
+      type ENUM('ap','switch','router','other') NOT NULL DEFAULT 'ap',
+      ip_address VARCHAR(64) NULL,
+      mac_address VARCHAR(32) NULL,
+      brand_model VARCHAR(150) NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_nd_room (room_id),
+      FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS pc_assets (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      room_id INT NOT NULL,
+      name VARCHAR(150) NOT NULL,
+      description VARCHAR(300) NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_pc_room (room_id),
+      FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS network_checks (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      room_id INT NOT NULL,
+      device_id INT NULL,
+      checked_by INT NULL,
+      checked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      source ENUM('browser','manual') NOT NULL DEFAULT 'browser',
+      download_mbps DECIMAL(10,2) NULL,
+      upload_mbps DECIMAL(10,2) NULL,
+      latency_ms DECIMAL(10,2) NULL,
+      jitter_ms DECIMAL(10,2) NULL,
+      download_jitter_ms DECIMAL(10,2) NULL,
+      upload_jitter_ms DECIMAL(10,2) NULL,
+      packet_loss_pct DECIMAL(5,2) NULL,
+      duration_sec INT NULL,
+      connected_clients INT NULL,
+      status ENUM('good','fair','poor') NOT NULL DEFAULT 'good',
+      note VARCHAR(500) NULL,
+      INDEX idx_nc_room (room_id, checked_at),
+      FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+      FOREIGN KEY (device_id) REFERENCES network_devices(id) ON DELETE SET NULL,
+      FOREIGN KEY (checked_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS cleaning_schedules (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      room_id INT NOT NULL,
+      pc_id INT NULL,
+      title VARCHAR(200) NOT NULL,
+      frequency_days INT NOT NULL DEFAULT 30,
+      next_due_date DATE NOT NULL,
+      assigned_to INT NULL,
+      last_notified_date DATE NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_cs_due (next_due_date),
+      FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+      FOREIGN KEY (pc_id) REFERENCES pc_assets(id) ON DELETE CASCADE,
+      FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS cleaning_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      schedule_id INT NULL,
+      room_id INT NOT NULL,
+      pc_id INT NULL,
+      cleaned_by INT NULL,
+      cleaned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      tasks_done VARCHAR(300) NULL,
+      note VARCHAR(500) NULL,
+      INDEX idx_cl_room (room_id, cleaned_at),
+      FOREIGN KEY (schedule_id) REFERENCES cleaning_schedules(id) ON DELETE SET NULL,
+      FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+      FOREIGN KEY (pc_id) REFERENCES pc_assets(id) ON DELETE SET NULL,
+      FOREIGN KEY (cleaned_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+
+  // Folder menu "Infrastruktur" + anak-anaknya (admin & staff)
+  // (kolom menus.role hanya satu nilai, jadi satu set baris per role)
+  const infraChildren: [string, string, string, number][] = [
+    ['Ruangan & Device', '/infra/rooms', 'server', 1],
+    ['Network Check', '/infra/network', 'chart-bar', 2],
+    ['Pembersihan PC', '/infra/cleaning', 'clipboard', 3],
+  ]
+  for (const role of ['admin', 'staff']) {
+    await db.execute(
+      `INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Infrastruktur', NULL, 'server', 20, ? WHERE NOT EXISTS (SELECT 1 FROM menus WHERE name='Infrastruktur' AND path IS NULL AND role=?)`,
+      [role, role]
+    ).catch(() => {})
+    for (const [name, path, icon, ord] of infraChildren) {
+      await db.execute(
+        `INSERT INTO menus (name, path, icon, order_index, role, parent_id)
+         SELECT ?, ?, ?, ?, ?, (SELECT id FROM (SELECT id FROM menus WHERE name='Infrastruktur' AND path IS NULL AND role=? LIMIT 1) x)
+         WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path=? AND role=?)`,
+        [name, path, icon, ord, role, role, path, role]
+      ).catch(() => {})
+    }
+  }
+
   // Fix constraints that were never enforced (column-level REFERENCES shorthand) or
   // that block deletes (default RESTRICT) so ticket/task/prd/qc deletes clean up properly.
   await ensureCascadeFk(db, 'tickets', 'task_id', 'tasks', 'SET NULL')

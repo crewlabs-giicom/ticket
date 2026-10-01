@@ -316,6 +316,15 @@ watch(() => route.path, () => {
   }
 }, { immediate: true })
 
+function infraFallback() {
+  return [
+    { id: 'fg-infra', name: t('infra.menu'), path: null, icon: 'server', parent_id: null },
+    { id: 'f-infra-rooms', name: t('infra.rooms.menu'), path: '/infra/rooms', icon: 'server', parent_id: 'fg-infra' },
+    { id: 'f-infra-network', name: t('infra.network.menu'), path: '/infra/network', icon: 'chart-bar', parent_id: 'fg-infra' },
+    { id: 'f-infra-cleaning', name: t('infra.cleaning.menu'), path: '/infra/cleaning', icon: 'clipboard', parent_id: 'fg-infra' },
+  ]
+}
+
 function fallbackMenus(role?: string) {
   const base: any[] = [
     { id: 'f1', name: 'Dashboard', path: '/', icon: 'dashboard', parent_id: null },
@@ -347,14 +356,16 @@ function fallbackMenus(role?: string) {
       { id: 'f11', name: 'Status', path: '/master/statuses', icon: 'tag', parent_id: 'fg-master' },
       { id: 'f12', name: 'Menus', path: '/master/menus', icon: 'menu', parent_id: 'fg-master' },
       { id: 'f13', name: t('layout.systemMenu'), path: '/master/system-menus', icon: 'grid', parent_id: 'fg-master' },
+      ...infraFallback(),
     ]
   }
+  if (role === 'staff') return [...base, ...infraFallback()]
   return base
 }
 
 async function loadMenus() {
   try {
-    const res = await $fetch('/api/menus')
+    const res = await $fetch('/api/menus', { query: { sidebar: 1 } })
     const rows = (res as any)?.data || []
     menus.value = rows.length ? rows : fallbackMenus(auth.user?.role)
   } catch {
@@ -376,6 +387,7 @@ const pageTitle = computed(() => {
     '/workload': 'Workload', '/calendar': t('layout.calendar'), '/reports': 'Recapitulation', '/reports/tickets': 'Report Ticket', '/reports/tasks': 'Report Task', '/reports/daily': 'Daily Report', '/reports/weekly': 'Weekly Report',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
     '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
+    '/infra/rooms': t('infra.rooms.menu'), '/infra/network': t('infra.network.menu'), '/infra/cleaning': t('infra.cleaning.menu'),
     '/notifications': t('layout.notifications'), '/profile': t('layout.myProfile'), '/wishlist': t('layout.notes'),
   }
   if (titles[route.path]) return titles[route.path]
@@ -425,6 +437,7 @@ function getIcon(name: string) {
     bell: resolveComponent('IconBell'),
     'check-square': resolveComponent('IconTicket'), // reuse ticket icon for tasks
     clipboard: resolveComponent('IconClipboard'),
+    server: resolveComponent('IconServer'),
   }
   return icons[name] || resolveComponent('IconDashboard')
 }
