@@ -52,7 +52,20 @@
     "inviteParticipant": "Invite Participant to Ticket",
     "createTaskFromTicket": "Create Task from Ticket",
     "assignTo": "Assign to",
-    "notABugHint": "Not a bug — deviates from requirements. Customer is asked to submit a new request."
+    "notABugHint": "Not a bug — deviates from requirements. Customer is asked to submit a new request.",
+    "activity": {
+      "analysis": {
+        "resolved": "Resolved by {user}.",
+        "resolvedAfter": "Resolved by {user} about {hours}h after the previous activity.",
+        "bypassed": "Marked Done directly by {user}, skipping the normal flow.",
+        "qcLoop": "QC found issues so the work was looped back for revision.",
+        "viaReply": "Status changed automatically as a result of a reply by {user}.",
+        "rejected": "Moved to \"{to}\" because {user} rejected it.",
+        "afterAssign": "Moved to \"{to}\" after the ticket was assigned, so work has started.",
+        "afterComment": "Moved to \"{to}\" following a comment, likely a response to the discussion.",
+        "manual": "Manually moved to \"{to}\" by {user}."
+      }
+    }
   },
   "login": {
     "welcome": "Welcome",
@@ -303,6 +316,16 @@
       "source": {
         "browser": "auto",
         "manual": "manual"
+      },
+      "dateFrom": "From date",
+      "dateTo": "To date",
+      "resetFilter": "Reset",
+      "analysis": {
+        "label": "Analysis",
+        "allWithin": "Good: all metrics within limits",
+        "latency": "latency {value} ms (>{limit})",
+        "jitter": "jitter {value} ms (>{limit})",
+        "loss": "packet loss {value}% (>{limit})"
       }
     },
     "cleaning": {

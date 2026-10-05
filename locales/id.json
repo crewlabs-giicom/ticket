@@ -52,7 +52,20 @@
     "inviteParticipant": "Undang Peserta ke Ticket",
     "createTaskFromTicket": "Buat Task dari Ticket",
     "assignTo": "Assign ke",
-    "notABugHint": "Bukan bug — melenceng dari requirement. Customer diminta submit request baru."
+    "notABugHint": "Bukan bug — melenceng dari requirement. Customer diminta submit request baru.",
+    "activity": {
+      "analysis": {
+        "resolved": "Diselesaikan oleh {user}.",
+        "resolvedAfter": "Diselesaikan oleh {user} sekitar {hours} jam setelah aktivitas sebelumnya.",
+        "bypassed": "Langsung ditandai Done oleh {user}, melewati alur normal.",
+        "qcLoop": "QC menemukan masalah sehingga pekerjaan dikembalikan untuk revisi.",
+        "viaReply": "Status berubah otomatis akibat balasan dari {user}.",
+        "rejected": "Dipindah ke \"{to}\" karena ditolak oleh {user}.",
+        "afterAssign": "Dipindah ke \"{to}\" setelah tiket ditugaskan, pekerjaan mulai dikerjakan.",
+        "afterComment": "Dipindah ke \"{to}\" setelah ada komentar, kemungkinan menanggapi diskusi.",
+        "manual": "Dipindah manual ke \"{to}\" oleh {user}."
+      }
+    }
   },
   "login": {
     "welcome": "Welcome",
@@ -303,6 +316,16 @@
       "source": {
         "browser": "otomatis",
         "manual": "manual"
+      },
+      "dateFrom": "Dari tanggal",
+      "dateTo": "Sampai tanggal",
+      "resetFilter": "Reset",
+      "analysis": {
+        "label": "Analisa",
+        "allWithin": "Good: semua metrik dalam batas",
+        "latency": "latency {value} ms (>{limit})",
+        "jitter": "jitter {value} ms (>{limit})",
+        "loss": "packet loss {value}% (>{limit})"
       }
     },
     "cleaning": {

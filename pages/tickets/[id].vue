@@ -380,10 +380,11 @@
         <div v-if="ticket.history?.length" class="card p-4">
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Activity</h3>
           <div class="space-y-2">
-            <div v-for="h in ticket.history" :key="h.id" class="flex gap-2 items-start">
+            <div v-for="(h, i) in ticket.history" :key="h.id" class="flex gap-2 items-start">
               <div class="w-1.5 h-1.5 rounded-full bg-slate-300 mt-1.5 flex-shrink-0"></div>
               <div class="flex-1 min-w-0">
                 <p class="text-[11px] text-slate-700 leading-snug">{{ h.label }}</p>
+                <p v-if="activityAnalysis(i)" class="text-[10px] text-slate-500 italic leading-snug">{{ activityAnalysis(i) }}</p>
                 <p class="text-[10px] text-slate-400 mt-0.5">{{ timeAgo(h.created_at) }}</p>
               </div>
             </div>
@@ -590,6 +591,10 @@
 definePageMeta({ middleware: 'auth' })
 const { fmtDateTime } = useDate()
 const { t } = useI18n()
+function activityAnalysis(i: number) {
+  const a = explainTicketActivity(ticket.value?.history || [], i)
+  return a ? t(`tickets.activity.analysis.${a.key}`, a.params) : ''
+}
 const auth = useAuthStore()
 const tabs = useTabStore()
 const chatWidget = useChatWidgetStore()

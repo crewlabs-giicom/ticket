@@ -11,11 +11,9 @@ export function requireInfraAdmin(event: H3Event) {
   return requireRole(event, ['admin'])
 }
 
-/** Ambang batas penilaian network check (satu tempat agar mudah diubah). */
-export const NETWORK_THRESHOLDS = {
-  good: { latency: 50, jitter: 20, loss: 1 },
-  fair: { latency: 150, jitter: 50, loss: 5 },
-}
+import { NETWORK_THRESHOLDS } from '../../utils/networkAnalysis'
+
+export { NETWORK_THRESHOLDS }
 
 const num = (v: any): number | null => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v))
 

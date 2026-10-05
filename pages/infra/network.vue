@@ -81,7 +81,13 @@
     <div class="card p-4">
       <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 class="text-sm font-semibold text-slate-900">{{ t('infra.network.trend') }}</h3>
-        <div class="w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <input v-model="dateFrom" type="date" class="input w-auto" :aria-label="t('infra.network.dateFrom')" />
+          <span class="text-slate-400">—</span>
+          <input v-model="dateTo" type="date" class="input w-auto" :aria-label="t('infra.network.dateTo')" />
+          <div class="w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
+          <button @click="resetFilter" class="btn-ghost py-1 px-2 text-xs">{{ t('infra.network.resetFilter') }}</button>
+        </div>
       </div>
       <ClientOnly>
         <div v-if="trendRows.length > 1" class="h-56"><Line :data="chartData" :options="chartOptions" /></div>
@@ -105,12 +111,13 @@
               <th class="text-right px-2 py-2">Loss</th>
               <th class="text-right px-2 py-2">{{ t('infra.network.clientsShort') }}</th>
               <th class="text-center px-2 py-2">{{ t('infra.network.status.label') }}</th>
+              <th class="text-left px-2 py-2">{{ t('infra.network.analysis.label') }}</th>
               <th class="text-left px-2 py-2">{{ t('infra.network.checkedBy') }}</th>
               <th v-if="auth.isAdmin" class="px-2" />
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-if="!rows.length"><td colspan="11" class="text-center text-slate-400 py-8">{{ t('infra.network.noHistory') }}</td></tr>
+            <tr v-if="!rows.length"><td colspan="12" class="text-center text-slate-400 py-8">{{ t('infra.network.noHistory') }}</td></tr>
             <tr v-for="r in rows" :key="r.id" class="hover:bg-slate-50">
               <td class="px-4 py-2 whitespace-nowrap">{{ fmtDateTime(r.checked_at) }}</td>
               <td class="px-2 py-2">{{ r.room_name }}<span v-if="r.device_name" class="text-xs text-slate-400"> · {{ r.device_name }}</span></td>
@@ -121,6 +128,7 @@
               <td class="px-2 py-2 text-right font-mono">{{ fmt(r.packet_loss_pct) }}%</td>
               <td class="px-2 py-2 text-right">{{ r.connected_clients ?? '—' }}</td>
               <td class="px-2 py-2 text-center"><span :class="['badge', statusClass[r.status]]">{{ t(`infra.network.status.${r.status}`) }}</span></td>
+              <td class="px-2 py-2 text-xs text-slate-600 min-w-[14rem]">{{ analysisText(r) }}</td>
               <td class="px-2 py-2 text-xs text-slate-500">{{ r.checked_by_name || '—' }} <span class="text-slate-300">({{ t(`infra.network.source.${r.source}`) }})</span></td>
               <td v-if="auth.isAdmin" class="px-2"><button @click="deleteRow(r)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button></td>
             </tr>
@@ -215,6 +223,33 @@ async function saveResult(result: any, source: 'browser' | 'manual') {
 
 // ── History + trend ───────────────────────────────────────────────────────
 const filterRoom = ref<number | ''>('')
+const ymd = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(d)
+function defaultRange() {
+  const to = new Date()
+  const from = new Date(to)
+  from.setMonth(from.getMonth() - 1)
+  return { from: ymd(from), to: ymd(to) }
+}
+const dateFrom = ref(defaultRange().from)
+const dateTo = ref(defaultRange().to)
+function dateQuery() {
+  let from = dateFrom.value || undefined
+  let to = dateTo.value || undefined
+  if (from && to && from > to) [from, to] = [to, from]
+  return { from, to }
+}
+function resetFilter() {
+  const r = defaultRange()
+  dateFrom.value = r.from
+  dateTo.value = r.to
+  filterRoom.value = ''
+}
+function analysisText(r: any) {
+  const f = explainNetworkStatus(r)
+  if (!f.length) return t('infra.network.analysis.allWithin')
+  const parts = f.map(x => t(`infra.network.analysis.${x.metric}`, { value: Number(x.value).toFixed(1), limit: x.limit }))
+  return `${t(`infra.network.status.${f.some(x => x.level === 'poor') ? 'poor' : 'fair'}`)}: ${parts.join(', ')}`
+}
 const rows = ref<any[]>([])
 const trendRows = ref<any[]>([])
 const pending = ref(false)
@@ -223,16 +258,16 @@ const pagination = reactive({ page: 1, limit: 20, total: 0, totalPages: 1 })
 async function fetchHistory() {
   pending.value = true
   try {
-    const res: any = await $fetch('/api/network-checks', { query: { room_id: filterRoom.value || undefined, page: pagination.page, limit: pagination.limit } })
+    const res: any = await $fetch('/api/network-checks', { query: { room_id: filterRoom.value || undefined, ...dateQuery(), page: pagination.page, limit: pagination.limit } })
     rows.value = res.data
     Object.assign(pagination, { total: res.total, totalPages: res.totalPages })
   } finally { pending.value = false }
 }
 async function fetchTrend() {
-  const res: any = await $fetch('/api/network-checks', { query: { room_id: filterRoom.value || undefined, limit: 30 } })
+  const res: any = await $fetch('/api/network-checks', { query: { room_id: filterRoom.value || undefined, ...dateQuery(), limit: 30 } })
   trendRows.value = [...res.data].reverse()
 }
-watch(filterRoom, () => { pagination.page = 1; fetchHistory(); fetchTrend() })
+watch([filterRoom, dateFrom, dateTo],() => { pagination.page = 1; fetchHistory(); fetchTrend() })
 onMounted(() => Promise.all([fetchHistory(), fetchTrend()]))
 
 const chartData = computed(() => ({

@@ -52,7 +52,20 @@
     "inviteParticipant": "邀请参与者加入工单",
     "createTaskFromTicket": "从工单创建任务",
     "assignTo": "分配给",
-    "notABugHint": "不是缺陷——偏离了需求。请客户提交新的请求。"
+    "notABugHint": "不是缺陷——偏离了需求。请客户提交新的请求。",
+    "activity": {
+      "analysis": {
+        "resolved": "由 {user} 解决。",
+        "resolvedAfter": "在上一次活动约 {hours} 小时后由 {user} 解决。",
+        "bypassed": "{user} 直接标记为完成，跳过了正常流程。",
+        "qcLoop": "QC 发现问题，工作被退回修改。",
+        "viaReply": "因 {user} 的回复，状态自动变更。",
+        "rejected": "因 {user} 拒绝，已转为“{to}”。",
+        "afterAssign": "工单分配后转为“{to}”，工作已开始。",
+        "afterComment": "评论之后转为“{to}”，可能是对讨论的回应。",
+        "manual": "由 {user} 手动转为“{to}”。"
+      }
+    }
   },
   "login": {
     "welcome": "欢迎",
@@ -303,6 +316,16 @@
       "source": {
         "browser": "自动",
         "manual": "手动"
+      },
+      "dateFrom": "起始日期",
+      "dateTo": "结束日期",
+      "resetFilter": "重置",
+      "analysis": {
+        "label": "分析",
+        "allWithin": "良好：所有指标均在范围内",
+        "latency": "延迟 {value} ms（>{limit}）",
+        "jitter": "抖动 {value} ms（>{limit}）",
+        "loss": "丢包 {value}%（>{limit}）"
       }
     },
     "cleaning": {
