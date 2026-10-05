@@ -26,3 +26,19 @@ export function explainNetworkStatus(m: { latency_ms?: any; jitter_ms?: any; dow
   check('loss', loss, g.loss, f.loss)
   return out
 }
+
+/** Saran perbaikan (kunci i18n `infra.network.suggestion.*`) berdasarkan temuan analisa. Kosong bila semua metrik aman. */
+export function suggestNetworkFixes(m: { latency_ms?: any; jitter_ms?: any; download_jitter_ms?: any; upload_jitter_ms?: any; packet_loss_pct?: any; connected_clients?: any }): string[] {
+  const findings = explainNetworkStatus(m)
+  if (!findings.length) return []
+  const has = (metric: NetworkFinding['metric']) => findings.some(f => f.metric === metric)
+  const clients = toNum(m.connected_clients)
+  const out: string[] = []
+  if (has('latency')) out.push('latency')
+  if (has('jitter')) out.push('jitter')
+  if (has('loss')) out.push('loss')
+  if (has('latency') && has('loss')) out.push('isp')
+  if (clients !== null && clients >= 30 && (has('jitter') || has('latency'))) out.push('clients')
+  if (findings.some(f => f.level === 'poor')) out.push('retest')
+  return out
+}

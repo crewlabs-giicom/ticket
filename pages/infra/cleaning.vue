@@ -55,7 +55,7 @@
     <div v-else class="card overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 flex-wrap gap-2">
         <h3 class="text-sm font-semibold text-slate-900">{{ t('infra.cleaning.tabs.history') }}</h3>
-        <div class="w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
+        <div class="w-full sm:w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">

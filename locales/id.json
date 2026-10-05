@@ -326,6 +326,15 @@
         "latency": "latency {value} ms (>{limit})",
         "jitter": "jitter {value} ms (>{limit})",
         "loss": "packet loss {value}% (>{limit})"
+      },
+      "suggestion": {
+        "label": "Saran",
+        "latency": "Latency tinggi: cek jarak/hop ke router atau AP, utamakan kabel LAN dibanding Wi-Fi, lalu restart AP/router.",
+        "jitter": "Jitter tinggi: kurangi trafik berat, aktifkan QoS, dan cek interferensi Wi-Fi (ganti channel) atau kabel.",
+        "loss": "Terdeteksi packet loss: cek kabel/konektor, sinyal Wi-Fi lemah, dan port switch; hubungi ISP bila berlanjut.",
+        "isp": "Latency dan loss sama-sama tinggi: kemungkinan masalah di sisi ISP/uplink.",
+        "clients": "Banyak client terhubung: AP kemungkinan overload, pertimbangkan menambah AP.",
+        "retest": "Hasil buruk: ulangi test untuk konfirmasi dan bandingkan dengan ruangan lain."
       }
     },
     "cleaning": {

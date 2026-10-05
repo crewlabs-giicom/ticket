@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
-    <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+    <div class="fixed top-4 right-4 max-w-[calc(100vw-2rem)] z-[9999] flex flex-col gap-2 pointer-events-none">
       <TransitionGroup name="toast">
         <div
           v-for="t in notif.toasts"
           :key="t._id"
-          class="pointer-events-auto w-80 bg-white border border-slate-200 rounded-xl shadow-lg p-3.5 animate-slide-in"
+          class="pointer-events-auto w-80 max-w-full bg-white border border-slate-200 rounded-xl shadow-lg p-3.5 animate-slide-in"
           :class="(t.ticket_id || t.task_id) ? 'cursor-pointer' : ''"
           @click="t.ticket_id ? goToTicket(t) : t.task_id ? goToTask(t) : null"
         >

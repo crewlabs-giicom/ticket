@@ -61,6 +61,12 @@
               <div class="text-lg font-semibold text-slate-900">{{ m.value }}<span class="text-xs font-normal text-slate-400 ml-1">{{ m.unit }}</span></div>
             </div>
           </div>
+          <div class="rounded-xl bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
+            <p>{{ analysisText({ ...test.result.value, connected_clients: form.connected_clients }) }}</p>
+            <ul v-if="suggestions({ ...test.result.value, connected_clients: form.connected_clients }).length" class="list-disc pl-4 text-slate-500 space-y-0.5">
+              <li v-for="k in suggestions({ ...test.result.value, connected_clients: form.connected_clients })" :key="k">{{ t(`infra.network.suggestion.${k}`) }}</li>
+            </ul>
+          </div>
           <button @click="saveResult(test.result.value, 'browser')" :disabled="saving" class="btn-primary">{{ t('infra.network.saveResult') }}</button>
         </div>
       </template>
@@ -81,11 +87,11 @@
     <div class="card p-4">
       <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 class="text-sm font-semibold text-slate-900">{{ t('infra.network.trend') }}</h3>
-        <div class="flex items-center gap-2 flex-wrap">
-          <input v-model="dateFrom" type="date" class="input w-auto" :aria-label="t('infra.network.dateFrom')" />
+        <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          <input v-model="dateFrom" type="date" class="input flex-1 sm:flex-none sm:w-auto min-w-0" :aria-label="t('infra.network.dateFrom')" />
           <span class="text-slate-400">—</span>
-          <input v-model="dateTo" type="date" class="input w-auto" :aria-label="t('infra.network.dateTo')" />
-          <div class="w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
+          <input v-model="dateTo" type="date" class="input flex-1 sm:flex-none sm:w-auto min-w-0" :aria-label="t('infra.network.dateTo')" />
+          <div class="w-full sm:w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
           <button @click="resetFilter" class="btn-ghost py-1 px-2 text-xs">{{ t('infra.network.resetFilter') }}</button>
         </div>
       </div>
@@ -103,33 +109,42 @@
           <thead class="bg-slate-50 text-xs text-slate-500">
             <tr>
               <th class="text-left px-4 py-2">{{ t('infra.network.time') }}</th>
-              <th class="text-left px-2 py-2">{{ t('infra.network.room') }}</th>
-              <th class="text-right px-2 py-2">↓ Mbps</th>
-              <th class="text-right px-2 py-2">↑ Mbps</th>
-              <th class="text-right px-2 py-2">{{ t('infra.network.latency') }}</th>
-              <th class="text-right px-2 py-2" :title="t('infra.network.jitterHint')">Jitter (idle/↓/↑)</th>
-              <th class="text-right px-2 py-2">Loss</th>
-              <th class="text-right px-2 py-2">{{ t('infra.network.clientsShort') }}</th>
+              <th class="text-left px-2 py-2 hidden md:table-cell">{{ t('infra.network.room') }}</th>
+              <th class="text-right px-2 py-2 hidden md:table-cell">↓ Mbps</th>
+              <th class="text-right px-2 py-2 hidden md:table-cell">↑ Mbps</th>
+              <th class="text-right px-2 py-2 hidden md:table-cell">{{ t('infra.network.latency') }}</th>
+              <th class="text-right px-2 py-2 hidden md:table-cell" :title="t('infra.network.jitterHint')">Jitter (idle/↓/↑)</th>
+              <th class="text-right px-2 py-2 hidden md:table-cell">Loss</th>
+              <th class="text-right px-2 py-2 hidden md:table-cell">{{ t('infra.network.clientsShort') }}</th>
               <th class="text-center px-2 py-2">{{ t('infra.network.status.label') }}</th>
               <th class="text-left px-2 py-2">{{ t('infra.network.analysis.label') }}</th>
-              <th class="text-left px-2 py-2">{{ t('infra.network.checkedBy') }}</th>
+              <th class="text-left px-2 py-2 hidden md:table-cell">{{ t('infra.network.checkedBy') }}</th>
               <th v-if="auth.isAdmin" class="px-2" />
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr v-if="!rows.length"><td colspan="12" class="text-center text-slate-400 py-8">{{ t('infra.network.noHistory') }}</td></tr>
             <tr v-for="r in rows" :key="r.id" class="hover:bg-slate-50">
-              <td class="px-4 py-2 whitespace-nowrap">{{ fmtDateTime(r.checked_at) }}</td>
-              <td class="px-2 py-2">{{ r.room_name }}<span v-if="r.device_name" class="text-xs text-slate-400"> · {{ r.device_name }}</span></td>
-              <td class="px-2 py-2 text-right font-mono">{{ fmt(r.download_mbps) }}</td>
-              <td class="px-2 py-2 text-right font-mono">{{ fmt(r.upload_mbps) }}</td>
-              <td class="px-2 py-2 text-right font-mono">{{ fmt(r.latency_ms) }} ms</td>
-              <td class="px-2 py-2 text-right font-mono whitespace-nowrap">{{ fmt(r.jitter_ms) }} / {{ fmt(r.download_jitter_ms) }} / {{ fmt(r.upload_jitter_ms) }}</td>
-              <td class="px-2 py-2 text-right font-mono">{{ fmt(r.packet_loss_pct) }}%</td>
-              <td class="px-2 py-2 text-right">{{ r.connected_clients ?? '—' }}</td>
+              <td class="px-4 py-2 md:whitespace-nowrap">
+                {{ fmtDateTime(r.checked_at) }}
+                <div class="md:hidden text-xs text-slate-500 mt-0.5">{{ r.room_name }}<span v-if="r.device_name"> · {{ r.device_name }}</span></div>
+                <div class="md:hidden text-xs text-slate-400 font-mono mt-0.5">↓{{ fmt(r.download_mbps) }} ↑{{ fmt(r.upload_mbps) }} Mbps · {{ fmt(r.latency_ms) }} ms · {{ fmt(r.packet_loss_pct) }}%</div>
+              </td>
+              <td class="px-2 py-2 hidden md:table-cell">{{ r.room_name }}<span v-if="r.device_name" class="text-xs text-slate-400"> · {{ r.device_name }}</span></td>
+              <td class="px-2 py-2 text-right font-mono hidden md:table-cell">{{ fmt(r.download_mbps) }}</td>
+              <td class="px-2 py-2 text-right font-mono hidden md:table-cell">{{ fmt(r.upload_mbps) }}</td>
+              <td class="px-2 py-2 text-right font-mono hidden md:table-cell">{{ fmt(r.latency_ms) }} ms</td>
+              <td class="px-2 py-2 text-right font-mono whitespace-nowrap hidden md:table-cell">{{ fmt(r.jitter_ms) }} / {{ fmt(r.download_jitter_ms) }} / {{ fmt(r.upload_jitter_ms) }}</td>
+              <td class="px-2 py-2 text-right font-mono hidden md:table-cell">{{ fmt(r.packet_loss_pct) }}%</td>
+              <td class="px-2 py-2 text-right hidden md:table-cell">{{ r.connected_clients ?? '—' }}</td>
               <td class="px-2 py-2 text-center"><span :class="['badge', statusClass[r.status]]">{{ t(`infra.network.status.${r.status}`) }}</span></td>
-              <td class="px-2 py-2 text-xs text-slate-600 min-w-[14rem]">{{ analysisText(r) }}</td>
-              <td class="px-2 py-2 text-xs text-slate-500">{{ r.checked_by_name || '—' }} <span class="text-slate-300">({{ t(`infra.network.source.${r.source}`) }})</span></td>
+              <td class="px-2 py-2 text-xs text-slate-600 md:min-w-[14rem]">
+                {{ analysisText(r) }}
+                <ul v-if="suggestions(r).length" class="mt-1 list-disc pl-4 text-slate-500 space-y-0.5">
+                  <li v-for="k in suggestions(r)" :key="k">{{ t(`infra.network.suggestion.${k}`) }}</li>
+                </ul>
+              </td>
+              <td class="px-2 py-2 text-xs text-slate-500 hidden md:table-cell">{{ r.checked_by_name || '—' }} <span class="text-slate-300">({{ t(`infra.network.source.${r.source}`) }})</span></td>
               <td v-if="auth.isAdmin" class="px-2"><button @click="deleteRow(r)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button></td>
             </tr>
           </tbody>
@@ -243,6 +258,9 @@ function resetFilter() {
   dateFrom.value = r.from
   dateTo.value = r.to
   filterRoom.value = ''
+}
+function suggestions(r: any) {
+  return suggestNetworkFixes(r).slice(0, 3)
 }
 function analysisText(r: any) {
   const f = explainNetworkStatus(r)

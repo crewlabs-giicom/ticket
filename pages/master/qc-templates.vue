@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <div class="card overflow-hidden">
+    <div class="card overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>

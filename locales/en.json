@@ -326,6 +326,15 @@
         "latency": "latency {value} ms (>{limit})",
         "jitter": "jitter {value} ms (>{limit})",
         "loss": "packet loss {value}% (>{limit})"
+      },
+      "suggestion": {
+        "label": "Suggestion",
+        "latency": "Latency is high: check the distance/hops to the router or AP, prefer LAN cable over Wi-Fi, and restart the AP/router.",
+        "jitter": "Jitter is high: reduce heavy traffic, enable QoS, and check Wi-Fi interference (change channel) or cabling.",
+        "loss": "Packet loss detected: check cables/connectors, weak Wi-Fi signal and switch ports; contact the ISP if it persists.",
+        "isp": "Latency and loss are both high: the problem may be on the ISP/uplink side.",
+        "clients": "Many connected clients: the AP may be overloaded, consider adding an AP.",
+        "retest": "Poor result: re-run the test to confirm and compare with another room."
       }
     },
     "cleaning": {

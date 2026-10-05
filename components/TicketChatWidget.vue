@@ -1,12 +1,12 @@
 <template>
   <Teleport to="body">
-    <div class="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 pointer-events-none">
+    <div class="fixed bottom-4 right-4 max-w-[calc(100vw-2rem)] z-50 flex flex-col items-end gap-2 pointer-events-none">
 
       <!-- Expanded window (only one at a time) -->
       <Transition name="chat-window">
         <div
           v-if="expandedTicket"
-          class="pointer-events-auto w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+          class="pointer-events-auto w-80 max-w-full bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
           style="height: 420px;"
         >
           <!-- Header -->

@@ -4,7 +4,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
 
       <!-- LEFT: Header + Diskusi (3/4) -->
-      <div class="lg:col-span-3 sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto space-y-4 pr-1">
+      <div class="lg:col-span-3 min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto space-y-4 pr-1">
 
         <!-- Header Card -->
         <div class="card overflow-hidden">
@@ -24,7 +24,7 @@
           <span v-if="ticket.resolution_type === 'mismatch_requirement'" class="badge bg-orange-100 text-orange-700 text-xs">Mismatch Req.</span>
           <div v-if="ticket.extended_due_date_history?.length" class="relative group">
             <span class="badge bg-purple-100 text-purple-700 text-xs cursor-help">⏱ Due Date Extended ({{ ticket.extended_due_date_history.length }}x)</span>
-            <div class="hidden group-hover:block absolute z-20 top-full left-0 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-2.5 space-y-2">
+            <div class="hidden group-hover:block absolute z-20 top-full left-0 mt-1 w-72 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-lg shadow-lg p-2.5 space-y-2">
               <div v-for="(h, idx) in [...ticket.extended_due_date_history].reverse()" :key="idx" class="text-[11px] text-slate-600 border-b border-slate-100 last:border-0 pb-1.5 last:pb-0">
                 <p class="text-slate-400 font-mono text-[10px]">{{ fmtDateTime(h.created_at) }}</p>
                 <p>{{ h.label }}</p>
@@ -257,7 +257,7 @@
       </div><!-- end left -->
 
       <!-- RIGHT: Sidebar (1/4) -->
-      <div class="lg:col-span-1 sticky top-4 max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden space-y-3 pl-0.5">
+      <div class="lg:col-span-1 min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto overflow-x-hidden space-y-3 pl-0.5">
 
         <!-- Card 1: Assignee & Dates -->
         <div class="card p-4">

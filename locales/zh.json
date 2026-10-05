@@ -326,6 +326,15 @@
         "latency": "延迟 {value} ms（>{limit}）",
         "jitter": "抖动 {value} ms（>{limit}）",
         "loss": "丢包 {value}%（>{limit}）"
+      },
+      "suggestion": {
+        "label": "建议",
+        "latency": "延迟偏高：检查到路由器/AP 的距离和跳数，优先使用网线而非 Wi-Fi，并重启 AP/路由器。",
+        "jitter": "抖动偏高：减少大流量，启用 QoS，并检查 Wi-Fi 干扰（更换信道）或线路。",
+        "loss": "检测到丢包：检查网线/接头、Wi-Fi 信号弱和交换机端口；若持续请联系 ISP。",
+        "isp": "延迟和丢包都偏高：问题可能出在 ISP/上行链路。",
+        "clients": "连接客户端较多：AP 可能过载，建议增加 AP。",
+        "retest": "结果较差：请重新测试确认，并与其他房间对比。"
       }
     },
     "cleaning": {

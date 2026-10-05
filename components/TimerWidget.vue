@@ -2,7 +2,7 @@
   <Transition name="timer-widget">
     <div
       v-if="store.hasTimer"
-      class="fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 w-72 select-none"
+      class="fixed bottom-6 right-6 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 w-72 max-w-[calc(100vw-2rem)] select-none"
     >
       <!-- Header -->
       <div class="flex items-center gap-2 px-4 pt-3 pb-1">

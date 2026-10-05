@@ -313,7 +313,7 @@
 
       <!-- Tab: Linked Requests -->
       <div v-if="activeTab === 'requests'">
-        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div class="bg-white border border-gray-200 rounded-xl overflow-x-auto">
           <div v-if="!prd.requests.length" class="text-center py-10 text-gray-400">No requests linked</div>
           <table v-else class="w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200">

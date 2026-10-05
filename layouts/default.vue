@@ -126,7 +126,7 @@
     </aside>
 
     <!-- Main -->
-    <div :class="['flex-1 flex flex-col transition-all duration-200', sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64']">
+    <div :class="['flex-1 min-w-0 flex flex-col transition-all duration-200', sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64']">
       <!-- Navbar -->
       <header class="sticky top-0 z-20 h-16 bg-white border-b border-slate-200 flex items-center px-4 gap-4">
         <button class="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg" @click="sidebarOpen = true">
@@ -248,7 +248,7 @@
       </div>
 
       <!-- Page content -->
-      <main class="flex-1 p-4 lg:p-6">
+      <main class="flex-1 min-w-0 p-4 lg:p-6">
         <slot />
       </main>
     </div>

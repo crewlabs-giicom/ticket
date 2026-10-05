@@ -95,7 +95,7 @@
     <!-- Table -->
     <div v-if="loading" class="text-center py-12 text-slate-400">{{ t('common.loading') }}</div>
     <div v-else-if="!forms.length" class="text-center py-12 text-slate-400">{{ t('qcForms.noForms') }}</div>
-    <div v-else class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div v-else class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
