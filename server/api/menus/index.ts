@@ -7,10 +7,23 @@ export default defineEventHandler(async (event) => {
 
   if (event.method === 'GET') {
     if (user.role === 'admin') {
-      // Sidebar: admin tidak perlu baris menu khusus staff (hindari folder ganda)
+      // Sidebar: admin juga melihat menu role 'staff' ("Staff & Admin"), tetapi baris duplikat
+      // (nama+path sama dengan baris admin/all, mis. folder Infrastruktur) disembunyikan.
       if (getQuery(event).sidebar) {
-        const [rows] = await db.execute("SELECT * FROM menus WHERE role IN ('all','admin') ORDER BY parent_id IS NOT NULL ASC, order_index ASC")
-        return { success: true, data: rows }
+        const [all] = await db.execute("SELECT * FROM menus WHERE role IN ('all','admin','staff') ORDER BY parent_id IS NOT NULL ASC, order_index ASC") as any[]
+        const rows = all as any[]
+        const keyOf = (m: any) => `${m.name}|${m.path ?? ''}`
+        const others = rows.filter(m => m.role !== 'staff')
+        const seen = new Set(others.map(keyOf))
+        const otherNames = new Set(others.map(m => m.name))
+        const dropped = new Set<number>()
+        const data = rows.filter(m => {
+          if (m.role !== 'staff') return true
+          // folder (tanpa path) dianggap duplikat bila admin/all sudah punya menu bernama sama
+          if (seen.has(keyOf(m)) || (!m.path && otherNames.has(m.name))) { dropped.add(m.id); return false }
+          return true
+        }).filter(m => !m.parent_id || !dropped.has(m.parent_id))
+        return { success: true, data }
       }
       const [rows] = await db.execute('SELECT * FROM menus ORDER BY parent_id IS NOT NULL ASC, order_index ASC')
       return { success: true, data: rows }

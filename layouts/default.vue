@@ -355,11 +355,17 @@ function fallbackMenus(role?: string) {
       { id: 'f10', name: 'Priority', path: '/master/priorities', icon: 'flag', parent_id: 'fg-master' },
       { id: 'f11', name: 'Status', path: '/master/statuses', icon: 'tag', parent_id: 'fg-master' },
       { id: 'f12', name: 'Menus', path: '/master/menus', icon: 'menu', parent_id: 'fg-master' },
+      { id: 'f12d', name: 'DingTalk', path: '/master/dingtalk', icon: 'menu', parent_id: 'fg-master' },
       { id: 'f13', name: t('layout.systemMenu'), path: '/master/system-menus', icon: 'grid', parent_id: 'fg-master' },
       ...infraFallback(),
     ]
   }
-  if (role === 'staff') return [...base, ...infraFallback()]
+  if (role === 'staff') return [
+    ...base,
+    { id: 'fg-reports', name: 'Reports', path: null, icon: 'chart-bar', parent_id: null },
+    { id: 'f7d', name: 'Daily Report', path: '/reports/daily', icon: 'chart-bar', parent_id: 'fg-reports' },
+    ...infraFallback(),
+  ]
   return base
 }
 
@@ -386,7 +392,7 @@ const pageTitle = computed(() => {
     '/': 'Dashboard', '/tickets': 'Tickets', '/tasks': 'Tasks', '/projects': 'Projects',
     '/workload': 'Workload', '/calendar': t('layout.calendar'), '/reports': 'Recapitulation', '/reports/tickets': 'Report Ticket', '/reports/tasks': 'Report Task', '/reports/daily': 'Daily Report', '/reports/weekly': 'Weekly Report',
     '/master/users': 'Master User', '/master/projects': 'Master Project',
-    '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu',
+    '/master/priorities': 'Master Priority', '/master/statuses': 'Master Status', '/master/menus': 'Master Menu', '/master/dingtalk': 'DingTalk',
     '/infra/rooms': t('infra.rooms.menu'), '/infra/network': t('infra.network.menu'), '/infra/cleaning': t('infra.cleaning.menu'),
     '/notifications': t('layout.notifications'), '/profile': t('layout.myProfile'), '/wishlist': t('layout.notes'),
   }

@@ -972,6 +972,62 @@ async function migrate(db: mysql.Pool) {
     }
   }
 
+  // Menu "Daily Report" di bawah folder Reports (admin & staff, satu baris per role)
+  for (const role of ['admin', 'staff']) {
+    await db.execute(
+      `INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Reports', NULL, 'chart-bar', 7, ? WHERE NOT EXISTS (SELECT 1 FROM menus WHERE name='Reports' AND parent_id IS NULL AND role=?)`,
+      [role, role]
+    ).catch(() => {})
+    await db.execute(
+      `INSERT INTO menus (name, path, icon, order_index, role, parent_id)
+       SELECT 'Daily Report', '/reports/daily', 'chart-bar', 4, ?, (SELECT id FROM (SELECT id FROM menus WHERE name='Reports' AND parent_id IS NULL AND role=? ORDER BY id LIMIT 1) x)
+       WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/reports/daily' AND role=?)`,
+      [role, role, role]
+    ).catch(() => {})
+  }
+
+  // Menu setting DingTalk (admin)
+  await db.execute(`INSERT INTO menus (name, path, icon, order_index, role) SELECT 'DingTalk','/master/dingtalk','menu',14,'admin' WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/master/dingtalk')`).catch(() => {})
+
+  // === DingTalk daily report ===
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS dingtalk_settings (
+      id INT PRIMARY KEY,
+      app_key VARCHAR(200) NOT NULL DEFAULT '',
+      app_secret VARCHAR(300) NOT NULL DEFAULT '',
+      robot_code VARCHAR(200) NOT NULL DEFAULT '',
+      open_conversation_id VARCHAR(300) NOT NULL DEFAULT '',
+      enabled TINYINT(1) NOT NULL DEFAULT 0,
+      send_time VARCHAR(5) NOT NULL DEFAULT '17:00',
+      staff_user_ids TEXT NULL,
+      last_sent_date DATE NULL,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS dingtalk_send_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      trigger_type ENUM('auto','manual','test') NOT NULL,
+      report_date DATE NULL,
+      status ENUM('success','failed') NOT NULL,
+      detail TEXT NULL,
+      sent_by INT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_dtl_created (created_at)
+    )
+  `)
+  {
+    const [exists] = await db.execute('SELECT id FROM dingtalk_settings WHERE id = 1') as any[]
+    if (!(exists as any[]).length) {
+      const [found] = await db.execute(
+        `SELECT id FROM users WHERE is_active = 1 AND role <> 'customer'
+           AND (name LIKE 'Galang%' OR name LIKE 'Bintang%' OR name LIKE 'Raka%')`
+      ) as any[]
+      const ids = (found as any[]).map(r => r.id)
+      await db.execute('INSERT INTO dingtalk_settings (id, staff_user_ids) VALUES (1, ?)', [JSON.stringify(ids)])
+    }
+  }
+
   // Fix constraints that were never enforced (column-level REFERENCES shorthand) or
   // that block deletes (default RESTRICT) so ticket/task/prd/qc deletes clean up properly.
   await ensureCascadeFk(db, 'tickets', 'task_id', 'tasks', 'SET NULL')

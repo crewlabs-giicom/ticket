@@ -494,6 +494,9 @@
     "ticketLifecycle": "工单生命周期"
   },
   "reportsDaily": {
+    "sendDingtalk": "发送到钉钉",
+    "sendDingtalkConfirm": "将日报发送到钉钉群？",
+    "sendDingtalkOk": "日报已发送到钉钉",
     "date": "日期",
     "allStaff": "全部员工",
     "todayLower": "今天",

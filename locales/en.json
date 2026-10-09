@@ -494,6 +494,9 @@
     "ticketLifecycle": "Ticket Lifecycle"
   },
   "reportsDaily": {
+    "sendDingtalk": "Send to DingTalk",
+    "sendDingtalkConfirm": "Send the Daily Report to the DingTalk group?",
+    "sendDingtalkOk": "Daily Report sent to DingTalk",
     "date": "Date",
     "allStaff": "All Staff",
     "todayLower": "Today",

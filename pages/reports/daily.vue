@@ -22,6 +22,12 @@
           <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           {{ t('reports.show') }}
         </button>
+        <button v-if="dingtalkConfigured" @click="sendToDingtalk" :disabled="sending"
+          class="text-sm py-1.5 px-4 flex items-center gap-1.5 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 transition-colors">
+          <svg v-if="sending" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          {{ t('reportsDaily.sendDingtalk') }}
+        </button>
         <div class="flex gap-1.5 ml-auto flex-wrap">
           <button @click="setDate('today')" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">{{ t('reportsDaily.todayLower') }}</button>
           <button @click="setDate('yesterday')" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">{{ t('reportsDaily.yesterday') }}</button>
@@ -295,6 +301,26 @@ const { data: userData } = await useFetch('/api/users', { query: { limit: 500 } 
 const staffUsers = computed(() =>
   ((userData.value as any)?.data || []).filter((u: any) => u.is_active && u.role !== 'customer')
 )
+
+// Kirim ke DingTalk (tombol hanya tampil bila integrasi sudah dikonfigurasi)
+const { confirmAction, toast } = useConfirm()
+const dingtalkConfigured = ref(false)
+const sending = ref(false)
+$fetch('/api/dingtalk/status').then((r: any) => { dingtalkConfigured.value = !!r?.configured }).catch(() => {})
+
+async function sendToDingtalk() {
+  if (!(await confirmAction(t('reportsDaily.sendDingtalkConfirm'), t('reportsDaily.sendDingtalk')))) return
+  sending.value = true
+  try {
+    await $fetch('/api/reports/daily-send', {
+      method: 'POST',
+      body: { date: filters.date, user_id: filters.user_id || undefined },
+    })
+    toast(t('reportsDaily.sendDingtalkOk'))
+  } catch (e: any) {
+    toast(e?.data?.message || e?.message || 'Gagal mengirim', 'error')
+  } finally { sending.value = false }
+}
 
 function setDate(preset: 'today' | 'yesterday') {
   const d = new Date()
