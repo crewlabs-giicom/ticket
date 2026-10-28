@@ -269,9 +269,17 @@ export default defineEventHandler(async (event) => {
         label: `${user?.name ?? 'System'} mengubah status dari "${oldStatusName}" ke "${newStatusName}"`,
         user_id: user?.id,
       })
+      // ID user ticketing tidak sama dengan ID user di sistem penerima; email adalah penghubungnya.
+      const currentAssigneeId = assigned_to !== undefined ? assigned_to : old.assigned_to
+      const [assigneeRows] = currentAssigneeId
+        ? await db.execute('SELECT email, name FROM users WHERE id = ?', [currentAssigneeId]) as any[]
+        : [[]]
+      const assignee = (assigneeRows as any[])[0]
       triggerWebhook(db, old.project_id, 'ticket.status_changed', {
         ticket_id: Number(id), ticket_number: old.ticket_number,
-        assigned_to: old.assigned_to,
+        assigned_to: currentAssigneeId,
+        assigned_to_email: assignee?.email ?? null,
+        assigned_to_name: assignee?.name ?? null,
         from_status: oldStatusName, to_status: newStatusName,
       }).catch(() => {})
       if (resolved_at && !old.resolved_at) {
