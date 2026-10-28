@@ -28,6 +28,17 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     jwtSecret: process.env.JWT_SECRET || 'ticketing-secret-key-2024',
+    // Private (server only). Override lewat NUXT_ROUTEROS_*; password tidak pernah dikirim ke client.
+    routeros: {
+      host: '',
+      port: 8729,
+      user: '',
+      password: '',
+      tls: true,
+      rejectUnauthorized: false,
+      cacheMs: 3000,
+      mock: false
+    },
     public: {
       appName: process.env.APP_NAME || 'Shadow Care'
     }

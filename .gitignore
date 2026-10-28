@@ -9,3 +9,4 @@ storage/uploads/*
 !storage/uploads/.gitkeep
 dist
 *.log
+prd/

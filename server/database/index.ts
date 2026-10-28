@@ -972,6 +972,13 @@ async function migrate(db: mysql.Pool) {
     }
   }
 
+  // Menu "Jaringan" (MikroTik, read-only) di folder Infrastruktur: khusus admin
+  await db.execute(
+    `INSERT INTO menus (name, path, icon, order_index, role, parent_id)
+     SELECT 'Jaringan', '/infra/mikrotik', 'chart-bar', 4, 'admin', (SELECT id FROM (SELECT id FROM menus WHERE name='Infrastruktur' AND path IS NULL AND role='admin' LIMIT 1) x)
+     WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/infra/mikrotik')`
+  ).catch(() => {})
+
   // Menu "Daily Report" di bawah folder Reports (admin & staff, satu baris per role)
   for (const role of ['admin', 'staff']) {
     await db.execute(
