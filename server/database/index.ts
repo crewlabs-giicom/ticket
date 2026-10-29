@@ -986,6 +986,7 @@ async function migrate(db: mysql.Pool) {
     ['Ruangan & Device', '/infra/rooms', 'server', 1],
     ['Network Check', '/infra/network', 'chart-bar', 2],
     ['Pembersihan PC', '/infra/cleaning', 'clipboard', 3],
+    ['Jaringan', '/infra/mikrotik', 'chart-bar', 4],
   ]
   for (const role of ['admin', 'staff']) {
     await db.execute(
@@ -1002,12 +1003,15 @@ async function migrate(db: mysql.Pool) {
     }
   }
 
-  // Menu "Jaringan" (MikroTik, read-only) di folder Infrastruktur: khusus admin
-  await db.execute(
-    `INSERT INTO menus (name, path, icon, order_index, role, parent_id)
-     SELECT 'Jaringan', '/infra/mikrotik', 'chart-bar', 4, 'admin', (SELECT id FROM (SELECT id FROM menus WHERE name='Infrastruktur' AND path IS NULL AND role='admin' LIMIT 1) x)
-     WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/infra/mikrotik')`
-  ).catch(() => {})
+  // Menu "Jaringan" (MikroTik, read-only) kini ikut infraChildren (admin & staff). Perbaiki baris lama yang
+  // parent_id-nya menunjuk folder role lain (mis. role diubah lewat Master Menu) agar tidak jadi anak yatim.
+  for (const role of ['admin', 'staff']) {
+    await db.execute(
+      `UPDATE menus SET parent_id = (SELECT id FROM (SELECT id FROM menus WHERE name='Infrastruktur' AND path IS NULL AND role=? LIMIT 1) x)
+       WHERE path='/infra/mikrotik' AND role=?`,
+      [role, role]
+    ).catch(() => {})
+  }
 
   // Menu "Daily Report" di bawah folder Reports (admin & staff, satu baris per role)
   for (const role of ['admin', 'staff']) {

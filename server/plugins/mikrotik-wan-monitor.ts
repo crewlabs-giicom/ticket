@@ -5,7 +5,7 @@ import { isMockMode } from '../utils/mikrotik/client'
 import { getWanStatus } from '../utils/mikrotik/service'
 import { nextWanTransitions } from '../utils/mikrotik/logic'
 
-const POLL_MS = 30 * 1000
+const POLL_MS = 5 * 1000 // sama dengan poll halaman Jaringan, supaya alert setara tampilan realtime
 
 function formatDuration(ms: number): string {
   const m = Math.max(1, Math.round(ms / 60000))
@@ -14,7 +14,7 @@ function formatDuration(ms: number): string {
   return `${h} jam ${m % 60} menit`
 }
 
-// Deteksi WAN down dari MikroTik: notifikasi in-app ke semua admin + pesan grup DingTalk.
+// Deteksi WAN down dari MikroTik: notifikasi in-app ke semua admin & staff + pesan grup DingTalk.
 // Router tidak terjangkau BUKAN dianggap WAN down (hanya dilewati).
 export default defineNitroPlugin(() => {
   let running = false
@@ -22,8 +22,8 @@ export default defineNitroPlugin(() => {
 
   async function notify(title: string, message: string) {
     const db = getDb()
-    const [admins] = await db.execute("SELECT id FROM users WHERE role = 'admin' AND is_active = 1") as any[]
-    const ids = (admins as any[]).map(a => a.id)
+    const [recipients] = await db.execute("SELECT id FROM users WHERE role IN ('admin', 'staff') AND is_active = 1") as any[]
+    const ids = (recipients as any[]).map(a => a.id)
     for (const id of ids) {
       await db.execute(
         `INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'network')`,
@@ -31,7 +31,8 @@ export default defineNitroPlugin(() => {
       )
     }
     broadcastToUsers(ids, 'notification', { title, message, type: 'network' })
-    await sendGroupAlert(`${title}\n${message}`)
+    // tidak di-await: panggilan jaringan DingTalk tidak boleh menunda siklus polling (sendGroupAlert tidak pernah melempar)
+    void sendGroupAlert(`${title}\n${message}`)
   }
 
   async function tick() {
@@ -84,6 +85,6 @@ export default defineNitroPlugin(() => {
     }
   }
 
-  setTimeout(tick, 20 * 1000)
+  setTimeout(tick, 10 * 1000)
   setInterval(tick, POLL_MS)
 })

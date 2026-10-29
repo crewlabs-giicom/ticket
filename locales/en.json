@@ -300,10 +300,12 @@
         "hostname": "Hostname",
         "mac": "MAC",
         "jalur": "Route",
+        "speed": "Speed",
         "dhcp": "DHCP",
         "lastSeen": "Last seen",
         "comment": "Comment"
       },
+      "speedHint": "Current download/upload per IP (from connection tracking). FastTrack connections are not counted, so values may be lower than actual.",
       "chartWanTotal": "Total WAN bandwidth (live)",
       "chartWanDown": "Download per WAN",
       "chartWanUp": "Upload per WAN",

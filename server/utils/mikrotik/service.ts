@@ -1,6 +1,6 @@
 import { rosRead, isMockMode } from './client'
 import {
-  activeAddressesByInterface, buildClients, buildInterfaceViews, buildSubnetDefs, groupClients,
+  activeAddressesByInterface, aggregateClientRates, buildClients, buildInterfaceViews, buildSubnetDefs, groupClients,
   interfaceRole, routerIpSet, summarize, wanMemberSet, type InterfaceRole, type RosRow, type WanState,
 } from './logic'
 
@@ -37,6 +37,15 @@ export async function getTraffic() {
   return {
     fetchedAt: new Date().toISOString(), mock: isMockMode(),
     traffic: [...traffic].map(([name, v]) => ({ name, rxBps: v.rx, txBps: v.tx })),
+  }
+}
+
+/** Kecepatan per IP klien (Mbps di UI) dari rate connection tracking; koneksi FastTrack tidak terhitung. */
+export async function getClientRates() {
+  const conns = await rosRead('/ip/firewall/connection/print', ['=.proplist=src-address,orig-rate,repl-rate'])
+  return {
+    fetchedAt: new Date().toISOString(), mock: isMockMode(),
+    rates: [...aggregateClientRates(conns)].map(([ip, v]) => ({ ip, rxBps: v.rxBps, txBps: v.txBps })),
   }
 }
 

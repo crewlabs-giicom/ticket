@@ -1,7 +1,7 @@
-import { requireRole } from '../../utils/rbac'
+import { requireInfraUser } from '../../utils/infra'
 import { getInterfaces } from '../../utils/mikrotik/service'
 
 export default defineEventHandler(async (event) => {
-  requireRole(event, ['admin'])
+  requireInfraUser(event)
   return await getInterfaces()
 })

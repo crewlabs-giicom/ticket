@@ -122,7 +122,7 @@
             <span class="text-slate-400 text-xs">{{ collapsed[s.cidr] ? '▸' : '▾' }}</span>
           </div>
         </button>
-        <ClientTable v-if="!collapsed[s.cidr]" :rows="s.rows" :t="t" :jalur-class="jalurClass" />
+        <ClientTable v-if="!collapsed[s.cidr]" :rows="s.rows" :t="t" :jalur-class="jalurClass" :rates="rates" />
       </div>
 
       <div v-if="unassignedRows.length" class="card overflow-hidden">
@@ -130,7 +130,7 @@
           <span class="text-sm font-semibold text-slate-900">{{ t('infra.mikrotik.outsideSubnet') }}</span>
           <span class="text-xs text-slate-600">{{ unassignedRows.length }} <span class="text-slate-400 ml-2">{{ collapsed['__unassigned'] ? '▸' : '▾' }}</span></span>
         </button>
-        <ClientTable v-if="!collapsed['__unassigned']" :rows="unassignedRows" :t="t" :jalur-class="jalurClass" />
+        <ClientTable v-if="!collapsed['__unassigned']" :rows="unassignedRows" :t="t" :jalur-class="jalurClass" :rates="rates" />
       </div>
     </template>
   </div>
@@ -144,7 +144,7 @@ definePageMeta({ middleware: 'auth' })
 const { t } = useI18n()
 const auth = useAuthStore()
 
-if (auth.user?.role !== 'admin') await navigateTo('/')
+if (auth.user?.role === 'customer') await navigateTo('/')
 
 const tab = ref<'interfaces' | 'clients'>('interfaces')
 const loading = ref(false)
@@ -229,9 +229,27 @@ async function loadTraffic() {
 const trafficPoll = useIntervalFn(loadTraffic, 1000, { immediate: false })
 const ifacePoll = useIntervalFn(() => load('interfaces'), 5000, { immediate: false })
 const clientPoll = useIntervalFn(() => load('clients'), 30000, { immediate: false })
+
+// Kecepatan per IP klien (connection tracking): ~5 dtk, hanya saat tab Klien aktif.
+const rates = ref<Map<string, { rxBps: number; txBps: number }>>(new Map())
+let ratesBusy = false
+async function loadRates() {
+  if (ratesBusy || (typeof document !== 'undefined' && document.hidden)) return
+  ratesBusy = true
+  try {
+    const res: any = await $fetch('/api/network/client-rates')
+    rates.value = new Map((res.rates as Array<{ ip: string; rxBps: number; txBps: number }>).map(r => [r.ip, { rxBps: r.rxBps, txBps: r.txBps }]))
+  } catch {
+    // kecepatan bersifat tambahan: kegagalan tidak menimpa pesan error utama halaman
+  } finally {
+    ratesBusy = false
+  }
+}
+const ratesPoll = useIntervalFn(loadRates, 5000, { immediate: false })
+
 watch(tab, (v) => {
-  if (v === 'clients') { load('clients'); clientPoll.resume() }
-  else clientPoll.pause()
+  if (v === 'clients') { load('clients'); clientPoll.resume(); loadRates(); ratesPoll.resume() }
+  else { clientPoll.pause(); ratesPoll.pause() }
 })
 onMounted(() => { load('interfaces'); loadTraffic(); ifacePoll.resume(); trafficPoll.resume() })
 
@@ -283,6 +301,7 @@ function fmtBps(v: number | null) {
   if (v >= 1e3) return `${(v / 1e3).toFixed(1)} Kbps`
   return `${v} bps`
 }
+const fmtMbps = (v: number) => (v / 1e6).toFixed(2)
 function fmtBytes(v: number | null) {
   if (v === null) return '—'
   const u = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -327,16 +346,22 @@ const ClientTable = defineComponent({
     rows: { type: Array as PropType<ClientView[]>, required: true },
     t: { type: Function as PropType<(k: string) => string>, required: true },
     jalurClass: { type: Function as PropType<(j: string) => string>, required: true },
+    rates: { type: Object as PropType<Map<string, { rxBps: number; txBps: number }>>, required: true },
   },
   setup(props) {
     return () => {
       const th = (k: string, cls = '') => h('th', { class: `text-left px-3 py-2 ${cls}` }, props.t(k))
       const dhcp = (c: ClientView) => c.dhcpStatic === null ? '–' : c.dhcpStatic ? 'static' : 'dynamic'
+      const speed = (c: ClientView) => {
+        const r = props.rates.get(c.ip)
+        return r ? `↓ ${fmtMbps(r.rxBps)} · ↑ ${fmtMbps(r.txBps)} Mbps` : '—'
+      }
       return h('div', { class: 'overflow-x-auto border-t border-slate-100' }, [
         h('table', { class: 'w-full text-sm' }, [
           h('thead', { class: 'bg-slate-50 text-xs text-slate-500' }, h('tr', [
             th('infra.mikrotik.col.status'), th('infra.mikrotik.col.ip'), th('infra.mikrotik.col.hostname'),
             th('infra.mikrotik.col.mac', 'hidden md:table-cell'), th('infra.mikrotik.col.jalur'),
+            h('th', { class: 'text-left px-3 py-2 whitespace-nowrap', title: props.t('infra.mikrotik.speedHint') }, props.t('infra.mikrotik.col.speed')),
             th('infra.mikrotik.col.dhcp', 'hidden md:table-cell'), th('infra.mikrotik.col.lastSeen', 'hidden lg:table-cell'),
             th('infra.mikrotik.col.comment', 'hidden lg:table-cell'),
           ])),
@@ -350,11 +375,12 @@ const ClientTable = defineComponent({
                 class: `badge ${props.jalurClass(c.jalur)}`,
                 title: c.jalurConflict.length ? `${props.t('infra.mikrotik.alsoIn')}: ${c.jalurConflict.filter(x => x !== c.jalurList).join(', ')}. ${props.t('infra.mikrotik.effective')}: ${c.jalurList}` : undefined,
               }, `${c.jalurConflict.length ? '⚠ ' : ''}${c.jalur}`)),
+              h('td', { class: 'px-3 py-2 text-xs font-mono whitespace-nowrap' }, speed(c)),
               h('td', { class: 'px-3 py-2 text-xs hidden md:table-cell' }, dhcp(c)),
               h('td', { class: 'px-3 py-2 text-xs text-slate-500 hidden lg:table-cell' }, c.lastSeen || '—'),
               h('td', { class: 'px-3 py-2 text-xs text-slate-500 hidden lg:table-cell' }, c.comment || '—'),
             ]))
-            : [h('tr', h('td', { class: 'px-3 py-4 text-center text-xs text-slate-400', colspan: 8 }, props.t('infra.mikrotik.noClients')))]),
+            : [h('tr', h('td', { class: 'px-3 py-4 text-center text-xs text-slate-400', colspan: 9 }, props.t('infra.mikrotik.noClients')))]),
         ]),
       ])
     }

@@ -12,6 +12,7 @@ const TTL_BY_PATH: Record<string, number> = {
   '/ip/arp/print': 10000,
   '/ip/dhcp-server/lease/print': 10000,
   '/ip/firewall/address-list/print': 10000,
+  '/ip/firewall/connection/print': 3000, // rate per koneksi untuk kecepatan per IP
 }
 
 interface RosConfig {

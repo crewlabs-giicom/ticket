@@ -94,6 +94,21 @@ export function mockRead(path: string, params: string[] = []): RosRow[] {
         server: 'dhcp-lan', 'last-seen': online ? '12s' : '2d3h', disabled: 'false',
         ...(online ? { 'active-address': address, 'active-mac-address': mac } : {}),
       }))
+    case '/ip/firewall/connection/print': {
+      // 1-3 koneksi per klien online; orig = upload klien, repl = download klien
+      const out: RosRow[] = []
+      CLIENTS.filter(c => c[6]).forEach(([ip], i) => {
+        const wave = 0.5 + 0.5 * Math.sin(Date.now() / 3000 + i)
+        for (let k = 0; k < 1 + (i % 3); k++) {
+          out.push({
+            'src-address': `${ip}:${40000 + i * 10 + k}`,
+            'orig-rate': String(Math.round(Math.random() * 2e6 * wave)),
+            'repl-rate': String(Math.round(Math.random() * 20e6 * wave)),
+          })
+        }
+      })
+      return out
+    }
     case '/ip/firewall/address-list/print':
       return ADDRESS_LIST.map(([list, address, disabled], i) => ({ '.id': `*F${i}`, list, address, disabled: String(disabled) }))
     default:

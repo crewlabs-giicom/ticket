@@ -135,7 +135,7 @@ export interface WanState { name: string; comment: string; up: boolean }
 /**
  * Tentukan WAN yang baru down / baru pulih dari hasil satu poll.
  * - down: berstatus tidak running selama `threshold` poll berturut-turut dan belum punya event terbuka
- *   (debounce supaya flapping sesaat tidak memicu alert).
+ *   (default 1 = langsung lapor; naikkan bila perlu debounce untuk link yang sering flapping).
  * - pulih: punya event terbuka dan kini running, atau interface-nya hilang/di-disable dari daftar WAN.
  * Fungsi murni: `streaks` (hitungan down berturut-turut per interface) dikembalikan untuk dipakai poll berikutnya.
  */
@@ -143,7 +143,7 @@ export function nextWanTransitions(
   prevStreaks: Map<string, number>,
   current: WanState[],
   openEvents: Set<string>,
-  threshold = 2,
+  threshold = 1,
 ) {
   const streaks = new Map<string, number>()
   const wentDown: WanState[] = []
@@ -164,6 +164,27 @@ export function nextWanTransitions(
   for (const name of openEvents) if (!seen.has(name)) recovered.push(name)
 
   return { streaks, wentDown, recovered }
+}
+
+// ---------- Kecepatan per IP klien ----------
+
+export interface ClientRate { rxBps: number; txBps: number }
+
+/**
+ * Jumlahkan rate koneksi (connection tracking) per IP klien.
+ * Sisi originator = klien: `orig-rate` = upload klien (txBps), `repl-rate` = download klien (rxBps).
+ */
+export function aggregateClientRates(conns: RosRow[]): Map<string, ClientRate> {
+  const out = new Map<string, ClientRate>()
+  for (const c of conns) {
+    const ip = (c['src-address'] || '').split(':')[0]
+    if (!isIPv4(ip)) continue
+    const cur = out.get(ip) || { rxBps: 0, txBps: 0 }
+    cur.txBps += Number(c['orig-rate']) || 0
+    cur.rxBps += Number(c['repl-rate']) || 0
+    out.set(ip, cur)
+  }
+  return out
 }
 
 export function activeAddressesByInterface(addresses: RosRow[]): Map<string, string[]> {

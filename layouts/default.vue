@@ -322,6 +322,7 @@ function infraFallback() {
     { id: 'f-infra-rooms', name: t('infra.rooms.menu'), path: '/infra/rooms', icon: 'server', parent_id: 'fg-infra' },
     { id: 'f-infra-network', name: t('infra.network.menu'), path: '/infra/network', icon: 'chart-bar', parent_id: 'fg-infra' },
     { id: 'f-infra-cleaning', name: t('infra.cleaning.menu'), path: '/infra/cleaning', icon: 'clipboard', parent_id: 'fg-infra' },
+    { id: 'f-infra-mikrotik', name: t('infra.mikrotik.menu'), path: '/infra/mikrotik', icon: 'chart-bar', parent_id: 'fg-infra' },
   ]
 }
 
@@ -358,7 +359,6 @@ function fallbackMenus(role?: string) {
       { id: 'f12d', name: 'DingTalk', path: '/master/dingtalk', icon: 'menu', parent_id: 'fg-master' },
       { id: 'f13', name: t('layout.systemMenu'), path: '/master/system-menus', icon: 'grid', parent_id: 'fg-master' },
       ...infraFallback(),
-      { id: 'f-infra-mikrotik', name: t('infra.mikrotik.menu'), path: '/infra/mikrotik', icon: 'chart-bar', parent_id: 'fg-infra' },
     ]
   }
   if (role === 'staff') return [

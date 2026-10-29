@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
 import {
   parseCidr, parseAddressEntry, interfaceRole, wanMemberSet, resolveJalur, buildViaEntries,
-  buildClients, buildSubnetDefs, groupClients, routerIpSet, JALUR_UTAMA, nextWanTransitions, type InterfaceRole, type RosRow,
+  buildClients, buildSubnetDefs, groupClients, routerIpSet, JALUR_UTAMA, nextWanTransitions, aggregateClientRates, type InterfaceRole, type RosRow,
 } from '../server/utils/mikrotik/logic'
 import { assertReadOnlyPath } from '../server/utils/mikrotik/guard'
 import { mockRead } from '../server/utils/mikrotik/mock'
@@ -152,16 +152,20 @@ describe('nextWanTransitions', () => {
   const down = (name: string) => ({ name, comment: '', up: false })
   const up = (name: string) => ({ name, comment: '', up: true })
 
-  it('down baru dilaporkan setelah 2 poll berturut-turut (debounce)', () => {
-    const first = nextWanTransitions(new Map(), [down('ether1')], new Set())
+  it('down dilaporkan langsung pada poll pertama (default)', () => {
+    const r = nextWanTransitions(new Map(), [down('ether1')], new Set())
+    expect(r.wentDown.map(w => w.name)).toEqual(['ether1'])
+  })
+  it('dengan threshold 2: baru dilaporkan setelah 2 poll berturut-turut (debounce)', () => {
+    const first = nextWanTransitions(new Map(), [down('ether1')], new Set(), 2)
     expect(first.wentDown).toHaveLength(0)
-    const second = nextWanTransitions(first.streaks, [down('ether1')], new Set())
+    const second = nextWanTransitions(first.streaks, [down('ether1')], new Set(), 2)
     expect(second.wentDown.map(w => w.name)).toEqual(['ether1'])
   })
-  it('flapping sesaat tidak memicu down', () => {
-    const a = nextWanTransitions(new Map(), [down('ether1')], new Set())
-    const b = nextWanTransitions(a.streaks, [up('ether1')], new Set())
-    const c = nextWanTransitions(b.streaks, [down('ether1')], new Set())
+  it('dengan threshold 2: flapping sesaat tidak memicu down', () => {
+    const a = nextWanTransitions(new Map(), [down('ether1')], new Set(), 2)
+    const b = nextWanTransitions(a.streaks, [up('ether1')], new Set(), 2)
+    const c = nextWanTransitions(b.streaks, [down('ether1')], new Set(), 2)
     expect(c.wentDown).toHaveLength(0)
   })
   it('tidak melaporkan ulang bila event masih terbuka', () => {
@@ -177,5 +181,26 @@ describe('nextWanTransitions', () => {
   it('interface hilang/di-disable dari daftar WAN dianggap pulih (event tidak menggantung)', () => {
     const r = nextWanTransitions(new Map(), [up('ether2')], new Set(['ether1']))
     expect(r.recovered).toEqual(['ether1'])
+  })
+})
+
+describe('aggregateClientRates', () => {
+  it('menjumlahkan rate koneksi per IP klien (orig = upload, repl = download)', () => {
+    const m = aggregateClientRates([
+      { 'src-address': '10.10.4.4:51000', 'orig-rate': '1000', 'repl-rate': '5000' },
+      { 'src-address': '10.10.4.4:51001', 'orig-rate': '500', 'repl-rate': '2500' },
+      { 'src-address': '10.10.4.5:40000', 'orig-rate': '10', 'repl-rate': '20' },
+    ])
+    expect(m.get('10.10.4.4')).toEqual({ txBps: 1500, rxBps: 7500 })
+    expect(m.get('10.10.4.5')).toEqual({ txBps: 10, rxBps: 20 })
+  })
+  it('mengabaikan non-IPv4 dan memperlakukan nilai kosong/NaN sebagai 0', () => {
+    const m = aggregateClientRates([
+      { 'src-address': 'fe80::1', 'orig-rate': '1', 'repl-rate': '1' },
+      { 'src-address': '', 'orig-rate': '1' },
+      { 'src-address': '10.10.4.9:1', 'orig-rate': 'abc' },
+    ])
+    expect(m.size).toBe(1)
+    expect(m.get('10.10.4.9')).toEqual({ txBps: 0, rxBps: 0 })
   })
 })

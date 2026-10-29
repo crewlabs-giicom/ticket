@@ -300,10 +300,12 @@
         "hostname": "主机名",
         "mac": "MAC",
         "jalur": "线路",
+        "speed": "速度",
         "dhcp": "DHCP",
         "lastSeen": "最后在线",
         "comment": "备注"
       },
+      "speedHint": "每个 IP 的当前下载/上传速度（来自连接跟踪）。FastTrack 连接不会被统计，因此数值可能低于实际值。",
       "chartWanTotal": "WAN 总带宽（实时）",
       "chartWanDown": "各 WAN 下载",
       "chartWanUp": "各 WAN 上传",
