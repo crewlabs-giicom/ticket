@@ -10,8 +10,8 @@ export default defineEventHandler(async (event) => {
     const b = await readBody(event)
     if (!b?.room_id || !b?.name?.trim()) throw createError({ statusCode: 400, statusMessage: 'Ruangan dan nama PC wajib diisi' })
     await db.execute(
-      'UPDATE pc_assets SET room_id=?, name=?, description=?, is_active=? WHERE id=?',
-      [Number(b.room_id), b.name.trim(), b.description || null, b.is_active ?? 1, id]
+      'UPDATE pc_assets SET room_id=?, name=?, description=?, arf_number=?, owner_name=?, is_active=? WHERE id=?',
+      [Number(b.room_id), b.name.trim(), b.description || null, b.arf_number?.trim() || null, b.owner_name?.trim() || null, b.is_active ?? 1, id]
     )
     return { success: true }
   }

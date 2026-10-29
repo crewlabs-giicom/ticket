@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
 import {
   parseCidr, parseAddressEntry, interfaceRole, wanMemberSet, resolveJalur, buildViaEntries,
-  buildClients, buildSubnetDefs, groupClients, routerIpSet, JALUR_UTAMA, type InterfaceRole, type RosRow,
+  buildClients, buildSubnetDefs, groupClients, routerIpSet, JALUR_UTAMA, nextWanTransitions, type InterfaceRole, type RosRow,
 } from '../server/utils/mikrotik/logic'
 import { assertReadOnlyPath } from '../server/utils/mikrotik/guard'
 import { mockRead } from '../server/utils/mikrotik/mock'
@@ -145,5 +145,37 @@ describe('audit: tidak ada kemampuan write', () => {
     expect(c.indexOf('assertReadOnlyPath(path)')).toBeGreaterThan(-1)
     expect(c.indexOf('assertReadOnlyPath(path)')).toBeLessThan(c.indexOf('.write('))
     expect(c.match(/\.write\(/g)).toHaveLength(1)
+  })
+})
+
+describe('nextWanTransitions', () => {
+  const down = (name: string) => ({ name, comment: '', up: false })
+  const up = (name: string) => ({ name, comment: '', up: true })
+
+  it('down baru dilaporkan setelah 2 poll berturut-turut (debounce)', () => {
+    const first = nextWanTransitions(new Map(), [down('ether1')], new Set())
+    expect(first.wentDown).toHaveLength(0)
+    const second = nextWanTransitions(first.streaks, [down('ether1')], new Set())
+    expect(second.wentDown.map(w => w.name)).toEqual(['ether1'])
+  })
+  it('flapping sesaat tidak memicu down', () => {
+    const a = nextWanTransitions(new Map(), [down('ether1')], new Set())
+    const b = nextWanTransitions(a.streaks, [up('ether1')], new Set())
+    const c = nextWanTransitions(b.streaks, [down('ether1')], new Set())
+    expect(c.wentDown).toHaveLength(0)
+  })
+  it('tidak melaporkan ulang bila event masih terbuka', () => {
+    const r = nextWanTransitions(new Map([['ether1', 5]]), [down('ether1')], new Set(['ether1']))
+    expect(r.wentDown).toHaveLength(0)
+    expect(r.recovered).toHaveLength(0)
+  })
+  it('pulih saat running lagi', () => {
+    const r = nextWanTransitions(new Map([['ether1', 5]]), [up('ether1')], new Set(['ether1']))
+    expect(r.recovered).toEqual(['ether1'])
+    expect(r.streaks.get('ether1')).toBe(0)
+  })
+  it('interface hilang/di-disable dari daftar WAN dianggap pulih (event tidak menggantung)', () => {
+    const r = nextWanTransitions(new Map(), [up('ether2')], new Set(['ether1']))
+    expect(r.recovered).toEqual(['ether1'])
   })
 })

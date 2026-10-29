@@ -56,6 +56,8 @@ export async function saveUploadedFile(params: SaveUploadedFileParams): Promise<
   let subPath: string
   if (menu === 'profile') {
     subPath = `profile/${today}`
+  } else if (menu === 'cleaning') {
+    subPath = `cleaning/${today}`
   } else if (['ticket', 'task'].includes(menu) && projectId) {
     const slug = slugify(projectName || `project${projectId}`)
     subPath = `${menu}/${projectId}_${slug}/${today}`

@@ -128,6 +128,44 @@ export function wanMemberSet(members: RosRow[]): Set<string> {
   return s
 }
 
+// ---------- Deteksi WAN down ----------
+
+export interface WanState { name: string; comment: string; up: boolean }
+
+/**
+ * Tentukan WAN yang baru down / baru pulih dari hasil satu poll.
+ * - down: berstatus tidak running selama `threshold` poll berturut-turut dan belum punya event terbuka
+ *   (debounce supaya flapping sesaat tidak memicu alert).
+ * - pulih: punya event terbuka dan kini running, atau interface-nya hilang/di-disable dari daftar WAN.
+ * Fungsi murni: `streaks` (hitungan down berturut-turut per interface) dikembalikan untuk dipakai poll berikutnya.
+ */
+export function nextWanTransitions(
+  prevStreaks: Map<string, number>,
+  current: WanState[],
+  openEvents: Set<string>,
+  threshold = 2,
+) {
+  const streaks = new Map<string, number>()
+  const wentDown: WanState[] = []
+  const recovered: string[] = []
+  const seen = new Set<string>()
+
+  for (const w of current) {
+    seen.add(w.name)
+    if (w.up) {
+      streaks.set(w.name, 0)
+      if (openEvents.has(w.name)) recovered.push(w.name)
+      continue
+    }
+    const n = (prevStreaks.get(w.name) || 0) + 1
+    streaks.set(w.name, n)
+    if (n >= threshold && !openEvents.has(w.name)) wentDown.push(w)
+  }
+  for (const name of openEvents) if (!seen.has(name)) recovered.push(name)
+
+  return { streaks, wentDown, recovered }
+}
+
 export function activeAddressesByInterface(addresses: RosRow[]): Map<string, string[]> {
   const map = new Map<string, string[]>()
   for (const a of addresses) {

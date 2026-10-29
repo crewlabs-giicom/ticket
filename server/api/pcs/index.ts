@@ -21,8 +21,8 @@ export default defineEventHandler(async (event) => {
     const b = await readBody(event)
     if (!b?.room_id || !b?.name?.trim()) throw createError({ statusCode: 400, statusMessage: 'Ruangan dan nama PC wajib diisi' })
     const [r] = await db.execute(
-      'INSERT INTO pc_assets (room_id, name, description) VALUES (?, ?, ?)',
-      [Number(b.room_id), b.name.trim(), b.description || null]
+      'INSERT INTO pc_assets (room_id, name, description, arf_number, owner_name) VALUES (?, ?, ?, ?, ?)',
+      [Number(b.room_id), b.name.trim(), b.description || null, b.arf_number?.trim() || null, b.owner_name?.trim() || null]
     )
     const [rows] = await db.execute('SELECT * FROM pc_assets WHERE id = ?', [(r as ResultSetHeader).insertId])
     return { success: true, data: (rows as any[])[0] }

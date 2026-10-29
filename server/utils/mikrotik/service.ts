@@ -1,7 +1,7 @@
 import { rosRead, isMockMode } from './client'
 import {
   activeAddressesByInterface, buildClients, buildInterfaceViews, buildSubnetDefs, groupClients,
-  interfaceRole, routerIpSet, summarize, wanMemberSet, type InterfaceRole, type RosRow,
+  interfaceRole, routerIpSet, summarize, wanMemberSet, type InterfaceRole, type RosRow, type WanState,
 } from './logic'
 
 async function loadInterfaceBase() {
@@ -38,6 +38,14 @@ export async function getTraffic() {
     fetchedAt: new Date().toISOString(), mock: isMockMode(),
     traffic: [...traffic].map(([name, v]) => ({ name, rxBps: v.rx, txBps: v.tx })),
   }
+}
+
+/** Status interface WAN yang tidak di-disable (dipakai detector WAN down). */
+export async function getWanStatus(): Promise<WanState[]> {
+  const { interfaces, roleByInterface } = await loadInterfaceBase()
+  return interfaces
+    .filter(i => roleByInterface.get(i.name || '') === 'WAN' && i.disabled !== 'true')
+    .map(i => ({ name: i.name || '', comment: i.comment || '', up: i.running === 'true' }))
 }
 
 export async function getInterfaces() {

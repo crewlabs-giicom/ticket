@@ -63,20 +63,34 @@
             <tr>
               <th class="text-left px-4 py-2">{{ t('infra.cleaning.cleanedAt') }}</th>
               <th class="text-left px-2 py-2">{{ t('infra.cleaning.target') }}</th>
+              <th class="text-left px-2 py-2">{{ t('infra.cleaning.arf') }} / {{ t('infra.cleaning.owner') }}</th>
               <th class="text-left px-2 py-2">{{ t('infra.cleaning.tasksDone') }}</th>
               <th class="text-left px-2 py-2">{{ t('infra.cleaning.cleanedBy') }}</th>
               <th class="text-left px-2 py-2">{{ t('infra.network.note') }}</th>
+              <th class="text-left px-2 py-2">{{ t('infra.cleaning.photos') }}</th>
               <th v-if="auth.isAdmin" class="px-2" />
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-if="!logs.length"><td colspan="6" class="text-center text-slate-400 py-8">{{ t('infra.cleaning.noHistory') }}</td></tr>
+            <tr v-if="!logs.length"><td colspan="8" class="text-center text-slate-400 py-8">{{ t('infra.cleaning.noHistory') }}</td></tr>
             <tr v-for="l in logs" :key="l.id" class="hover:bg-slate-50">
               <td class="px-4 py-2 whitespace-nowrap">{{ fmtDateTime(l.cleaned_at) }}</td>
               <td class="px-2 py-2">{{ l.room_name }}<span class="text-xs text-slate-400"> · {{ l.pc_name || t('infra.cleaning.allPcs') }}</span><div v-if="l.schedule_title" class="text-xs text-slate-400">{{ l.schedule_title }}</div></td>
+              <td class="px-2 py-2 text-xs">
+                <div class="font-mono">{{ l.arf_number || '—' }}</div>
+                <div class="text-slate-500">{{ l.owner_name || '—' }}</div>
+              </td>
               <td class="px-2 py-2 text-xs">{{ l.tasks_done || '—' }}</td>
               <td class="px-2 py-2 text-xs">{{ l.cleaned_by_name || '—' }}</td>
               <td class="px-2 py-2 text-xs text-slate-500">{{ l.note || '—' }}</td>
+              <td class="px-2 py-2">
+                <div v-if="l.photos?.length" class="flex gap-1 flex-wrap max-w-[10rem]">
+                  <a v-for="ph in l.photos" :key="ph.id" :href="`/uploads/${ph.filename}`" target="_blank" rel="noopener">
+                    <img :src="`/uploads/${ph.filename}`" :alt="ph.original_name" class="w-10 h-10 object-cover rounded-lg border border-slate-200" loading="lazy" />
+                  </a>
+                </div>
+                <span v-else class="text-xs text-slate-400">—</span>
+              </td>
               <td v-if="auth.isAdmin" class="px-2"><button @click="deleteLog(l)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button></td>
             </tr>
           </tbody>
@@ -126,6 +140,20 @@
             </div>
           </div>
           <div><label class="label">{{ t('infra.network.note') }}</label><textarea v-model="dForm.note" rows="2" class="input" /></div>
+          <div>
+            <label class="label">{{ t('infra.cleaning.photos') }}</label>
+            <label class="btn-secondary inline-block cursor-pointer py-1 px-3 text-xs">
+              {{ photoUploading ? t('infra.cleaning.uploading') : t('infra.cleaning.addPhotos') }}
+              <input type="file" accept="image/*" multiple class="hidden" :disabled="photoUploading" @change="onPickPhotos" />
+            </label>
+            <span class="text-xs text-slate-400 ml-2">{{ t('infra.cleaning.photoHint') }}</span>
+            <div v-if="dForm.photos.length" class="flex gap-2 flex-wrap mt-2">
+              <div v-for="(ph, i) in dForm.photos" :key="ph.filename" class="relative">
+                <img :src="`/uploads/${ph.filename}`" :alt="ph.original_name" class="w-16 h-16 object-cover rounded-lg border border-slate-200" />
+                <button type="button" @click="dForm.photos.splice(i, 1)" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none">×</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="flex gap-2 mt-5">
           <button @click="closeModal" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
@@ -201,12 +229,35 @@ async function deleteSchedule(s: any) {
 // ── Mark done / ad-hoc log ────────────────────────────────────────────────
 const taskKeys = ['dust', 'physical', 'diskCleanup', 'update', 'cable', 'antivirus']
 const doneSchedule = ref<any>(null)
-const dForm = reactive<any>({ room_id: null, pc_id: null, tasks_done: [] as string[], note: '' })
+const dForm = reactive<any>({ room_id: null, pc_id: null, tasks_done: [] as string[], note: '', photos: [] as any[] })
+const photoUploading = ref(false)
+const MAX_PHOTOS = 10
+
+async function onPickPhotos(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || []).slice(0, MAX_PHOTOS - dForm.photos.length)
+  input.value = ''
+  if (!files.length) return
+  photoUploading.value = true
+  try {
+    for (const f of files) {
+      const fd = new FormData()
+      fd.append('file', f)
+      fd.append('menu', 'cleaning')
+      const res: any = await $fetch('/api/upload', { method: 'POST', body: fd })
+      dForm.photos.push(res.data)
+    }
+  } catch (err: any) {
+    toast(err?.data?.statusMessage || t('common.error'), 'error')
+  } finally {
+    photoUploading.value = false
+  }
+}
 watch(() => dForm.room_id, () => { dForm.pc_id = null })
 
 function openDone(s?: any) {
   doneSchedule.value = s || null
-  Object.assign(dForm, { room_id: s?.room_id ?? null, pc_id: s?.pc_id ?? null, tasks_done: [], note: '' })
+  Object.assign(dForm, { room_id: s?.room_id ?? null, pc_id: s?.pc_id ?? null, tasks_done: [], note: '', photos: [] })
   modal.value = 'done'
 }
 async function saveDone() {
@@ -214,7 +265,7 @@ async function saveDone() {
   try {
     await $fetch('/api/cleaning/logs', {
       method: 'POST',
-      body: { schedule_id: doneSchedule.value?.id, room_id: dForm.room_id, pc_id: dForm.pc_id, tasks_done: dForm.tasks_done, note: dForm.note },
+      body: { schedule_id: doneSchedule.value?.id, room_id: dForm.room_id, pc_id: dForm.pc_id, tasks_done: dForm.tasks_done, note: dForm.note, photos: dForm.photos },
     })
     toast(t('infra.common.saved')); closeModal()
     await Promise.all([refreshSched(), fetchLogs()])

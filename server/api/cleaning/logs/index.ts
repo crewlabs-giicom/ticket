@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
 
     const [[{ total }]] = await db.execute(`SELECT COUNT(*) AS total FROM cleaning_logs l ${where}`, params) as any[]
     const [rows] = await db.execute(
-      `SELECT l.*, r.name AS room_name, p.name AS pc_name, s.title AS schedule_title, u.name AS cleaned_by_name
+      `SELECT l.*, r.name AS room_name, p.name AS pc_name, p.arf_number, p.owner_name, s.title AS schedule_title, u.name AS cleaned_by_name
        FROM cleaning_logs l
        JOIN rooms r ON r.id = l.room_id
        LEFT JOIN pc_assets p ON p.id = l.pc_id
@@ -29,7 +29,21 @@ export default defineEventHandler(async (event) => {
        ${where} ORDER BY l.cleaned_at DESC, l.id DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`,
       params
     )
-    return { success: true, data: rows, total, page, limit, totalPages: Math.ceil(total / limit) }
+    // foto per log: satu query untuk seluruh halaman
+    const logRows = rows as any[]
+    const photosByLog = new Map<number, any[]>()
+    if (logRows.length) {
+      const [photos] = await db.query(
+        'SELECT id, log_id, filename, original_name FROM cleaning_log_photos WHERE log_id IN (?) ORDER BY id ASC',
+        [logRows.map(l => l.id)]
+      ) as any[]
+      for (const ph of photos as any[]) {
+        if (!photosByLog.has(ph.log_id)) photosByLog.set(ph.log_id, [])
+        photosByLog.get(ph.log_id)!.push(ph)
+      }
+    }
+    for (const l of logRows) l.photos = photosByLog.get(l.id) || []
+    return { success: true, data: logRows, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
   // POST: catat pembersihan (dari jadwal, atau ad-hoc tanpa jadwal)
@@ -53,12 +67,25 @@ export default defineEventHandler(async (event) => {
       'INSERT INTO cleaning_logs (schedule_id, room_id, pc_id, cleaned_by, tasks_done, note) VALUES (?, ?, ?, ?, ?, ?)',
       [scheduleId, roomId, pcId, user.id, tasksDone, b.note || null]
     )
+    const logId = (r as ResultSetHeader).insertId
+
+    // hanya gambar; maksimal 10 foto per catatan
+    const photos = (Array.isArray(b.photos) ? b.photos : [])
+      .filter((p: any) => p?.filename && p?.original_name && String(p.mime_type || '').startsWith('image/'))
+      .slice(0, 10)
+    for (const p of photos) {
+      await db.execute(
+        'INSERT INTO cleaning_log_photos (log_id, filename, original_name, mime_type, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?)',
+        [logId, p.filename, p.original_name, p.mime_type, p.size || null, user.id]
+      )
+    }
+
     if (scheduleId) {
       await db.execute(
         'UPDATE cleaning_schedules SET next_due_date = DATE_ADD(CURDATE(), INTERVAL frequency_days DAY), last_notified_date = NULL WHERE id = ?',
         [scheduleId]
       )
     }
-    return { success: true, id: (r as ResultSetHeader).insertId }
+    return { success: true, id: logId }
   }
 })

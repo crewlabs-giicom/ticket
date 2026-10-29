@@ -950,6 +950,36 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  await db.execute(`ALTER TABLE pc_assets ADD COLUMN arf_number VARCHAR(100) NULL`).catch(() => {})
+  await db.execute(`ALTER TABLE pc_assets ADD COLUMN owner_name VARCHAR(150) NULL`).catch(() => {})
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS cleaning_log_photos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      log_id INT NOT NULL,
+      filename VARCHAR(255) NOT NULL,
+      original_name VARCHAR(255) NOT NULL,
+      mime_type VARCHAR(100),
+      size INT,
+      uploaded_by INT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_clp_log (log_id),
+      FOREIGN KEY (log_id) REFERENCES cleaning_logs(id) ON DELETE CASCADE,
+      FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+
+  // Riwayat gangguan WAN MikroTik. Event terbuka = recovered_at IS NULL.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS wan_events (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      interface_name VARCHAR(100) NOT NULL,
+      comment VARCHAR(255) NULL,
+      went_down_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      recovered_at DATETIME NULL,
+      INDEX idx_wan_open (interface_name, recovered_at)
+    )
+  `)
+
   // Folder menu "Infrastruktur" + anak-anaknya (admin & staff)
   // (kolom menus.role hanya satu nilai, jadi satu set baris per role)
   const infraChildren: [string, string, string, number][] = [

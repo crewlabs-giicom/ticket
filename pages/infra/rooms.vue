@@ -74,6 +74,9 @@
             <div v-for="p in roomPcs" :key="p.id" class="flex items-center gap-3 px-4 py-2.5 border-b border-slate-50 last:border-0">
               <div class="flex-1 min-w-0">
                 <div class="text-sm font-medium text-slate-900 truncate">{{ p.name }} <span v-if="!p.is_active" class="text-xs text-slate-400">({{ t('infra.common.inactive') }})</span></div>
+                <div v-if="p.arf_number || p.owner_name" class="text-xs text-slate-500 truncate">
+                  <span v-if="p.arf_number">{{ p.arf_number }}</span><span v-if="p.arf_number && p.owner_name"> · </span><span v-if="p.owner_name">{{ p.owner_name }}</span>
+                </div>
                 <div v-if="p.description" class="text-xs text-slate-400 truncate">{{ p.description }}</div>
               </div>
               <template v-if="auth.isAdmin">
@@ -133,6 +136,10 @@
         <h3 class="text-base font-semibold text-slate-900 mb-4">{{ editing ? t('infra.rooms.editPc') : t('infra.rooms.addPc') }}</h3>
         <div class="space-y-4">
           <div><label class="label">{{ t('infra.rooms.pcName') }}</label><input v-model="pcForm.name" class="input" placeholder="PC-01" /></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="label">{{ t('infra.rooms.arfNumber') }}</label><input v-model="pcForm.arf_number" class="input" placeholder="ARF-001" /></div>
+            <div><label class="label">{{ t('infra.rooms.ownerName') }}</label><input v-model="pcForm.owner_name" class="input" /></div>
+          </div>
           <div><label class="label">{{ t('infra.rooms.description') }}</label><input v-model="pcForm.description" class="input" /></div>
           <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" v-model="pcForm.is_active" /> {{ t('infra.common.active') }}</label>
         </div>
@@ -175,7 +182,7 @@ function closeModal() { modal.value = null; editing.value = null }
 
 const roomForm = reactive({ name: '', location: '', description: '', is_active: true })
 const deviceForm = reactive({ name: '', type: 'ap', ip_address: '', mac_address: '', brand_model: '', is_active: true })
-const pcForm = reactive({ name: '', description: '', is_active: true })
+const pcForm = reactive({ name: '', description: '', arf_number: '', owner_name: '', is_active: true })
 const deviceTypeOptions = computed(() => ['ap', 'switch', 'router', 'other'].map(v => ({ value: v, label: t(`infra.rooms.types.${v}`) })))
 
 function openRoomForm(r?: any) {
@@ -190,7 +197,9 @@ function openDeviceForm(d?: any) {
 }
 function openPcForm(p?: any) {
   editing.value = p || null
-  Object.assign(pcForm, p ? { name: p.name, description: p.description || '', is_active: !!p.is_active } : { name: '', description: '', is_active: true })
+  Object.assign(pcForm, p
+    ? { name: p.name, description: p.description || '', arf_number: p.arf_number || '', owner_name: p.owner_name || '', is_active: !!p.is_active }
+    : { name: '', description: '', arf_number: '', owner_name: '', is_active: true })
   modal.value = 'pc'
 }
 

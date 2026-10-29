@@ -121,6 +121,19 @@ export async function sendDailyReport(opts: { date: string; userIds?: number[] |
   }
 }
 
+/** Kirim pesan peringatan ke grup bila DingTalk sudah dikonfigurasi. Tidak pernah melempar error. */
+export async function sendGroupAlert(text: string): Promise<boolean> {
+  try {
+    const settings = await loadDingtalkSettings(getDb())
+    if (!isConfigured(settings)) return false
+    await sendGroupText(settings, limitMessage(text))
+    return true
+  } catch (e: any) {
+    console.error('[DingTalk] alert gagal:', e?.message || e)
+    return false
+  }
+}
+
 export async function sendTestMessage(sentBy: number | null) {
   const db = getDb()
   const settings = await loadDingtalkSettings(db)

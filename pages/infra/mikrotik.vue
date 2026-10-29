@@ -14,6 +14,9 @@
     <div v-if="error" class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
       {{ error }}
     </div>
+    <div v-if="wanDownNames.length" class="rounded-lg bg-red-600 text-white text-sm font-medium px-3 py-2">
+      {{ t('infra.mikrotik.wanDownBanner', { names: wanDownNames.join(', ') }) }}
+    </div>
 
     <div class="flex items-center gap-2">
       <button @click="tab = 'interfaces'" :class="tab === 'interfaces' ? 'btn-primary' : 'btn-secondary'" class="py-1 px-3 text-xs">{{ t('infra.mikrotik.tabInterfaces') }}</button>
@@ -238,6 +241,9 @@ const ifaceGroups = computed(() => (['WAN', 'LAN', 'LAINNYA'] as const).map(role
   role, label: ROLE_LABEL.value[role], items: (ifaces.value?.interfaces || []).filter(i => i.role === role),
 })))
 const wanTotal = computed(() => (ifaces.value?.interfaces || []).filter(i => i.role === 'WAN' && !i.disabled).length)
+const wanDownNames = computed(() => (ifaces.value?.interfaces || [])
+  .filter(i => i.role === 'WAN' && !i.disabled && !i.running)
+  .map(i => (i.comment ? `${i.name} (${i.comment})` : i.name)))
 const wanUp = computed(() => (ifaces.value?.interfaces || []).filter(i => i.role === 'WAN' && !i.disabled && i.running).length)
 
 const COLORS = ['#2563eb', '#f97316', '#16a34a', '#9333ea', '#dc2626', '#0891b2', '#ca8a04', '#db2777']
