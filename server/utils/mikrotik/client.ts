@@ -38,6 +38,15 @@ let connecting: Promise<RouterOSAPI> | null = null
 const cache = new Map<string, { at: number; value: RosRow[] }>()
 const inflight = new Map<string, Promise<RosRow[]>>()
 
+const CONNECT_TIMEOUT_MS = 10000
+
+// Paket yang di-drop firewall / TLS handshake macet tidak memicu error; paksa gagal setelah ms.
+function withTimeout<T>(p: Promise<T>, ms: number, msg: string): Promise<T> {
+  let t: ReturnType<typeof setTimeout>
+  const timer = new Promise<never>((_, reject) => { t = setTimeout(() => reject(new Error(msg)), ms) })
+  return Promise.race([p, timer]).finally(() => clearTimeout(t))
+}
+
 function resetConnection() {
   const old = api
   api = null
@@ -58,7 +67,7 @@ function connect(cfg: RosConfig): Promise<RouterOSAPI> {
     console.error('[RouterOS] connection error:', (err as Error)?.message || 'unknown')
     if (api === conn) resetConnection()
   })
-  const p: Promise<RouterOSAPI> = conn.connect().then(() => {
+  const p: Promise<RouterOSAPI> = withTimeout(conn.connect(), CONNECT_TIMEOUT_MS, 'timeout koneksi (cek port/TLS/firewall)').then(() => {
     api = conn
     connecting = null
     return conn
@@ -96,7 +105,7 @@ export async function rosRead(path: string, params: string[] = []): Promise<RosR
   const p = (async () => {
     try {
       const conn = await connect(cfg)
-      const rows = (await conn.write(path, params)) as unknown as RosRow[]
+      const rows = (await withTimeout(conn.write(path, params), CONNECT_TIMEOUT_MS, 'router tidak merespons')) as unknown as RosRow[]
       cache.set(key, { at: Date.now(), value: rows })
       return rows
     } catch (err) {
