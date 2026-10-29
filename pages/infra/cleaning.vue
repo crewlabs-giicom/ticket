@@ -55,7 +55,10 @@
     <div v-else class="card overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 flex-wrap gap-2">
         <h3 class="text-sm font-semibold text-slate-900">{{ t('infra.cleaning.tabs.history') }}</h3>
-        <div class="w-full sm:w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
+        <div class="flex gap-2 flex-wrap w-full sm:w-auto">
+          <div class="w-full sm:w-56"><AppSelect v-model="filterRoom" :options="[{ value: '', label: t('infra.network.allRooms') }, ...roomOptions]" /></div>
+          <div class="w-full sm:w-56"><AppSelect v-model="filterPc" :options="[{ value: '', label: t('infra.cleaning.filterPc') }, ...historyPcOptions]" /></div>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -123,13 +126,12 @@
 
     <!-- Done modal -->
     <div v-if="modal === 'done'" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-base font-semibold text-slate-900 mb-1">{{ t('infra.cleaning.doneTitle') }}</h3>
         <p v-if="doneSchedule" class="text-xs text-slate-500 mb-4">{{ doneSchedule.title }} — {{ doneSchedule.room_name }}</p>
         <div class="space-y-4 mt-3">
           <template v-if="!doneSchedule">
             <div><label class="label">{{ t('infra.network.room') }}</label><AppSelect v-model="dForm.room_id" :options="roomOptions" /></div>
-            <div><label class="label">PC</label><AppSelect v-model="dForm.pc_id" :options="pcOptions(dForm.room_id)" /></div>
           </template>
           <div>
             <label class="label">{{ t('infra.cleaning.tasksDone') }}</label>
@@ -141,23 +143,37 @@
           </div>
           <div><label class="label">{{ t('infra.network.note') }}</label><textarea v-model="dForm.note" rows="2" class="input" /></div>
           <div>
-            <label class="label">{{ t('infra.cleaning.photos') }}</label>
-            <label class="btn-secondary inline-block cursor-pointer py-1 px-3 text-xs">
-              {{ photoUploading ? t('infra.cleaning.uploading') : t('infra.cleaning.addPhotos') }}
-              <input type="file" accept="image/*" multiple class="hidden" :disabled="photoUploading" @change="onPickPhotos" />
-            </label>
-            <span class="text-xs text-slate-400 ml-2">{{ t('infra.cleaning.photoHint') }}</span>
-            <div v-if="dForm.photos.length" class="flex gap-2 flex-wrap mt-2">
-              <div v-for="(ph, i) in dForm.photos" :key="ph.filename" class="relative">
-                <img :src="`/uploads/${ph.filename}`" :alt="ph.original_name" class="w-16 h-16 object-cover rounded-lg border border-slate-200" />
-                <button type="button" @click="dForm.photos.splice(i, 1)" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none">×</button>
+            <label class="label">{{ t('infra.cleaning.selectPcs') }}</label>
+            <p v-if="!donePcs.length" class="text-xs text-slate-400">{{ t('infra.cleaning.noPcInRoom') }}</p>
+            <div v-else class="space-y-2">
+              <div v-for="p in donePcs" :key="p.id" class="rounded-xl border border-slate-200 p-3" :class="dForm.items[p.id] && !dForm.items[p.id].checked && 'opacity-60'">
+                <template v-if="dForm.items[p.id]">
+                  <label class="flex items-center gap-2 text-sm font-medium text-slate-800">
+                    <input type="checkbox" v-model="dForm.items[p.id].checked" />
+                    {{ p.name }}
+                    <span v-if="p.arf_number || p.owner_name" class="text-xs font-normal text-slate-400">{{ [p.arf_number, p.owner_name].filter(Boolean).join(' · ') }}</span>
+                  </label>
+                  <div v-if="dForm.items[p.id].checked" class="mt-2">
+                    <label class="btn-secondary inline-block cursor-pointer py-1 px-3 text-xs">
+                      {{ dForm.items[p.id].uploading ? t('infra.cleaning.uploading') : t('infra.cleaning.addPhotos') }}
+                      <input type="file" accept="image/*" multiple class="hidden" :disabled="dForm.items[p.id].uploading" @change="onPickPhotos(p.id, $event)" />
+                    </label>
+                    <span class="text-xs text-slate-400 ml-2">{{ t('infra.cleaning.photoHint') }}</span>
+                    <div v-if="dForm.items[p.id].photos.length" class="flex gap-2 flex-wrap mt-2">
+                      <div v-for="(ph, i) in dForm.items[p.id].photos" :key="ph.filename" class="relative">
+                        <img :src="`/uploads/${ph.filename}`" :alt="ph.original_name" class="w-16 h-16 object-cover rounded-lg border border-slate-200" />
+                        <button type="button" @click="dForm.items[p.id].photos.splice(i, 1)" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs leading-none">×</button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
         </div>
         <div class="flex gap-2 mt-5">
           <button @click="closeModal" class="btn-secondary flex-1">{{ t('common.cancel') }}</button>
-          <button @click="saveDone" class="btn-primary flex-1">{{ t('common.save') }}</button>
+          <button @click="saveDone" :disabled="anyUploading || !donePcs.length" class="btn-primary flex-1 disabled:opacity-50">{{ t('common.save') }}</button>
         </div>
       </div>
     </div>
@@ -188,7 +204,8 @@ function pcOptions(roomId: number | null) {
   ]
 }
 
-const tab = ref<'schedule' | 'history'>('schedule')
+const route = useRoute()
+const tab = ref<'schedule' | 'history'>(route.query.room_id || route.query.pc_id ? 'history' : 'schedule')
 const modal = ref<'schedule' | 'done' | null>(null)
 const editing = ref<any>(null)
 function closeModal() { modal.value = null; editing.value = null; doneSchedule.value = null }
@@ -229,43 +246,63 @@ async function deleteSchedule(s: any) {
 // ── Mark done / ad-hoc log ────────────────────────────────────────────────
 const taskKeys = ['dust', 'physical', 'diskCleanup', 'update', 'cable', 'antivirus']
 const doneSchedule = ref<any>(null)
-const dForm = reactive<any>({ room_id: null, pc_id: null, tasks_done: [] as string[], note: '', photos: [] as any[] })
-const photoUploading = ref(false)
-const MAX_PHOTOS = 10
+// Satu catatan per PC: tiap PC di ruangan punya checkbox + foto sendiri (foto wajib untuk PC yang dicentang).
+interface DoneItem { checked: boolean; photos: any[]; uploading: boolean }
+const dForm = reactive<{ room_id: number | null; tasks_done: string[]; note: string; items: Record<number, DoneItem> }>({ room_id: null, tasks_done: [], note: '', items: {} })
+const MAX_PHOTOS_PER_PC = 5
 
-async function onPickPhotos(e: Event) {
+// PC aktif di ruangan terpilih; jadwal dengan PC spesifik hanya mencakup PC itu.
+const donePcs = computed<any[]>(() => (pcsRes.value?.data || []).filter((p: any) =>
+  p.is_active && p.room_id === dForm.room_id && (!doneSchedule.value?.pc_id || p.id === doneSchedule.value.pc_id)))
+const anyUploading = computed(() => Object.values(dForm.items).some(i => i.uploading))
+function buildItems() {
+  dForm.items = Object.fromEntries(donePcs.value.map((p: any) => [p.id, { checked: true, photos: [], uploading: false }]))
+}
+watch(() => dForm.room_id, buildItems)
+
+async function onPickPhotos(pcId: number, e: Event) {
+  const it = dForm.items[pcId]
+  if (!it) return
   const input = e.target as HTMLInputElement
-  const files = Array.from(input.files || []).slice(0, MAX_PHOTOS - dForm.photos.length)
+  const files = Array.from(input.files || []).slice(0, MAX_PHOTOS_PER_PC - it.photos.length)
   input.value = ''
   if (!files.length) return
-  photoUploading.value = true
+  it.uploading = true
   try {
     for (const f of files) {
       const fd = new FormData()
       fd.append('file', f)
       fd.append('menu', 'cleaning')
       const res: any = await $fetch('/api/upload', { method: 'POST', body: fd })
-      dForm.photos.push(res.data)
+      it.photos.push(res.data)
     }
   } catch (err: any) {
     toast(err?.data?.statusMessage || t('common.error'), 'error')
   } finally {
-    photoUploading.value = false
+    it.uploading = false
   }
 }
-watch(() => dForm.room_id, () => { dForm.pc_id = null })
 
 function openDone(s?: any) {
   doneSchedule.value = s || null
-  Object.assign(dForm, { room_id: s?.room_id ?? null, pc_id: s?.pc_id ?? null, tasks_done: [], note: '', photos: [] })
+  Object.assign(dForm, { room_id: s?.room_id ?? null, tasks_done: [], note: '' })
+  buildItems()
   modal.value = 'done'
 }
 async function saveDone() {
   if (!doneSchedule.value && !dForm.room_id) return toast(t('infra.network.selectRoom'), 'warning')
+  if (!donePcs.value.length) return toast(t('infra.cleaning.noPcInRoom'), 'warning')
+  const selected = donePcs.value.filter((p: any) => dForm.items[p.id]?.checked)
+  if (!selected.length) return toast(t('infra.cleaning.selectPcs'), 'warning')
+  const missing = selected.find((p: any) => !dForm.items[p.id].photos.length)
+  if (missing) return toast(t('infra.cleaning.photoRequired', { pc: missing.name }), 'warning')
   try {
     await $fetch('/api/cleaning/logs', {
       method: 'POST',
-      body: { schedule_id: doneSchedule.value?.id, room_id: dForm.room_id, pc_id: dForm.pc_id, tasks_done: dForm.tasks_done, note: dForm.note, photos: dForm.photos },
+      body: {
+        schedule_id: doneSchedule.value?.id, room_id: dForm.room_id, tasks_done: dForm.tasks_done, note: dForm.note,
+        items: selected.map((p: any) => ({ pc_id: p.id, photos: dForm.items[p.id].photos })),
+      },
     })
     toast(t('infra.common.saved')); closeModal()
     await Promise.all([refreshSched(), fetchLogs()])
@@ -274,14 +311,23 @@ async function saveDone() {
 
 // ── History ───────────────────────────────────────────────────────────────
 const logs = ref<any[]>([])
-const filterRoom = ref<number | ''>('')
+// filter awal bisa datang dari tombol "Riwayat" di Ruangan & Device (?room_id=&pc_id=)
+const filterRoom = ref<number | ''>(Number(route.query.room_id) || '')
+const filterPc = ref<number | ''>(Number(route.query.pc_id) || '')
+const historyPcOptions = computed(() => (pcsRes.value?.data || [])
+  .filter((p: any) => !filterRoom.value || p.room_id === filterRoom.value)
+  .map((p: any) => ({ value: p.id, label: filterRoom.value ? p.name : `${p.room_name} · ${p.name}` })))
 const pagination = reactive({ page: 1, limit: 20, total: 0, totalPages: 1 })
 async function fetchLogs() {
-  const res: any = await $fetch('/api/cleaning/logs', { query: { room_id: filterRoom.value || undefined, page: pagination.page, limit: pagination.limit } })
+  const res: any = await $fetch('/api/cleaning/logs', {
+    query: { room_id: filterRoom.value || undefined, pc_id: filterPc.value || undefined, page: pagination.page, limit: pagination.limit },
+  })
   logs.value = res.data
   Object.assign(pagination, { total: res.total, totalPages: res.totalPages })
 }
-watch(filterRoom, () => { pagination.page = 1; fetchLogs() })
+// ganti ruangan -> filter PC di-reset (watcher filterPc yang memuat ulang); kalau sudah kosong, muat langsung
+watch(filterRoom, () => { pagination.page = 1; if (filterPc.value !== '') filterPc.value = ''; else fetchLogs() })
+watch(filterPc, () => { pagination.page = 1; fetchLogs() })
 onMounted(fetchLogs)
 async function refreshAll() { await Promise.all([refreshSched(), fetchLogs()]) }
 async function deleteLog(l: any) {

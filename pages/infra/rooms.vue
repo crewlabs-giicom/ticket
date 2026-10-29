@@ -79,6 +79,7 @@
                 </div>
                 <div v-if="p.description" class="text-xs text-slate-400 truncate">{{ p.description }}</div>
               </div>
+              <NuxtLink :to="{ path: '/infra/cleaning', query: { room_id: p.room_id, pc_id: p.id } }" class="btn-ghost py-1 px-2 text-xs">{{ t('infra.rooms.history') }}</NuxtLink>
               <template v-if="auth.isAdmin">
                 <button @click="openPcForm(p)" class="btn-ghost py-1 px-2 text-xs">{{ t('common.edit') }}</button>
                 <button @click="deleteItem('pcs', p)" class="btn-ghost py-1 px-2 text-xs text-red-500 hover:bg-red-50">{{ t('common.delete') }}</button>

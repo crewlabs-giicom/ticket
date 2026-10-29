@@ -52,7 +52,12 @@
         <div v-if="g.items.length" class="space-y-2">
           <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ g.label }}</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            <div v-for="i in g.items" :key="i.id" class="card p-4 space-y-2">
+            <div
+              v-for="i in g.items" :key="i.id" class="card p-4 space-y-2"
+              :class="i.running && !i.disabled ? 'cursor-pointer hover:shadow-md transition-shadow' : ''"
+              :title="i.running && !i.disabled ? t('infra.mikrotik.chartHint') : undefined"
+              @click="i.running && !i.disabled && (chartIface = i.name)"
+            >
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                   <div class="text-sm font-semibold text-slate-900">{{ i.name }} <span class="text-xs font-normal text-slate-400">{{ i.type }}</span></div>
@@ -122,7 +127,7 @@
             <span class="text-slate-400 text-xs">{{ collapsed[s.cidr] ? '▸' : '▾' }}</span>
           </div>
         </button>
-        <ClientTable v-if="!collapsed[s.cidr]" :rows="s.rows" :t="t" :jalur-class="jalurClass" :rates="rates" />
+        <ClientTable v-if="!collapsed[s.cidr]" :rows="s.rows" :t="t" :jalur-class="jalurClass" :rates="rates" :sort-key="sortKey" :sort-dir="sortDir" :on-sort="toggleSort" />
       </div>
 
       <div v-if="unassignedRows.length" class="card overflow-hidden">
@@ -130,9 +135,39 @@
           <span class="text-sm font-semibold text-slate-900">{{ t('infra.mikrotik.outsideSubnet') }}</span>
           <span class="text-xs text-slate-600">{{ unassignedRows.length }} <span class="text-slate-400 ml-2">{{ collapsed['__unassigned'] ? '▸' : '▾' }}</span></span>
         </button>
-        <ClientTable v-if="!collapsed['__unassigned']" :rows="unassignedRows" :t="t" :jalur-class="jalurClass" :rates="rates" />
+        <ClientTable v-if="!collapsed['__unassigned']" :rows="unassignedRows" :t="t" :jalur-class="jalurClass" :rates="rates" :sort-key="sortKey" :sort-dir="sortDir" :on-sort="toggleSort" />
       </div>
     </template>
+
+    <!-- Popup grafik besar per interface -->
+    <div v-if="chartIfaceView" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="chartIface = null">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div class="min-w-0">
+            <div class="text-base font-semibold text-slate-900">{{ chartIfaceView.name }} <span class="text-xs font-normal text-slate-400">{{ chartIfaceView.type }}</span></div>
+            <div class="text-xs text-slate-500 truncate">{{ chartIfaceView.comment || '—' }}</div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="badge" :class="statusClass(chartIfaceView)">{{ statusLabel(chartIfaceView) }}</span>
+            <button type="button" class="btn-ghost py-1 px-2 text-lg leading-none" @click="chartIface = null">×</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 text-xs mb-3">
+          <div class="rounded-lg bg-slate-50 p-3">
+            <div class="text-slate-400">↓ rx</div>
+            <div class="text-base font-semibold text-slate-900">{{ fmtBps(chartIfaceView.rxBps) }}</div>
+            <div class="text-slate-400 mt-0.5">{{ t('infra.mikrotik.peak') }}: {{ fmtBps(chartPeak.rx) }}</div>
+          </div>
+          <div class="rounded-lg bg-slate-50 p-3">
+            <div class="text-slate-400">↑ tx</div>
+            <div class="text-base font-semibold text-slate-900">{{ fmtBps(chartIfaceView.txBps) }}</div>
+            <div class="text-slate-400 mt-0.5">{{ t('infra.mikrotik.peak') }}: {{ fmtBps(chartPeak.tx) }}</div>
+          </div>
+        </div>
+        <NetLiveChart :labels="history.labels" :series="ifaceSeries(chartIfaceView.name, false, true)" :height="320" />
+        <p class="text-xs text-slate-400 mt-2">{{ t('infra.mikrotik.chartWindow') }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -283,10 +318,21 @@ const lanSeries = computed(() => [
   { label: t('infra.mikrotik.toClients'), color: '#16a34a', data: sumSeries(lanNames.value, 'tx'), fill: true },
   { label: t('infra.mikrotik.fromClients'), color: '#9333ea', data: sumSeries(lanNames.value, 'rx'), fill: true },
 ])
-const ifaceSeries = (name: string, onlyTx = false) => [
-  ...(onlyTx ? [] : [{ label: 'rx', color: '#2563eb', data: history.rx[name] || [] }]),
-  { label: 'tx', color: onlyTx ? '#16a34a' : '#f97316', data: history.tx[name] || [] },
+const ifaceSeries = (name: string, onlyTx = false, fill = false) => [
+  ...(onlyTx ? [] : [{ label: 'rx', color: '#2563eb', data: history.rx[name] || [], fill }]),
+  { label: 'tx', color: onlyTx ? '#16a34a' : '#f97316', data: history.tx[name] || [], fill },
 ]
+
+// Popup grafik besar per interface (klik kartu). Tertutup sendiri bila interface mati/hilang.
+const chartIface = ref<string | null>(null)
+const chartIfaceView = computed(() => {
+  const i = (ifaces.value?.interfaces || []).find(x => x.name === chartIface.value)
+  return i && i.running && !i.disabled ? i : null
+})
+watch(chartIfaceView, (v) => { if (!v) chartIface.value = null })
+const maxOf = (a: Array<number | null> = []) => a.reduce<number>((m, v) => (v !== null && v > m ? v : m), 0)
+const chartPeak = computed(() => ({ rx: maxOf(history.rx[chartIface.value || '']), tx: maxOf(history.tx[chartIface.value || '']) }))
+onKeyStroke('Escape', () => { chartIface.value = null })
 const lastOf = (a: Array<number | null>) => (a.length ? a[a.length - 1] ?? 0 : 0)
 const wanNow = computed(() => ({ rx: lastOf(sumSeries(wanNames.value, 'rx')), tx: lastOf(sumSeries(wanNames.value, 'tx')) }))
 const lanNow = computed(() => ({ rx: lastOf(sumSeries(lanNames.value, 'rx')), tx: lastOf(sumSeries(lanNames.value, 'tx')) }))
@@ -336,10 +382,25 @@ function matches(c: ClientView) {
   return !q || c.ip.includes(q) || c.hostname.toLowerCase().includes(q) || c.mac.toLowerCase().includes(q)
 }
 const filtering = computed(() => !!(search.value.trim() || onlyOnline.value || jalurFilter.value))
+// Urutan tabel klien (berlaku untuk semua subnet); kosong = urutan dari server. Kecepatan = download + upload.
+const sortKey = ref<'ip' | 'speed' | ''>('')
+const sortDir = ref<'asc' | 'desc'>('asc')
+function toggleSort(key: 'ip' | 'speed') {
+  if (sortKey.value === key) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+  else { sortKey.value = key; sortDir.value = key === 'speed' ? 'desc' : 'asc' }
+}
+function sortRows(rows: ClientView[]) {
+  if (!sortKey.value) return rows
+  const dir = sortDir.value === 'asc' ? 1 : -1
+  const speedOf = (c: ClientView) => { const r = rates.value.get(c.ip); return r ? r.rxBps + r.txBps : -1 } // tanpa koneksi = paling bawah saat desc
+  return [...rows].sort((a, b) => dir * (sortKey.value === 'speed'
+    ? speedOf(a) - speedOf(b)
+    : a.ip.localeCompare(b.ip, 'en', { numeric: true })))
+}
 const visibleSubnets = computed(() => (clients.value?.subnets || [])
-  .map(s => ({ ...s, rows: s.clients.filter(matches) }))
+  .map(s => ({ ...s, rows: sortRows(s.clients.filter(matches)) }))
   .filter(s => !filtering.value || s.rows.length))
-const unassignedRows = computed(() => (clients.value?.unassigned || []).filter(matches))
+const unassignedRows = computed(() => sortRows((clients.value?.unassigned || []).filter(matches)))
 
 const ClientTable = defineComponent({
   props: {
@@ -347,10 +408,18 @@ const ClientTable = defineComponent({
     t: { type: Function as PropType<(k: string) => string>, required: true },
     jalurClass: { type: Function as PropType<(j: string) => string>, required: true },
     rates: { type: Object as PropType<Map<string, { rxBps: number; txBps: number }>>, required: true },
+    sortKey: { type: String, default: '' },
+    sortDir: { type: String, default: 'asc' },
+    onSort: { type: Function as PropType<(key: 'ip' | 'speed') => void>, required: true },
   },
   setup(props) {
     return () => {
       const th = (k: string, cls = '') => h('th', { class: `text-left px-3 py-2 ${cls}` }, props.t(k))
+      // header yang bisa diklik untuk mengurutkan (IP, Kecepatan)
+      const sth = (key: 'ip' | 'speed', k: string, title?: string) => h('th', {
+        class: 'text-left px-3 py-2 whitespace-nowrap cursor-pointer select-none hover:text-slate-700', title,
+        onClick: () => props.onSort(key),
+      }, props.t(k) + (props.sortKey === key ? (props.sortDir === 'asc' ? ' ▲' : ' ▼') : ''))
       const dhcp = (c: ClientView) => c.dhcpStatic === null ? '–' : c.dhcpStatic ? 'static' : 'dynamic'
       const speed = (c: ClientView) => {
         const r = props.rates.get(c.ip)
@@ -359,9 +428,9 @@ const ClientTable = defineComponent({
       return h('div', { class: 'overflow-x-auto border-t border-slate-100' }, [
         h('table', { class: 'w-full text-sm' }, [
           h('thead', { class: 'bg-slate-50 text-xs text-slate-500' }, h('tr', [
-            th('infra.mikrotik.col.status'), th('infra.mikrotik.col.ip'), th('infra.mikrotik.col.hostname'),
+            th('infra.mikrotik.col.status'), sth('ip', 'infra.mikrotik.col.ip'), th('infra.mikrotik.col.hostname'),
             th('infra.mikrotik.col.mac', 'hidden md:table-cell'), th('infra.mikrotik.col.jalur'),
-            h('th', { class: 'text-left px-3 py-2 whitespace-nowrap', title: props.t('infra.mikrotik.speedHint') }, props.t('infra.mikrotik.col.speed')),
+            sth('speed', 'infra.mikrotik.col.speed', props.t('infra.mikrotik.speedHint')),
             th('infra.mikrotik.col.dhcp', 'hidden md:table-cell'), th('infra.mikrotik.col.lastSeen', 'hidden lg:table-cell'),
             th('infra.mikrotik.col.comment', 'hidden lg:table-cell'),
           ])),
