@@ -3,6 +3,7 @@ import { getDb } from '../../../database/index'
 import { isMockMode } from '../../../utils/mikrotik/client'
 import { getWanPingSetups, probeWan, wanQuality } from '../../../utils/mikrotik/service'
 import { pingConfig } from '../../../utils/mikrotik/pingConfig'
+import { getPingDiag } from '../../../utils/mikrotik/pingDiag'
 import { classifyQuality, pickRepresentative } from '../../../utils/mikrotik/analytics'
 
 // Status kualitas terakhir per WAN untuk badge. Data dari DB (diisi plugin mikrotik-ping);
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
       const q = wanQuality(await probeWan(w.setup!))
       if (q) items.push({ name: w.name, target: q.target, rttAvg: q.rttAvg, jitter: q.jitter, lossPct: q.lossPct, quality: q.quality, reasons: q.reasons, ageSec: 0 })
     }
-    return { items, unmeasurable, setups: setupInfo, openEvents: [], mock: true }
+    return { items, unmeasurable, setups: setupInfo, diag: getPingDiag(), openEvents: [], mock: true }
   }
 
   const db = getDb()
@@ -48,5 +49,5 @@ export default defineEventHandler(async (event) => {
     items.push({ ...rep, name, ...classifyQuality(rep, thresholds) })
   }
   const [open] = await db.execute('SELECT interface_name AS name, reason, started_at AS startedAt FROM wan_quality_events WHERE ended_at IS NULL') as any[]
-  return { items, unmeasurable, setups: setupInfo, openEvents: open, intervalSec, mock: false }
+  return { items, unmeasurable, setups: setupInfo, diag: getPingDiag(), openEvents: open, intervalSec, mock: false }
 })

@@ -90,9 +90,16 @@ function routerError(err: unknown) {
   return createError({ statusCode: 502, statusMessage: 'Bad Gateway', message: `Router tidak bisa dibaca: ${msg}` })
 }
 
-const PING_TIMEOUT_MS = 8000
+const PING_TIMEOUT_MS = 15000
 
-/** Ping dari router lewat satu WAN (IP sumber + routing table-nya; satu baris hasil per paket). Tanpa cache; parameter divalidasi guard. */
+/** Galat level koneksi (soket putus / tidak ada respons); selain itu galat dari router sendiri (trap: izin, parameter). */
+const isConnectionError = (err: unknown) => /timeout|tidak selesai|tidak merespons|ECONN|EPIPE|ETIMEDOUT|EHOST|ENET|socket|closed|not connected/i.test((err as any)?.message || (err as any)?.code || '')
+
+/**
+ * Ping dari router lewat satu WAN (IP sumber + routing table-nya; satu baris hasil per paket). Tanpa cache; parameter divalidasi guard.
+ * Galat koneksi -> 502 (koneksi direset). Penolakan dari router (mis. izin `test` kurang) dilempar apa adanya
+ * dan TIDAK mereset koneksi bersama yang juga dipakai polling halaman.
+ */
 export async function rosPing(wanName: string, o: PingOptions): Promise<RosRow[]> {
   const params = buildPingParams(o)
   const cfg = config()
@@ -100,12 +107,21 @@ export async function rosPing(wanName: string, o: PingOptions): Promise<RosRow[]
   if (!cfg.host || !cfg.user) {
     throw createError({ statusCode: 502, statusMessage: 'Bad Gateway', message: 'Router tidak bisa dibaca: NUXT_ROUTEROS_HOST / NUXT_ROUTEROS_USER belum diisi' })
   }
+  let conn: RouterOSAPI
   try {
-    const conn = await connect(cfg)
-    return (await withTimeout(conn.write('/ping', params), PING_TIMEOUT_MS, 'ping tidak selesai')) as unknown as RosRow[]
+    conn = await connect(cfg)
   } catch (err) {
     resetConnection()
     throw routerError(err)
+  }
+  try {
+    return (await withTimeout(conn.write('/ping', params), PING_TIMEOUT_MS, 'ping tidak selesai')) as unknown as RosRow[]
+  } catch (err) {
+    if (isConnectionError(err)) {
+      resetConnection()
+      throw routerError(err)
+    }
+    throw new Error(`ping ditolak router: ${(err as any)?.message || String(err)}`)
   }
 }
 

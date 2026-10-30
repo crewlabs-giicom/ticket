@@ -1,6 +1,7 @@
 import { rosRead, rosPing, isMockMode } from './client'
 import { summarizePing, pickRepresentative, classifyQuality, type PingSummary } from './analytics'
 import { pingConfig } from './pingConfig'
+import { setPingDiag, type PingDiagTarget } from './pingDiag'
 import {
   activeAddressesByInterface, aggregateClientRates, buildClients, buildInterfaceViews, buildSubnetDefs, groupClients,
   interfaceRole, resolveWanPing, routerIpSet, summarize, wanMemberSet,
@@ -88,15 +89,20 @@ export interface WanProbe { name: string; targets: Array<PingSummary & { target:
 export async function probeWan(setup: WanPingSetup): Promise<WanProbe> {
   const { targets, count } = pingConfig()
   const out: WanProbe['targets'] = []
+  const diag: PingDiagTarget[] = []
   for (const target of targets) {
     try {
-      out.push({ target, ...summarizePing(await rosPing(setup.name, { target, srcAddress: setup.srcAddress, routingTable: setup.routingTable, count }), count) })
+      const rows = await rosPing(setup.name, { target, srcAddress: setup.srcAddress, routingTable: setup.routingTable, count })
+      diag.push({ target, error: null, rows: rows.length, raw: JSON.stringify(rows.slice(0, 2)).slice(0, 240) })
+      out.push({ target, ...summarizePing(rows, count) })
     } catch (e: any) {
-      if (e?.statusCode === 502) throw e // router tidak terjangkau: hentikan siklus, bukan "WAN jelek"
-      // parameter ditolak guard / target tak valid: lewati target ini, tapi catat supaya tidak diam-diam
+      if (e?.statusCode === 502) { setPingDiag(setup.name, diag); throw e } // router tidak terjangkau: hentikan siklus, bukan "WAN jelek"
+      // ditolak router / parameter tidak valid: lewati target ini, tapi catat supaya tidak diam-diam
+      diag.push({ target, error: String(e?.message || e), rows: 0, raw: '' })
       console.error(`[Ping] ${setup.name} -> ${target} dilewati:`, e?.message || e)
     }
   }
+  setPingDiag(setup.name, diag)
   return { name: setup.name, targets: out }
 }
 

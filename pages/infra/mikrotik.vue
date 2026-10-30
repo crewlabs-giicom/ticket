@@ -81,6 +81,9 @@
               <div v-if="i.role === 'WAN' && pingSetups[i.name]" class="text-[11px] text-slate-400 font-mono">
                 ping: src {{ pingSetups[i.name].srcAddress }} · table {{ pingSetups[i.name].routingTable || 'main' }}<template v-if="pingSetups[i.name].gateway"> · gw {{ pingSetups[i.name].gateway }}</template>
               </div>
+              <div v-if="i.role === 'WAN' && qualityOf(i.name)?.quality === 'bad' && pingDiag[i.name]" class="text-[11px] text-red-400 font-mono break-all">
+                <div v-for="d in pingDiag[i.name].targets" :key="d.target">{{ d.target }}: {{ d.error || (d.rows + ' baris · ' + d.raw) }}</div>
+              </div>
               <div class="grid grid-cols-2 gap-2 text-xs">
                 <div class="rounded-lg bg-slate-50 p-2">
                   <div class="text-slate-400">{{ i.role === 'WAN' ? '↓ ' + t('infra.mikrotik.download') : '↓ rx' }}</div>
@@ -304,6 +307,7 @@ const ratesPoll = useIntervalFn(loadRates, 5000, { immediate: false })
 interface WanQuality { name: string; target: string; rttAvg: number | null; jitter: number | null; lossPct: number; quality: 'good' | 'degraded' | 'bad' }
 const quality = ref<WanQuality[]>([])
 const unmeasurable = ref<string[]>([])
+const pingDiag = ref<Record<string, { targets: Array<{ target: string; error: string | null; rows: number; raw: string }> }>>({})
 const pingSetups = ref<Record<string, { srcAddress: string; routingTable: string | null; gateway: string | null }>>({})
 const qualityOf = (name: string) => quality.value.find(q => q.name === name)
 const badQualityNames = computed(() => quality.value.filter(q => q.quality === 'bad').map(q => q.name))
@@ -318,6 +322,7 @@ async function loadQuality() {
     quality.value = res.items
     unmeasurable.value = res.unmeasurable || []
     pingSetups.value = res.setups || {}
+    pingDiag.value = res.diag || {}
   } catch {
     // kualitas bersifat tambahan: kegagalan tidak menimpa pesan error utama halaman
   } finally {
