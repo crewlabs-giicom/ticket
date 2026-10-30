@@ -1,7 +1,7 @@
 import { requireInfraUser } from '../../../utils/infra'
 import { getDb } from '../../../database/index'
 import { isMockMode } from '../../../utils/mikrotik/client'
-import { getWanStatus, probeWan, wanQuality } from '../../../utils/mikrotik/service'
+import { getWanPingSetups, probeWan, wanQuality } from '../../../utils/mikrotik/service'
 import { pingConfig } from '../../../utils/mikrotik/pingConfig'
 import { classifyQuality, pickRepresentative } from '../../../utils/mikrotik/analytics'
 
@@ -11,14 +11,18 @@ export default defineEventHandler(async (event) => {
   requireInfraUser(event)
   const { thresholds, intervalSec } = pingConfig()
 
+  // WAN up yang setting ping-nya tidak bisa ditentukan dari router (belum ada routing table/rule khusus)
+  const setups = await getWanPingSetups().catch(() => [])
+  const unmeasurable = setups.filter(w => w.up && !w.setup).map(w => w.name)
+
   if (isMockMode()) {
-    const wan = (await getWanStatus()).filter(w => w.up)
+    const wan = setups.filter(w => w.up && w.setup)
     const items = []
     for (const w of wan) {
-      const q = wanQuality(await probeWan(w.name))
+      const q = wanQuality(await probeWan(w.setup!))
       if (q) items.push({ name: w.name, target: q.target, rttAvg: q.rttAvg, jitter: q.jitter, lossPct: q.lossPct, quality: q.quality, reasons: q.reasons, ageSec: 0 })
     }
-    return { items, openEvents: [], mock: true }
+    return { items, unmeasurable, openEvents: [], mock: true }
   }
 
   const db = getDb()
@@ -42,5 +46,5 @@ export default defineEventHandler(async (event) => {
     items.push({ ...rep, name, ...classifyQuality(rep, thresholds) })
   }
   const [open] = await db.execute('SELECT interface_name AS name, reason, started_at AS startedAt FROM wan_quality_events WHERE ended_at IS NULL') as any[]
-  return { items, openEvents: open, intervalSec, mock: false }
+  return { items, unmeasurable, openEvents: open, intervalSec, mock: false }
 })

@@ -304,6 +304,8 @@
         },
         "quality": {
           "good": "Bagus", "degraded": "Menurun", "bad": "Buruk",
+          "unmeasurable": "Tidak terukur",
+          "unmeasurableHint": "Router tidak punya routing table/rule khusus untuk WAN ini, jadi ping tidak bisa dipastikan lewat ISP ini.",
           "title": "Kualitas koneksi WAN (ping dari router)",
           "hint": "Diukur dari router ke {target}",
           "banner": "Kualitas WAN buruk (latency/jitter/loss tinggi): {names}",

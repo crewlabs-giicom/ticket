@@ -120,6 +120,19 @@ export function mockRead(path: string, params: string[] = []): RosRow[] {
       })
       return out
     }
+    case '/ip/route/print':
+      // ether1 = default main (distance 1); WAN lain lewat tabel routing sendiri; ether10 hanya cadangan di main
+      return [
+        { '.id': '*Z0', 'dst-address': '0.0.0.0/0', gateway: '103.209.250.17', 'routing-table': 'main', distance: '1', disabled: 'false' },
+        { '.id': '*Z1', 'dst-address': '0.0.0.0/0', gateway: '192.168.0.1', 'routing-table': 'to_xl', distance: '1', disabled: 'false' },
+        { '.id': '*Z2', 'dst-address': '0.0.0.0/0', gateway: '192.168.12.1', 'routing-table': 'to_biznet60', distance: '1', disabled: 'false' },
+        { '.id': '*Z3', 'dst-address': '0.0.0.0/0', gateway: '192.168.20.1', 'routing-table': 'to_biznet_lc', distance: '1', disabled: 'false' },
+        { '.id': '*Z4', 'dst-address': '0.0.0.0/0', gateway: '192.168.18.1', 'routing-table': 'to_biznet350', distance: '1', disabled: 'false' },
+        { '.id': '*Z5', 'dst-address': '0.0.0.0/0', gateway: '192.168.100.1', 'routing-table': 'main', distance: '5', disabled: 'false' },
+      ]
+    case '/routing/rule/print':
+    case '/ip/route/rule/print':
+      return []
     case '/ip/firewall/address-list/print':
       return ADDRESS_LIST.map(([list, address, disabled], i) => ({ '.id': `*F${i}`, list, address, disabled: String(disabled) }))
     default:

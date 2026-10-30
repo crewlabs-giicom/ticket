@@ -71,7 +71,10 @@
                 <span class="badge" :class="statusClass(i)">{{ statusLabel(i) }}</span>
               </div>
               <div class="text-xs text-slate-500 font-mono">{{ i.addresses.length ? i.addresses.join(', ') : '—' }}</div>
-              <div v-if="i.role === 'WAN' && qualityOf(i.name)" class="flex items-center gap-2 text-xs" :title="t('infra.mikrotik.analytics.quality.hint', { target: qualityOf(i.name)!.target })">
+              <div v-if="i.role === 'WAN' && unmeasurable.includes(i.name) && !qualityOf(i.name)" class="flex items-center gap-2 text-xs" :title="t('infra.mikrotik.analytics.quality.unmeasurableHint')">
+                <span class="badge bg-slate-100 text-slate-500">{{ t('infra.mikrotik.analytics.quality.unmeasurable') }}</span>
+              </div>
+              <div v-else-if="i.role === 'WAN' && qualityOf(i.name)" class="flex items-center gap-2 text-xs" :title="t('infra.mikrotik.analytics.quality.hint', { target: qualityOf(i.name)!.target })">
                 <span class="badge" :class="qualityClass(qualityOf(i.name)!.quality)">{{ t('infra.mikrotik.analytics.quality.' + qualityOf(i.name)!.quality) }}</span>
                 <span class="text-slate-600">{{ fmtMs(qualityOf(i.name)!.rttAvg) }} · jitter {{ fmtMs(qualityOf(i.name)!.jitter) }} · loss {{ Math.round(qualityOf(i.name)!.lossPct) }}%</span>
               </div>
@@ -297,6 +300,7 @@ const ratesPoll = useIntervalFn(loadRates, 5000, { immediate: false })
 // Kualitas koneksi WAN (latency/jitter/loss dari ping router): ~30 dtk, di semua tab agar banner tetap muncul.
 interface WanQuality { name: string; target: string; rttAvg: number | null; jitter: number | null; lossPct: number; quality: 'good' | 'degraded' | 'bad' }
 const quality = ref<WanQuality[]>([])
+const unmeasurable = ref<string[]>([])
 const qualityOf = (name: string) => quality.value.find(q => q.name === name)
 const badQualityNames = computed(() => quality.value.filter(q => q.quality === 'bad').map(q => q.name))
 const qualityClass = (q: string) => q === 'bad' ? 'bg-red-100 text-red-700' : q === 'degraded' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
@@ -308,6 +312,7 @@ async function loadQuality() {
   try {
     const res: any = await $fetch('/api/network/ping/latest')
     quality.value = res.items
+    unmeasurable.value = res.unmeasurable || []
   } catch {
     // kualitas bersifat tambahan: kegagalan tidak menimpa pesan error utama halaman
   } finally {

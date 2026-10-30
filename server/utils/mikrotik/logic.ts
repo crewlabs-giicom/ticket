@@ -355,6 +355,53 @@ export function summarize(clients: ClientView[]) {
   return { total: clients.length, online, perJalur }
 }
 
+// ---------- Setting ping per WAN (dibaca dari router) ----------
+
+export interface WanPingSetup {
+  name: string
+  /** IP WAN yang dipakai sebagai sumber ping. */
+  srcAddress: string
+  gateway: string | null
+  /** Routing table/mark khusus WAN ini; null = tabel main. */
+  routingTable: string | null
+}
+
+/**
+ * Tentukan cara mem-ping lewat satu WAN dari konfigurasi router:
+ * - IP sumber = IP aktif pertama di interface WAN.
+ * - Tabel routing = route default (0.0.0.0/0) non-main yang keluar lewat WAN ini, atau rule routing
+ *   dengan src-address = IP WAN. Tanpa itu, hanya WAN yang route default `main`-nya terbaik (distance terkecil)
+ *   yang bisa diukur; WAN lain dikembalikan null karena ping-nya akan keluar lewat ISP yang salah.
+ */
+export function resolveWanPing(name: string, addresses: RosRow[], routes: RosRow[], rules: RosRow[]): WanPingSetup | null {
+  const addrs = (activeAddressesByInterface(addresses).get(name) || []).map(a => ({ ip: a.split('/')[0], cidr: parseCidr(a) })).filter(a => isIPv4(a.ip))
+  if (!addrs.length) return null
+  const src = addrs[0].ip
+
+  const viaThisWan = (r: RosRow) => {
+    const gw = r.gateway || ''
+    if (gw === name || (r['immediate-gw'] || '').endsWith(`%${name}`)) return true
+    const n = ipToInt(gw.split('%')[0])
+    return n !== null && addrs.some(a => a.cidr && n >= a.cidr.first && n <= a.cidr.last)
+  }
+  const tableOf = (r: RosRow) => r['routing-table'] || r['routing-mark'] || 'main'
+  const defaults = routes.filter(r => r['dst-address'] === '0.0.0.0/0' && r.disabled !== 'true' && viaThisWan(r))
+  const gateway = defaults.map(r => (r.gateway || '').split('%')[0]).find(g => isIPv4(g)) || null
+
+  const custom = defaults.find(r => tableOf(r) !== 'main')
+  if (custom) return { name, srcAddress: src, gateway, routingTable: tableOf(custom) }
+
+  const rule = rules.find(r => r.disabled !== 'true' && r.table && r.table !== 'main' && (r['src-address'] || '').split('/')[0] === src)
+  if (rule) return { name, srcAddress: src, gateway, routingTable: rule.table! }
+
+  // route default main lewat WAN ini: hanya valid kalau ini yang terbaik (distance terkecil) di tabel main
+  const mainDefaults = routes.filter(r => r['dst-address'] === '0.0.0.0/0' && r.disabled !== 'true' && tableOf(r) === 'main')
+  const best = Math.min(...mainDefaults.map(r => Number(r.distance) || 1))
+  const mine = defaults.find(r => tableOf(r) === 'main' && (Number(r.distance) || 1) === best)
+  if (mine) return { name, srcAddress: src, gateway, routingTable: null }
+  return null
+}
+
 // ---------- Interface view ----------
 
 export function buildInterfaceViews(

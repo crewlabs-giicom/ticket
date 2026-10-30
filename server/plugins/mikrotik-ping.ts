@@ -1,7 +1,7 @@
 import { getDb } from '../database/index'
 import { notifyNetwork } from '../utils/netNotify'
 import { isMockMode } from '../utils/mikrotik/client'
-import { getWanStatus, probeWan, wanQuality } from '../utils/mikrotik/service'
+import { getWanPingSetups, probeWan, wanQuality } from '../utils/mikrotik/service'
 import { pingConfig } from '../utils/mikrotik/pingConfig'
 import { nextQualityTransitions, type Quality } from '../utils/mikrotik/analytics'
 
@@ -25,7 +25,8 @@ export default defineNitroPlugin(() => {
       if (isMockMode()) return
       let wan
       try {
-        wan = (await getWanStatus()).filter(w => w.up)
+        // WAN yang up dan setting ping-nya (IP sumber + routing table) bisa ditentukan dari router; sisanya tidak diukur
+        wan = (await getWanPingSetups()).filter(w => w.up && w.setup)
       } catch {
         return // router tidak terjangkau
       }
@@ -37,7 +38,7 @@ export default defineNitroPlugin(() => {
       for (const w of wan) {
         let probe
         try {
-          probe = await probeWan(w.name)
+          probe = await probeWan(w.setup!)
         } catch {
           return // router tidak terjangkau di tengah siklus
         }

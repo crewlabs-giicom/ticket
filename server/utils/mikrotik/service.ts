@@ -3,7 +3,8 @@ import { summarizePing, pickRepresentative, classifyQuality, type PingSummary } 
 import { pingConfig } from './pingConfig'
 import {
   activeAddressesByInterface, aggregateClientRates, buildClients, buildInterfaceViews, buildSubnetDefs, groupClients,
-  interfaceRole, routerIpSet, summarize, wanMemberSet, type InterfaceRole, type RosRow, type WanState,
+  interfaceRole, resolveWanPing, routerIpSet, summarize, wanMemberSet,
+  type InterfaceRole, type RosRow, type WanPingSetup, type WanState,
 } from './logic'
 
 async function loadInterfaceBase() {
@@ -59,15 +60,37 @@ export async function getWanStatus(): Promise<WanState[]> {
     .map(i => ({ name: i.name || '', comment: i.comment || '', up: i.running === 'true' }))
 }
 
+export interface WanPingEntry { name: string; comment: string; up: boolean; setup: WanPingSetup | null }
+
+// RouterOS 7 = /routing/rule, 6 = /ip/route/rule; yang tidak ada di versi router diabaikan.
+async function readRules(): Promise<RosRow[]> {
+  for (const path of ['/routing/rule/print', '/ip/route/rule/print']) {
+    try { return await rosRead(path) } catch { /* path tidak dikenal di versi ini */ }
+  }
+  return []
+}
+
+/** WAN aktif beserta setting ping-nya (IP sumber + routing table) yang dibaca dari konfigurasi router. setup=null: tidak bisa diukur. */
+export async function getWanPingSetups(): Promise<WanPingEntry[]> {
+  const { interfaces, addresses, roleByInterface } = await loadInterfaceBase()
+  const [routes, rules] = await Promise.all([rosRead('/ip/route/print'), readRules()])
+  return interfaces
+    .filter(i => roleByInterface.get(i.name || '') === 'WAN' && i.disabled !== 'true')
+    .map(i => ({
+      name: i.name || '', comment: i.comment || '', up: i.running === 'true',
+      setup: resolveWanPing(i.name || '', addresses, routes, rules),
+    }))
+}
+
 export interface WanProbe { name: string; targets: Array<PingSummary & { target: string }> }
 
 /** Ping satu WAN ke semua target (berurutan, agar koneksi API bersama tidak terbebani). Target yang error dilewati. */
-export async function probeWan(name: string): Promise<WanProbe> {
+export async function probeWan(setup: WanPingSetup): Promise<WanProbe> {
   const { targets, count } = pingConfig()
   const out: WanProbe['targets'] = []
   for (const target of targets) {
     try {
-      out.push({ target, ...summarizePing(await rosPing(target, name, count), count) })
+      out.push({ target, ...summarizePing(await rosPing(setup.name, { target, srcAddress: setup.srcAddress, routingTable: setup.routingTable, count }), count) })
     } catch (e: any) {
       if (e?.statusCode === 502) throw e // router tidak terjangkau: hentikan siklus, bukan "WAN jelek"
       // parameter ditolak guard / target tak valid: lewati target ini

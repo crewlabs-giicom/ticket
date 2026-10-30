@@ -304,6 +304,8 @@
         },
         "quality": {
           "good": "Good", "degraded": "Degraded", "bad": "Bad",
+          "unmeasurable": "Not measurable",
+          "unmeasurableHint": "The router has no dedicated routing table/rule for this WAN, so a ping cannot be guaranteed to leave through this ISP.",
           "title": "WAN connection quality (ping from router)",
           "hint": "Measured from the router to {target}",
           "banner": "Poor WAN quality (high latency/jitter/loss): {names}",

@@ -10,15 +10,24 @@ export function assertReadOnlyPath(path: string): void {
 }
 
 const HOST_RE = /^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/
-const IFACE_RE = /^[A-Za-z0-9_.@ -]{1,64}$/
+const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+const TABLE_RE = /^[A-Za-z0-9_.@ -]{1,64}$/
+
+export interface PingOptions { target: string; srcAddress: string; routingTable?: string | null; count: number }
 
 /**
  * /ping adalah satu-satunya perintah non-print yang diizinkan, dan hanya lewat rosPing dengan parameter
  * tervalidasi (bukan lewat rosRead). Mengembalikan parameter API yang aman dikirim.
  */
-export function buildPingParams(target: string, iface: string, count: number): string[] {
-  if (typeof target !== 'string' || !HOST_RE.test(target)) throw new Error(`Target ping tidak valid: ${String(target)}`)
-  if (typeof iface !== 'string' || !IFACE_RE.test(iface)) throw new Error(`Interface ping tidak valid: ${String(iface)}`)
-  if (!Number.isInteger(count) || count < 1 || count > 10) throw new Error(`Jumlah ping tidak valid: ${String(count)}`)
-  return [`=address=${target}`, `=interface=${iface}`, `=count=${count}`, '=interval=200ms']
+export function buildPingParams(o: PingOptions): string[] {
+  if (typeof o.target !== 'string' || !HOST_RE.test(o.target)) throw new Error(`Target ping tidak valid: ${String(o.target)}`)
+  const m = typeof o.srcAddress === 'string' ? IPV4_RE.exec(o.srcAddress) : null
+  if (!m || m.slice(1).some(p => Number(p) > 255)) throw new Error(`IP sumber ping tidak valid: ${String(o.srcAddress)}`)
+  if (o.routingTable && !TABLE_RE.test(o.routingTable)) throw new Error(`Routing table ping tidak valid: ${String(o.routingTable)}`)
+  if (!Number.isInteger(o.count) || o.count < 1 || o.count > 10) throw new Error(`Jumlah ping tidak valid: ${String(o.count)}`)
+  return [
+    `=address=${o.target}`, `=src-address=${o.srcAddress}`,
+    ...(o.routingTable ? [`=routing-table=${o.routingTable}`] : []),
+    `=count=${o.count}`, '=interval=200ms',
+  ]
 }

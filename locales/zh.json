@@ -304,6 +304,8 @@
         },
         "quality": {
           "good": "良好", "degraded": "下降", "bad": "差",
+          "unmeasurable": "无法测量",
+          "unmeasurableHint": "路由器没有此 WAN 的专用路由表/规则，无法保证 ping 经由该 ISP 发出。",
           "title": "WAN 连接质量（路由器 ping）",
           "hint": "从路由器到 {target} 测得",
           "banner": "WAN 质量差（延迟/抖动/丢包高）：{names}",

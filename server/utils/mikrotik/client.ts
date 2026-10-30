@@ -1,5 +1,5 @@
 import { RouterOSAPI } from 'node-routeros'
-import { assertReadOnlyPath, buildPingParams } from './guard'
+import { assertReadOnlyPath, buildPingParams, type PingOptions } from './guard'
 import { mockRead, mockPing } from './mock'
 import type { RosRow } from './logic'
 
@@ -9,6 +9,9 @@ const TTL_BY_PATH: Record<string, number> = {
   '/interface/list/member/print': 60000,
   '/ip/address/print': 60000,
   '/interface/monitor-traffic': 900, // grafik realtime ~1 dtk; admin lain berbagi hasil cache yang sama
+  '/ip/route/print': 60000,
+  '/routing/rule/print': 60000,
+  '/ip/route/rule/print': 60000,
   '/ip/arp/print': 10000,
   '/ip/dhcp-server/lease/print': 10000,
   '/ip/firewall/address-list/print': 10000,
@@ -89,11 +92,11 @@ function routerError(err: unknown) {
 
 const PING_TIMEOUT_MS = 8000
 
-/** Ping dari router lewat satu interface (satu baris hasil per paket). Tanpa cache; parameter divalidasi guard. */
-export async function rosPing(target: string, iface: string, count = 5): Promise<RosRow[]> {
-  const params = buildPingParams(target, iface, count)
+/** Ping dari router lewat satu WAN (IP sumber + routing table-nya; satu baris hasil per paket). Tanpa cache; parameter divalidasi guard. */
+export async function rosPing(wanName: string, o: PingOptions): Promise<RosRow[]> {
+  const params = buildPingParams(o)
   const cfg = config()
-  if (cfg.mock) return mockPing(iface, count)
+  if (cfg.mock) return mockPing(wanName, o.count)
   if (!cfg.host || !cfg.user) {
     throw createError({ statusCode: 502, statusMessage: 'Bad Gateway', message: 'Router tidak bisa dibaca: NUXT_ROUTEROS_HOST / NUXT_ROUTEROS_USER belum diisi' })
   }
