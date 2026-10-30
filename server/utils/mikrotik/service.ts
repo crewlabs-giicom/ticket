@@ -93,10 +93,11 @@ export async function probeWan(setup: WanPingSetup): Promise<WanProbe> {
       out.push({ target, ...summarizePing(await rosPing(setup.name, { target, srcAddress: setup.srcAddress, routingTable: setup.routingTable, count }), count) })
     } catch (e: any) {
       if (e?.statusCode === 502) throw e // router tidak terjangkau: hentikan siklus, bukan "WAN jelek"
-      // parameter ditolak guard / target tak valid: lewati target ini
+      // parameter ditolak guard / target tak valid: lewati target ini, tapi catat supaya tidak diam-diam
+      console.error(`[Ping] ${setup.name} -> ${target} dilewati:`, e?.message || e)
     }
   }
-  return { name, targets: out }
+  return { name: setup.name, targets: out }
 }
 
 /** Status kualitas per WAN (target terbaik sebagai wakil) dari satu hasil probe. */

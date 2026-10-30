@@ -27,7 +27,8 @@ export default defineNitroPlugin(() => {
       try {
         // WAN yang up dan setting ping-nya (IP sumber + routing table) bisa ditentukan dari router; sisanya tidak diukur
         wan = (await getWanPingSetups()).filter(w => w.up && w.setup)
-      } catch {
+      } catch (e: any) {
+        console.error('[Ping] gagal membaca setting WAN:', e?.message || e)
         return // router tidak terjangkau
       }
 
@@ -39,7 +40,8 @@ export default defineNitroPlugin(() => {
         let probe
         try {
           probe = await probeWan(w.setup!)
-        } catch {
+        } catch (e: any) {
+          console.error(`[Ping] siklus dihentikan di ${w.name}:`, e?.message || e)
           return // router tidak terjangkau di tengah siklus
         }
         if (!probe.targets.length) continue

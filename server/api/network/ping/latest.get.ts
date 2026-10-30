@@ -14,6 +14,8 @@ export default defineEventHandler(async (event) => {
   // WAN up yang setting ping-nya tidak bisa ditentukan dari router (belum ada routing table/rule khusus)
   const setups = await getWanPingSetups().catch(() => [])
   const unmeasurable = setups.filter(w => w.up && !w.setup).map(w => w.name)
+  // diagnostik: setting yang dipakai untuk ping tiap WAN (IP sumber, tabel routing, gateway) hasil baca router
+  const setupInfo = Object.fromEntries(setups.filter(w => w.setup).map(w => [w.name, w.setup]))
 
   if (isMockMode()) {
     const wan = setups.filter(w => w.up && w.setup)
@@ -22,7 +24,7 @@ export default defineEventHandler(async (event) => {
       const q = wanQuality(await probeWan(w.setup!))
       if (q) items.push({ name: w.name, target: q.target, rttAvg: q.rttAvg, jitter: q.jitter, lossPct: q.lossPct, quality: q.quality, reasons: q.reasons, ageSec: 0 })
     }
-    return { items, unmeasurable, openEvents: [], mock: true }
+    return { items, unmeasurable, setups: setupInfo, openEvents: [], mock: true }
   }
 
   const db = getDb()
@@ -46,5 +48,5 @@ export default defineEventHandler(async (event) => {
     items.push({ ...rep, name, ...classifyQuality(rep, thresholds) })
   }
   const [open] = await db.execute('SELECT interface_name AS name, reason, started_at AS startedAt FROM wan_quality_events WHERE ended_at IS NULL') as any[]
-  return { items, unmeasurable, openEvents: open, intervalSec, mock: false }
+  return { items, unmeasurable, setups: setupInfo, openEvents: open, intervalSec, mock: false }
 })

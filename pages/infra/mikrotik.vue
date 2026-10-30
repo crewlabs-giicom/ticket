@@ -78,6 +78,9 @@
                 <span class="badge" :class="qualityClass(qualityOf(i.name)!.quality)">{{ t('infra.mikrotik.analytics.quality.' + qualityOf(i.name)!.quality) }}</span>
                 <span class="text-slate-600">{{ fmtMs(qualityOf(i.name)!.rttAvg) }} · jitter {{ fmtMs(qualityOf(i.name)!.jitter) }} · loss {{ Math.round(qualityOf(i.name)!.lossPct) }}%</span>
               </div>
+              <div v-if="i.role === 'WAN' && pingSetups[i.name]" class="text-[11px] text-slate-400 font-mono">
+                ping: src {{ pingSetups[i.name].srcAddress }} · table {{ pingSetups[i.name].routingTable || 'main' }}<template v-if="pingSetups[i.name].gateway"> · gw {{ pingSetups[i.name].gateway }}</template>
+              </div>
               <div class="grid grid-cols-2 gap-2 text-xs">
                 <div class="rounded-lg bg-slate-50 p-2">
                   <div class="text-slate-400">{{ i.role === 'WAN' ? '↓ ' + t('infra.mikrotik.download') : '↓ rx' }}</div>
@@ -301,6 +304,7 @@ const ratesPoll = useIntervalFn(loadRates, 5000, { immediate: false })
 interface WanQuality { name: string; target: string; rttAvg: number | null; jitter: number | null; lossPct: number; quality: 'good' | 'degraded' | 'bad' }
 const quality = ref<WanQuality[]>([])
 const unmeasurable = ref<string[]>([])
+const pingSetups = ref<Record<string, { srcAddress: string; routingTable: string | null; gateway: string | null }>>({})
 const qualityOf = (name: string) => quality.value.find(q => q.name === name)
 const badQualityNames = computed(() => quality.value.filter(q => q.quality === 'bad').map(q => q.name))
 const qualityClass = (q: string) => q === 'bad' ? 'bg-red-100 text-red-700' : q === 'degraded' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
@@ -313,6 +317,7 @@ async function loadQuality() {
     const res: any = await $fetch('/api/network/ping/latest')
     quality.value = res.items
     unmeasurable.value = res.unmeasurable || []
+    pingSetups.value = res.setups || {}
   } catch {
     // kualitas bersifat tambahan: kegagalan tidak menimpa pesan error utama halaman
   } finally {

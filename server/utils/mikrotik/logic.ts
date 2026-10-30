@@ -376,7 +376,6 @@ export interface WanPingSetup {
 export function resolveWanPing(name: string, addresses: RosRow[], routes: RosRow[], rules: RosRow[]): WanPingSetup | null {
   const addrs = (activeAddressesByInterface(addresses).get(name) || []).map(a => ({ ip: a.split('/')[0], cidr: parseCidr(a) })).filter(a => isIPv4(a.ip))
   if (!addrs.length) return null
-  const src = addrs[0].ip
 
   const viaThisWan = (r: RosRow) => {
     const gw = r.gateway || ''
@@ -387,6 +386,9 @@ export function resolveWanPing(name: string, addresses: RosRow[], routes: RosRow
   const tableOf = (r: RosRow) => r['routing-table'] || r['routing-mark'] || 'main'
   const defaults = routes.filter(r => r['dst-address'] === '0.0.0.0/0' && r.disabled !== 'true' && viaThisWan(r))
   const gateway = defaults.map(r => (r.gateway || '').split('%')[0]).find(g => isIPv4(g)) || null
+  // beberapa IP di satu interface: pakai yang satu subnet dengan gateway (kalau tidak ada, IP pertama)
+  const gwN = gateway ? ipToInt(gateway) : null
+  const src = (gwN !== null ? addrs.find(a => a.cidr && gwN >= a.cidr.first && gwN <= a.cidr.last) : undefined)?.ip || addrs[0].ip
 
   const custom = defaults.find(r => tableOf(r) !== 'main')
   if (custom) return { name, srcAddress: src, gateway, routingTable: tableOf(custom) }
