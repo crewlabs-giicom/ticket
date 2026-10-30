@@ -10,6 +10,8 @@ export interface InterfaceView {
   rxBps: number | null; txBps: number | null
   rxBytes: number | null; txBytes: number | null
   linkDowns: number | null; lastLinkUp: string | null
+  rxErrors: number | null; txErrors: number | null
+  rxDrops: number | null; txDrops: number | null
 }
 
 export interface ClientView {
@@ -377,6 +379,8 @@ export function buildInterfaceViews(
       txBps: running && !disabled ? (t?.tx ?? null) : null,
       rxBytes: num(i['rx-byte']), txBytes: num(i['tx-byte']),
       linkDowns: num(i['link-downs']), lastLinkUp: i['last-link-up-time'] || null,
+      rxErrors: num(i['rx-error']), txErrors: num(i['tx-error']),
+      rxDrops: num(i['rx-drop']), txDrops: num(i['tx-drop']),
     }
   })
   const order: Record<InterfaceRole, number> = { WAN: 0, LAN: 1, LAINNYA: 2 }

@@ -4,7 +4,7 @@
       <p class="text-sm text-slate-500">{{ t('infra.mikrotik.subtitle') }}</p>
       <div class="flex items-center gap-3">
         <span v-if="fetchedAt" class="text-xs text-slate-400">{{ t('infra.mikrotik.updated') }} {{ fmtTime(fetchedAt) }}</span>
-        <AppRefreshButton :loading="loading" @click="loadActive()" />
+        <AppRefreshButton v-if="tab !== 'analytics'" :loading="loading" @click="loadActive()" />
       </div>
     </div>
 
@@ -21,6 +21,7 @@
     <div class="flex items-center gap-2">
       <button @click="tab = 'interfaces'" :class="tab === 'interfaces' ? 'btn-primary' : 'btn-secondary'" class="py-1 px-3 text-xs">{{ t('infra.mikrotik.tabInterfaces') }}</button>
       <button @click="tab = 'clients'" :class="tab === 'clients' ? 'btn-primary' : 'btn-secondary'" class="py-1 px-3 text-xs">{{ t('infra.mikrotik.tabClients') }}</button>
+      <button @click="tab = 'analytics'" :class="tab === 'analytics' ? 'btn-primary' : 'btn-secondary'" class="py-1 px-3 text-xs">{{ t('infra.mikrotik.tabAnalytics') }}</button>
     </div>
 
     <!-- Tab Interface -->
@@ -86,6 +87,9 @@
         </div>
       </template>
     </template>
+
+    <!-- Tab Analitik (data historis dari DB) -->
+    <NetAnalytics v-else-if="tab === 'analytics'" />
 
     <!-- Tab Klien per Subnet -->
     <template v-else>
@@ -181,7 +185,7 @@ const auth = useAuthStore()
 
 if (auth.user?.role === 'customer') await navigateTo('/')
 
-const tab = ref<'interfaces' | 'clients'>('interfaces')
+const tab = ref<'interfaces' | 'clients' | 'analytics'>('interfaces')
 const loading = ref(false)
 const error = ref('')
 const mock = ref(false)
@@ -227,7 +231,7 @@ async function load(kind: 'interfaces' | 'clients') {
     loading.value = false
   }
 }
-const loadActive = () => load(tab.value)
+const loadActive = () => { if (tab.value !== 'analytics') return load(tab.value) } // tab Analitik punya tombol refresh sendiri
 
 // Bandwidth live: endpoint ringan, ~1 dtk. Nilai terbaru juga dipakai kartu interface.
 const latestTraffic = new Map<string, TrafficSample>()

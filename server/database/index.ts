@@ -980,6 +980,41 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  // Sampel historis untuk Analitik Jaringan (diisi sampler tiap menit, retensi 30 hari).
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS net_iface_samples (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      ts DATETIME NOT NULL,
+      interface_name VARCHAR(100) NOT NULL,
+      rx_bps BIGINT NOT NULL DEFAULT 0,
+      tx_bps BIGINT NOT NULL DEFAULT 0,
+      rx_bytes BIGINT UNSIGNED NULL,
+      tx_bytes BIGINT UNSIGNED NULL,
+      rx_errors BIGINT UNSIGNED NULL,
+      tx_errors BIGINT UNSIGNED NULL,
+      rx_drops BIGINT UNSIGNED NULL,
+      tx_drops BIGINT UNSIGNED NULL,
+      link_downs INT UNSIGNED NULL,
+      running TINYINT(1) NOT NULL DEFAULT 1,
+      INDEX idx_nis_iface_ts (interface_name, ts),
+      INDEX idx_nis_ts (ts)
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS net_subnet_samples (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      ts DATETIME NOT NULL,
+      cidr VARCHAR(50) NOT NULL,
+      interface_name VARCHAR(100) NOT NULL DEFAULT '',
+      online INT NOT NULL DEFAULT 0,
+      total INT NOT NULL DEFAULT 0,
+      rx_bps BIGINT NOT NULL DEFAULT 0,
+      tx_bps BIGINT NOT NULL DEFAULT 0,
+      INDEX idx_nss_cidr_ts (cidr, ts),
+      INDEX idx_nss_ts (ts)
+    )
+  `)
+
   // Folder menu "Infrastruktur" + anak-anaknya (admin & staff)
   // (kolom menus.role hanya satu nilai, jadi satu set baris per role)
   const infraChildren: [string, string, string, number][] = [
