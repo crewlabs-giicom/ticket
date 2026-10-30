@@ -54,6 +54,66 @@
         </template>
       </div>
 
+      <!-- Kualitas koneksi WAN (ping dari router) -->
+      <div v-if="mode === 'interfaces' && ping && ping.items.length" class="card p-4 space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-sm font-semibold text-slate-900">{{ t('infra.mikrotik.analytics.quality.title') }}</h3>
+          <span class="text-xs text-slate-500">{{ t('infra.mikrotik.analytics.quality.thresholds', { lat: ping.thresholds.latencyBad, jit: ping.thresholds.jitterBad, loss: ping.thresholds.lossBad }) }}</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-xs text-slate-500"><tr>
+              <th class="text-left px-3 py-2">WAN</th>
+              <th class="text-right px-3 py-2">Latency avg / p95</th>
+              <th class="text-right px-3 py-2">Jitter</th>
+              <th class="text-right px-3 py-2">Loss</th>
+              <th class="text-right px-3 py-2">{{ t('infra.mikrotik.analytics.quality.badPct') }}</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="p in pingSorted" :key="p.name" class="border-t border-slate-100 cursor-pointer hover:bg-slate-50" @click="qualityWan = p.name">
+                <td class="px-3 py-2 font-mono font-medium text-slate-900">{{ p.name }}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap">{{ fmtMs(p.latencyAvg) }} / {{ fmtMs(p.latencyP95) }}</td>
+                <td class="px-3 py-2 text-right" :class="p.jitterAvg !== null && p.jitterAvg >= ping.thresholds.jitterWarn ? 'text-amber-600 font-semibold' : ''">{{ fmtMs(p.jitterAvg) }}</td>
+                <td class="px-3 py-2 text-right" :class="p.lossAvg >= ping.thresholds.lossWarn ? 'text-red-600 font-semibold' : ''">{{ p.lossAvg.toFixed(1) }}%</td>
+                <td class="px-3 py-2 text-right" :class="p.badPct >= 10 ? 'text-red-600 font-semibold' : 'text-slate-500'">{{ p.badPct.toFixed(0) }}%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="pingShown" class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div>
+            <h4 class="text-xs font-semibold text-slate-500 mb-1">{{ pingShown.name }} · latency &amp; jitter</h4>
+            <NetLiveChart :labels="pingLabels" unit="ms" :height="200" :series="[
+              { label: 'Latency', color: '#2563eb', data: pingShown.points.map((x: any) => x.rttAvg), fill: true },
+              { label: 'Latency max', color: '#2563eb', data: pingShown.points.map((x: any) => x.rttMax), dashed: true },
+              { label: 'Jitter', color: '#f97316', data: pingShown.points.map((x: any) => x.jitter) },
+            ]" />
+          </div>
+          <div>
+            <h4 class="text-xs font-semibold text-slate-500 mb-1">{{ pingShown.name }} · packet loss</h4>
+            <NetLiveChart :labels="pingLabels" unit="%" :height="200" :series="[
+              { label: 'Loss', color: '#dc2626', data: pingShown.points.map((x: any) => x.loss), fill: true },
+            ]" />
+          </div>
+        </div>
+        <div v-if="ping.events.length" class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="text-slate-500"><tr>
+              <th class="text-left py-1">WAN</th><th class="text-left py-1">{{ t('infra.mikrotik.analytics.wentDown') }}</th>
+              <th class="text-left py-1">{{ t('infra.mikrotik.analytics.recovered') }}</th><th class="text-left py-1">{{ t('infra.mikrotik.analytics.quality.reason') }}</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="(e, i) in ping.events.slice(0, 10)" :key="i" class="border-t border-slate-100">
+                <td class="py-1 font-medium text-slate-900">{{ e.name }}</td>
+                <td class="py-1">{{ new Date(e.startedAt).toLocaleString('id-ID') }}</td>
+                <td class="py-1">{{ e.endedAt ? new Date(e.endedAt).toLocaleString('id-ID') : t('infra.mikrotik.analytics.ongoing') }}</td>
+                <td class="py-1 text-slate-500">{{ e.reason || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Heatmap jam sibuk -->
       <div v-if="data.heatmap" class="card p-4">
         <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
@@ -175,12 +235,24 @@ const loading = ref(false)
 const error = ref('')
 const data = ref<any>(null)
 
+// ---- kualitas koneksi (ping) ----
+const ping = ref<any>(null)
+const qualityWan = ref('')
+// WAN terburuk (persen waktu buruk, lalu latency) di urutan atas; grafik default = WAN terburuk
+const pingSorted = computed<any[]>(() => [...(ping.value?.items || [])].sort((a, b) => b.badPct - a.badPct || (b.latencyAvg ?? 0) - (a.latencyAvg ?? 0)))
+const pingShown = computed(() => pingSorted.value.find(p => p.name === qualityWan.value) || pingSorted.value[0] || null)
+const pingLabels = computed(() => (pingShown.value?.points || []).map((p: any) => fmtLabel(p.ts)))
+const fmtMs = (v: number | null) => (v === null || v === undefined ? '—' : `${v >= 100 ? Math.round(v) : v.toFixed(1)} ms`)
+
 async function load() {
   loading.value = true
   try {
     const param = mode.value === 'interfaces' ? 'name' : 'cidr'
     data.value = await $fetch(`/api/network/analytics/${mode.value}`, { query: { range: range.value, [param]: selectedKey.value || undefined } })
     selectedKey.value = data.value.selected
+    ping.value = mode.value === 'interfaces'
+      ? await $fetch('/api/network/analytics/ping', { query: { range: range.value } }).catch(() => null)
+      : null
     error.value = ''
   } catch (e: any) {
     error.value = e?.data?.message || e?.data?.statusMessage || e?.message || t('infra.mikrotik.errorGeneric')

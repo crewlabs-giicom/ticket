@@ -302,6 +302,14 @@
           "peak": "Puncak", "availability": "Availability WAN", "worstWan": "WAN terendah", "noIncident": "tanpa gangguan",
           "errDrops": "Error + drop", "onlinePeak": "Klien online puncak", "fullest": "subnet terpadat"
         },
+        "quality": {
+          "good": "Bagus", "degraded": "Menurun", "bad": "Buruk",
+          "title": "Kualitas koneksi WAN (ping dari router)",
+          "hint": "Diukur dari router ke {target}",
+          "banner": "Kualitas WAN buruk (latency/jitter/loss tinggi): {names}",
+          "thresholds": "Buruk bila latency ≥ {lat} ms, jitter ≥ {jit} ms, atau loss ≥ {loss}%",
+          "badPct": "% waktu buruk", "reason": "Penyebab"
+        },
         "avg": "Rata-rata",
         "errors": "Error",
         "drops": "Drop",

@@ -139,12 +139,19 @@ describe('audit: tidak ada kemampuan write', () => {
     const verbs = /['"`]\/[a-z0-9\-/]*\/(add|set|remove|enable|disable|move|unset|reset|reboot|shutdown|import|export|run|comment|edit|make-static)['"`]/i
     for (const f of files) expect(src(f), f).not.toMatch(verbs)
   })
-  it('client.ts hanya mengekspor fungsi baca; conn.write hanya setelah guard', () => {
+  it('client.ts hanya mengekspor fungsi baca + ping; conn.write hanya setelah guard masing-masing', () => {
     const c = src('client.ts')
-    expect([...c.matchAll(/^export (?:async )?function (\w+)/gm)].map(m => m[1]).sort()).toEqual(['isMockMode', 'rosRead'])
-    expect(c.indexOf('assertReadOnlyPath(path)')).toBeGreaterThan(-1)
-    expect(c.indexOf('assertReadOnlyPath(path)')).toBeLessThan(c.indexOf('.write('))
-    expect(c.match(/\.write\(/g)).toHaveLength(1)
+    expect([...c.matchAll(/^export (?:async )?function (\w+)/gm)].map(m => m[1]).sort()).toEqual(['isMockMode', 'rosPing', 'rosRead'])
+    expect(c.match(/\.write\(/g)).toHaveLength(2)
+    // rosPing: parameter harus lewat buildPingParams sebelum write, dan write-nya hanya '/ping'
+    const ping = c.slice(c.indexOf('export async function rosPing'), c.indexOf('export async function rosRead'))
+    expect(ping.indexOf('buildPingParams(')).toBeGreaterThan(-1)
+    expect(ping.indexOf('buildPingParams(')).toBeLessThan(ping.indexOf('.write('))
+    expect(ping).toContain(".write('/ping', params)")
+    // rosRead: guard read-only sebelum write
+    const read = c.slice(c.indexOf('export async function rosRead'))
+    expect(read.indexOf('assertReadOnlyPath(path)')).toBeGreaterThan(-1)
+    expect(read.indexOf('assertReadOnlyPath(path)')).toBeLessThan(read.indexOf('.write('))
   })
 })
 

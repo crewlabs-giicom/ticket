@@ -37,7 +37,16 @@ export default defineNuxtConfig({
       tls: true,
       rejectUnauthorized: false,
       cacheMs: 3000,
-      mock: false
+      mock: false,
+      // Kualitas koneksi WAN (ping dari router). Override lewat NUXT_ROUTEROS_PING_*.
+      pingTargets: '1.1.1.1,8.8.8.8',
+      pingIntervalSec: 30,
+      pingLatencyWarn: 100,
+      pingLatencyBad: 200,
+      pingJitterWarn: 30,
+      pingJitterBad: 60,
+      pingLossWarn: 2,
+      pingLossBad: 5
     },
     public: {
       appName: process.env.APP_NAME || 'Shadow Care'

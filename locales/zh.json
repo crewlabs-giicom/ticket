@@ -302,6 +302,14 @@
           "peak": "峰值", "availability": "WAN 可用率", "worstWan": "最低 WAN", "noIncident": "无故障",
           "errDrops": "错误 + 丢包", "onlinePeak": "在线客户端峰值", "fullest": "最满子网"
         },
+        "quality": {
+          "good": "良好", "degraded": "下降", "bad": "差",
+          "title": "WAN 连接质量（路由器 ping）",
+          "hint": "从路由器到 {target} 测得",
+          "banner": "WAN 质量差（延迟/抖动/丢包高）：{names}",
+          "thresholds": "延迟 ≥ {lat} ms、抖动 ≥ {jit} ms 或丢包 ≥ {loss}% 时为差",
+          "badPct": "差的时间占比", "reason": "原因"
+        },
         "avg": "平均",
         "errors": "错误",
         "drops": "丢包",

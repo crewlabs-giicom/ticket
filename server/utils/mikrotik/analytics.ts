@@ -115,6 +115,101 @@ export function buildHeatmap(rows: Array<{ dow: number; hour: number; bps: numbe
   return { cells, max, busiestHour }
 }
 
+// ---------- Kualitas koneksi (ping dari router) ----------
+
+/** Durasi RouterOS ("12ms", "1s200ms", "12ms345us", "300us") -> milidetik; null bila tidak terbaca. */
+export function parseRosDuration(v: string | undefined): number | null {
+  if (!v) return null
+  const re = /(\d+(?:\.\d+)?)(ms|us|s|m|h)/g
+  const unit: Record<string, number> = { us: 0.001, ms: 1, s: 1000, m: 60000, h: 3600000 }
+  let total = 0
+  let found = false
+  let m: RegExpExecArray | null
+  while ((m = re.exec(v))) { total += Number(m[1]) * unit[m[2]]; found = true }
+  return found ? total : null
+}
+
+export interface PingSummary { sent: number; received: number; lossPct: number; rttMin: number | null; rttAvg: number | null; rttMax: number | null; jitter: number | null }
+
+/** Ringkas balasan /ping (satu baris per paket). Jitter = rata-rata |selisih RTT berurutan|. */
+export function summarizePing(rows: Array<Record<string, string | undefined>>, expected: number): PingSummary {
+  const rtts: number[] = []
+  for (const r of rows) {
+    if (r.status && /timeout|no route/i.test(r.status)) continue
+    const t = parseRosDuration(r.time)
+    if (t !== null) rtts.push(t)
+  }
+  const sent = Math.max(expected, rows.length)
+  const received = rtts.length
+  let jitter: number | null = null
+  if (rtts.length >= 2) {
+    let acc = 0
+    for (let i = 1; i < rtts.length; i++) acc += Math.abs(rtts[i] - rtts[i - 1])
+    jitter = acc / (rtts.length - 1)
+  } else if (rtts.length === 1) jitter = 0
+  return {
+    sent, received, lossPct: sent ? ((sent - received) / sent) * 100 : 100,
+    rttMin: received ? Math.min(...rtts) : null,
+    rttAvg: received ? rtts.reduce((a, b) => a + b, 0) / received : null,
+    rttMax: received ? Math.max(...rtts) : null,
+    jitter,
+  }
+}
+
+export type Quality = 'good' | 'degraded' | 'bad'
+
+export interface QualityThresholds { latencyWarn: number; latencyBad: number; jitterWarn: number; jitterBad: number; lossWarn: number; lossBad: number }
+
+export const DEFAULT_THRESHOLDS: QualityThresholds = { latencyWarn: 100, latencyBad: 200, jitterWarn: 30, jitterBad: 60, lossWarn: 2, lossBad: 5 }
+
+/** Kualitas satu sampel + alasan yang melampaui ambang. Tidak ada balasan sama sekali = bad (loss 100%). */
+export function classifyQuality(s: { rttAvg: number | null; jitter: number | null; lossPct: number }, th: QualityThresholds = DEFAULT_THRESHOLDS): { quality: Quality; reasons: Array<'latency' | 'jitter' | 'loss'> } {
+  let level = 0
+  const reasons: Array<'latency' | 'jitter' | 'loss'> = []
+  const check = (key: 'latency' | 'jitter' | 'loss', v: number | null, warn: number, bad: number) => {
+    if (v === null) return
+    if (v >= bad) { level = Math.max(level, 2); reasons.push(key) }
+    else if (v >= warn) { level = Math.max(level, 1); reasons.push(key) }
+  }
+  check('latency', s.rttAvg, th.latencyWarn, th.latencyBad)
+  check('jitter', s.jitter, th.jitterWarn, th.jitterBad)
+  check('loss', s.lossPct, th.lossWarn, th.lossBad)
+  return { quality: (['good', 'degraded', 'bad'] as const)[level], reasons }
+}
+
+/** Target representatif sebuah WAN: yang loss-nya terendah, lalu RTT terendah. WAN dianggap jelek hanya bila semua target jelek. */
+export function pickRepresentative<T extends { lossPct: number; rttAvg: number | null }>(samples: T[]): T | null {
+  if (!samples.length) return null
+  return [...samples].sort((a, b) => a.lossPct - b.lossPct || (a.rttAvg ?? Infinity) - (b.rttAvg ?? Infinity))[0]
+}
+
+/**
+ * Transisi kualitas dengan histeresis: bad setelah `badAfter` sampel bad berturut-turut dan belum ada insiden terbuka,
+ * pulih setelah `goodAfter` sampel non-bad berturut-turut. Fungsi murni; `streaks` dipakai lagi pada poll berikutnya.
+ */
+export function nextQualityTransitions(
+  prev: Map<string, { bad: number; good: number }>,
+  current: Array<{ name: string; quality: Quality }>,
+  open: Set<string>,
+  badAfter = 3,
+  goodAfter = 3,
+) {
+  const streaks = new Map<string, { bad: number; good: number }>()
+  const wentBad: string[] = []
+  const recovered: string[] = []
+  const seen = new Set<string>()
+  for (const c of current) {
+    seen.add(c.name)
+    const p = prev.get(c.name) || { bad: 0, good: 0 }
+    const s = c.quality === 'bad' ? { bad: p.bad + 1, good: 0 } : { bad: 0, good: p.good + 1 }
+    streaks.set(c.name, s)
+    if (!open.has(c.name) && s.bad >= badAfter) wentBad.push(c.name)
+    if (open.has(c.name) && s.good >= goodAfter) recovered.push(c.name)
+  }
+  for (const name of open) if (!seen.has(name)) recovered.push(name) // WAN hilang/down: insiden kualitas ditutup
+  return { streaks, wentBad, recovered }
+}
+
 export interface Insight { level: 'warn' | 'crit' | 'info'; key: string; params: Record<string, string | number> }
 
 export interface IfaceHealth { name: string; errors: number; drops: number; linkDowns: number }

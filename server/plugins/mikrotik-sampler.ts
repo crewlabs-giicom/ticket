@@ -76,6 +76,7 @@ export default defineNitroPlugin(() => {
       const db = getDb()
       await db.execute('DELETE FROM net_iface_samples WHERE ts < NOW() - INTERVAL ? DAY', [RETENTION_DAYS])
       await db.execute('DELETE FROM net_subnet_samples WHERE ts < NOW() - INTERVAL ? DAY', [RETENTION_DAYS])
+      await db.execute('DELETE FROM net_ping_samples WHERE ts < NOW() - INTERVAL ? DAY', [RETENTION_DAYS])
     } catch (e: any) {
       console.error('[Analytics] purge error:', e?.message || e)
     }

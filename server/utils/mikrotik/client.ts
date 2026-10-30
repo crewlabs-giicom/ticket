@@ -1,6 +1,6 @@
 import { RouterOSAPI } from 'node-routeros'
-import { assertReadOnlyPath } from './guard'
-import { mockRead } from './mock'
+import { assertReadOnlyPath, buildPingParams } from './guard'
+import { mockRead, mockPing } from './mock'
 import type { RosRow } from './logic'
 
 // TTL cache per path (ms). Path yang tidak terdaftar memakai routeros.cacheMs.
@@ -85,6 +85,25 @@ function routerError(err: unknown) {
   const e = err as any
   const msg = e?.message || e?.code || e?.errno || 'koneksi gagal'
   return createError({ statusCode: 502, statusMessage: 'Bad Gateway', message: `Router tidak bisa dibaca: ${msg}` })
+}
+
+const PING_TIMEOUT_MS = 8000
+
+/** Ping dari router lewat satu interface (satu baris hasil per paket). Tanpa cache; parameter divalidasi guard. */
+export async function rosPing(target: string, iface: string, count = 5): Promise<RosRow[]> {
+  const params = buildPingParams(target, iface, count)
+  const cfg = config()
+  if (cfg.mock) return mockPing(iface, count)
+  if (!cfg.host || !cfg.user) {
+    throw createError({ statusCode: 502, statusMessage: 'Bad Gateway', message: 'Router tidak bisa dibaca: NUXT_ROUTEROS_HOST / NUXT_ROUTEROS_USER belum diisi' })
+  }
+  try {
+    const conn = await connect(cfg)
+    return (await withTimeout(conn.write('/ping', params), PING_TIMEOUT_MS, 'ping tidak selesai')) as unknown as RosRow[]
+  } catch (err) {
+    resetConnection()
+    throw routerError(err)
+  }
 }
 
 /** Baca data dari router. Hanya `/…/print` dan `/interface/monitor-traffic`. */

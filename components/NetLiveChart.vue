@@ -17,9 +17,12 @@ const props = withDefaults(defineProps<{
   series: LiveSeries[]
   height?: number
   compact?: boolean // sparkline: tanpa sumbu/legend
-}>(), { height: 220, compact: false })
+  unit?: 'bps' | 'ms' | '%' // satuan nilai data (default bps)
+}>(), { height: 220, compact: false, unit: 'bps' })
 
 function fmtBps(v: number) {
+  if (props.unit === 'ms') return `${v >= 100 ? Math.round(v) : v.toFixed(1)} ms`
+  if (props.unit === '%') return `${v.toFixed(v >= 10 ? 0 : 1)}%`
   if (v >= 1e9) return `${(v / 1e9).toFixed(2)} Gbps`
   if (v >= 1e6) return `${(v / 1e6).toFixed(2)} Mbps`
   if (v >= 1e3) return `${(v / 1e3).toFixed(1)} Kbps`

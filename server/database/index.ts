@@ -980,6 +980,36 @@ async function migrate(db: mysql.Pool) {
     )
   `)
 
+  // Kualitas koneksi WAN (ping dari router): satu baris per WAN per target per siklus.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS net_ping_samples (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      ts DATETIME NOT NULL,
+      interface_name VARCHAR(100) NOT NULL,
+      target VARCHAR(100) NOT NULL,
+      sent TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      received TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      loss_pct DECIMAL(5,2) NOT NULL DEFAULT 0,
+      rtt_min DECIMAL(8,2) NULL,
+      rtt_avg DECIMAL(8,2) NULL,
+      rtt_max DECIMAL(8,2) NULL,
+      jitter_ms DECIMAL(8,2) NULL,
+      INDEX idx_nps_iface_ts (interface_name, ts),
+      INDEX idx_nps_ts (ts)
+    )
+  `)
+  // Riwayat insiden kualitas WAN. Insiden terbuka = ended_at IS NULL.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS wan_quality_events (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      interface_name VARCHAR(100) NOT NULL,
+      reason VARCHAR(255) NULL,
+      started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ended_at DATETIME NULL,
+      INDEX idx_wqe_open (interface_name, ended_at)
+    )
+  `)
+
   // Sampel historis untuk Analitik Jaringan (diisi sampler tiap menit, retensi 30 hari).
   await db.execute(`
     CREATE TABLE IF NOT EXISTS net_iface_samples (

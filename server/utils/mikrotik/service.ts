@@ -1,4 +1,6 @@
-import { rosRead, isMockMode } from './client'
+import { rosRead, rosPing, isMockMode } from './client'
+import { summarizePing, pickRepresentative, classifyQuality, type PingSummary } from './analytics'
+import { pingConfig } from './pingConfig'
 import {
   activeAddressesByInterface, aggregateClientRates, buildClients, buildInterfaceViews, buildSubnetDefs, groupClients,
   interfaceRole, routerIpSet, summarize, wanMemberSet, type InterfaceRole, type RosRow, type WanState,
@@ -55,6 +57,30 @@ export async function getWanStatus(): Promise<WanState[]> {
   return interfaces
     .filter(i => roleByInterface.get(i.name || '') === 'WAN' && i.disabled !== 'true')
     .map(i => ({ name: i.name || '', comment: i.comment || '', up: i.running === 'true' }))
+}
+
+export interface WanProbe { name: string; targets: Array<PingSummary & { target: string }> }
+
+/** Ping satu WAN ke semua target (berurutan, agar koneksi API bersama tidak terbebani). Target yang error dilewati. */
+export async function probeWan(name: string): Promise<WanProbe> {
+  const { targets, count } = pingConfig()
+  const out: WanProbe['targets'] = []
+  for (const target of targets) {
+    try {
+      out.push({ target, ...summarizePing(await rosPing(target, name, count), count) })
+    } catch (e: any) {
+      if (e?.statusCode === 502) throw e // router tidak terjangkau: hentikan siklus, bukan "WAN jelek"
+      // parameter ditolak guard / target tak valid: lewati target ini
+    }
+  }
+  return { name, targets: out }
+}
+
+/** Status kualitas per WAN (target terbaik sebagai wakil) dari satu hasil probe. */
+export function wanQuality(probe: WanProbe) {
+  const rep = pickRepresentative(probe.targets)
+  if (!rep) return null
+  return { ...rep, ...classifyQuality(rep, pingConfig().thresholds) }
 }
 
 export async function getInterfaces() {

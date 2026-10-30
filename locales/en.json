@@ -302,6 +302,14 @@
           "peak": "Peak", "availability": "WAN availability", "worstWan": "lowest WAN", "noIncident": "no incidents",
           "errDrops": "Errors + drops", "onlinePeak": "Peak online clients", "fullest": "fullest subnet"
         },
+        "quality": {
+          "good": "Good", "degraded": "Degraded", "bad": "Bad",
+          "title": "WAN connection quality (ping from router)",
+          "hint": "Measured from the router to {target}",
+          "banner": "Poor WAN quality (high latency/jitter/loss): {names}",
+          "thresholds": "Bad when latency ≥ {lat} ms, jitter ≥ {jit} ms, or loss ≥ {loss}%",
+          "badPct": "% time bad", "reason": "Cause"
+        },
         "avg": "Average",
         "errors": "Errors",
         "drops": "Drops",

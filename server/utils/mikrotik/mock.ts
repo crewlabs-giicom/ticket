@@ -62,6 +62,17 @@ function trafficRow(name: string): RosRow {
   return { name, 'rx-bits-per-second': String(rx), 'tx-bits-per-second': String(tx) }
 }
 
+/** Balasan /ping sintetis: ether9 sengaja jelek (latency & jitter tinggi, sebagian loss) supaya alert bisa dicoba. */
+export function mockPing(iface: string, count: number): RosRow[] {
+  const bad = iface === 'ether9'
+  return Array.from({ length: count }, (_, i) => {
+    if (bad && Math.random() < 0.15) return { seq: String(i), status: 'timeout' }
+    const base = bad ? 180 : 12 + (iface.length % 5) * 4
+    const ms = Math.max(1, Math.round((base + Math.random() * (bad ? 160 : 6)) * 10) / 10)
+    return { seq: String(i), host: '1.1.1.1', time: `${Math.floor(ms)}ms${Math.round((ms % 1) * 1000)}us` }
+  })
+}
+
 export function mockRead(path: string, params: string[] = []): RosRow[] {
   switch (path) {
     case '/interface/print':
