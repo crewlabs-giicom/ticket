@@ -1134,6 +1134,56 @@ async function migrate(db: mysql.Pool) {
     }
   }
 
+  // === Pengingat tagihan jatuh tempo ===
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS bills (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      provider VARCHAR(150) NOT NULL,
+      type VARCHAR(20) NOT NULL,
+      type_other VARCHAR(100) NULL,
+      title VARCHAR(200) NULL,
+      amount DECIMAL(15,2) NULL,
+      billing_cycle VARCHAR(20) NOT NULL DEFAULT 'monthly',
+      due_date DATE NOT NULL,
+      remind_days INT NOT NULL DEFAULT 7,
+      last_notified_date DATE NULL,
+      last_notified_stage VARCHAR(10) NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      notes TEXT NULL,
+      created_by INT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_bills_due (is_active, due_date),
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS bill_payments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      bill_id INT NOT NULL,
+      paid_at DATE NOT NULL,
+      amount_paid DECIMAL(15,2) NULL,
+      previous_due_date DATE NOT NULL,
+      new_due_date DATE NOT NULL,
+      proof_filename VARCHAR(500) NULL,
+      proof_original_name VARCHAR(255) NULL,
+      proof_mime_type VARCHAR(100) NULL,
+      proof_size INT NULL,
+      note TEXT NULL,
+      paid_by INT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_bp_bill (bill_id, paid_at),
+      FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE CASCADE,
+      FOREIGN KEY (paid_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `)
+  for (const role of ['admin', 'staff']) {
+    await db.execute(
+      `INSERT INTO menus (name, path, icon, order_index, role) SELECT 'Tagihan', '/bills', 'calendar', 21, ? WHERE NOT EXISTS (SELECT 1 FROM menus WHERE path='/bills' AND role=?)`,
+      [role, role]
+    ).catch(() => {})
+  }
+
   // Fix constraints that were never enforced (column-level REFERENCES shorthand) or
   // that block deletes (default RESTRICT) so ticket/task/prd/qc deletes clean up properly.
   await ensureCascadeFk(db, 'tickets', 'task_id', 'tasks', 'SET NULL')
